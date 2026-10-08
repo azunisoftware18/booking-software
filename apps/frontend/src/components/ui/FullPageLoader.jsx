@@ -9,7 +9,7 @@ export default function FullPageLoader({ message = "Loading Heritage..." }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-[#071633] to-[#040d1f] text-center p-4"
+            className="fixed inset-0 z-9999 flex flex-col items-center justify-center bg-linear-to-br from-[#071633] to-[#040d1f] text-center p-4"
         > 
             <div className="absolute inset-0 opacity-[0.05] bg-mandala pointer-events-none scale-110" />
 

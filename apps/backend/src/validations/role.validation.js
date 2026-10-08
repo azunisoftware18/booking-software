@@ -13,7 +13,7 @@ class RoleValidation {
 
       description: z
         .string()
-        .min(10, "Description must be at least 10 characters")
+        .min(0, "Description must be at least 10 characters")
         .optional(),
     });
   }
@@ -32,7 +32,7 @@ class RoleValidation {
 
       description: z
         .string()
-        .min(10, "Description must be at least 10 characters")
+        .min(0, "Description must be at least 10 characters")
         .optional(),
     });
   }

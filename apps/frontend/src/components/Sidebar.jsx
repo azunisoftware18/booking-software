@@ -17,6 +17,9 @@ import {
   MapPlus,
   BookCheck,
   Scan,
+  Users,
+  UserRoundKey,
+  User,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,6 +33,8 @@ const menuItems = [
   { icon: MapPlus, label: "Addon", href: "/dashboard/addon" },
   { icon: BookCheck, label: "Booking", href: "/dashboard/booking" },
   { icon: Scan, label: "Ticket Scanner", href: "/dashboard/ticket-scanner" },
+  { icon: Users, label: "User Management", href: "/dashboard/users-management" },
+  { icon: User, label: "Role Management", href: "/dashboard/role-management" },
 ];
 
 export default function Sidebar() {

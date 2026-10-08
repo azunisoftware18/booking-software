@@ -1,154 +1,147 @@
+// frontend/src/components/table/UserTable.jsx
 "use client";
 
-import {
-  TableShell,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableEmpty,
-  TableLoader,
-} from "@/components/table/core"; // Apne path ke hisaab se adjust karein
-import ActionMenu from "../common/ActionMenu";
+import { useMemo, useState } from "react";
 import { Pencil, Trash, User, Mail, ShieldCheck } from "lucide-react";
-import { useState, useMemo } from "react";
+import ActionMenu from "../common/ActionMenu";
 
-// 1. Dummy Data
-const DUMMY_USERS = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    email: "rahul@example.com",
-    role: "Admin",
-    status: "Active",
-    joinedDate: "2023-10-12",
-  },
-  {
-    id: 2,
-    name: "Sneha Patel",
-    email: "sneha@example.com",
-    role: "Editor",
-    status: "Active",
-    joinedDate: "2023-11-05",
-  },
-  {
-    id: 3,
-    name: "Amit Verma",
-    email: "amit@example.com",
-    role: "User",
-    status: "Inactive",
-    joinedDate: "2024-01-20",
-  },
-];
-
-export default function UserTable() {
+export default function UserTable({ data, loading, onEdit, onDelete }) {
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
 
-  // 2. Filter Logic
   const filteredUsers = useMemo(() => {
-    return DUMMY_USERS.filter((user) =>
-      [user.name, user.email].some((val) =>
-        val?.toLowerCase().includes(search.toLowerCase())
-      )
+    const value = search.toLowerCase().trim();
+    if (!value) return data || [];
+    return (data || []).filter((user) =>
+      [user?.fullName, user?.email, user?.role?.roleName]
+        .filter(Boolean)
+        .some((val) => val.toLowerCase().includes(value))
     );
-  }, [search]);
+  }, [data, search]);
 
-  const columns = ["User Details", "Role", "Status", "Joined", "Action"];
+  if (loading) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="px-5 py-16 text-center">
+          <p className="text-sm text-gray-500">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="px-5 py-16 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+            <User size={22} className="text-gray-400" />
+          </div>
+          <p className="mt-3 text-sm font-medium text-gray-700">
+            No users found
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <TableShell
-      title="User Management"
-      searchProps={{
-        value: search,
-        onChange: (e) => setSearch(e.target.value),
-        onClear: () => setSearch(""),
-        placeholder: "Search by name or email...",
-      }}
-      paginationProps={{
-        page,
-        totalPages: 1,
-        onNext: () => setPage((p) => p + 1),
-        onPrev: () => setPage((p) => p - 1),
-      }}
-    >
-      <TableHead columns={columns} />
-
-      <TableBody>
-        {loading ? (
-          <TableLoader rows={5} />
-        ) : filteredUsers.length === 0 ? (
-          <TableEmpty message="No users found." />
-        ) : (
-          filteredUsers.map((user) => (
-            <TableRow
-              key={user.id}
-              renderActions={() => (
-                <ActionMenu
-                  items={[
-                    {
-                      label: "Edit User",
-                      icon: Pencil,
-                      onClick: () => console.log("Edit", user.id),
-                    },
-                    {
-                      label: "Delete",
-                      icon: Trash,
-                      danger: true,
-                      onClick: () => console.log("Delete", user.id),
-                    },
-                  ]}
-                />
-              )}
-            >
-              {/* User Details Column */}
-              <td className="px-6 py-4">
-                <div className="flex items-center">
-                  <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center mr-3">
-                    <User className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-900">{user.name}</div>
-                    <div className="text-xs text-slate-500 flex items-center">
-                      <Mail className="w-3 h-3 mr-1" /> {user.email}
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-225">
+          <thead>
+            <tr className="border-b border-gray-200 bg-[#fafbfc]">
+              <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                User Details
+              </th>
+              <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Role
+              </th>
+              <th className="px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Status
+              </th>
+              <th className="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user) => (
+              <tr
+                key={user.id}
+                className="border-b border-gray-100 transition hover:bg-gray-50"
+              >
+                {/* User Details */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-900 truncate">
+                        {user.fullName}
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center mt-0.5">
+                        <Mail className="w-3 h-3 mr-1 shrink-0" />
+                        <span className="truncate max-w-55">
+                          {user.email}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
+                </td>
 
-              {/* Role Column */}
-              <td className="px-6 py-4">
-                <div className="flex items-center text-slate-600">
-                  <ShieldCheck className="w-4 h-4 mr-2 text-blue-500" />
-                  {user.role}
-                </div>
-              </td>
+                {/* Role - FIXED */}
+                <td className="px-6 py-4">
+                  <div className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-1.5 text-sm text-blue-700">
+                    <ShieldCheck className="w-4 h-4 mr-2 text-blue-500" />
+                    <span className="font-medium">
+                      {user.role?.roleName || "No Role"}
+                    </span>
+                  </div>
+                </td>
 
-              {/* Status Column */}
-              <td className="px-6 py-4">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    user.status === "Active"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {user.status}
-                </span>
-              </td>
+                {/* Status */}
+                <td className="px-6 py-4 text-center">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      user.status === "Active"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        user.status === "Active"
+                          ? "bg-green-500"
+                          : "bg-slate-400"
+                      }`}
+                    />
+                    {user.status || "Active"}
+                  </span>
+                </td>
 
-              {/* Date Column */}
-              <td className="px-6 py-4 text-slate-500 italic text-sm">
-                {new Date(user.joinedDate).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </td>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </TableShell>
+                {/* Actions */}
+                <td className="px-6 py-4 text-right">
+                  <ActionMenu
+                    items={[
+                      {
+                        label: "Edit User",
+                        icon: Pencil,
+                        onClick: () => onEdit(user),
+                      },
+                      {
+                        label: "Delete",
+                        icon: Trash,
+                        danger: true,
+                        onClick: () => onDelete(user),
+                      },
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

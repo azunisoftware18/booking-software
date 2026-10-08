@@ -25,9 +25,9 @@ const Header = () => {
 
   return (
     <nav
-      className={`fixed w-full z-[999] top-0 left-0 transition-all duration-500 border-b backdrop-blur-xl ${scrolled ? "bg-royal-blue/90 shadow-2xl shadow-black/10 border-gold/20 py-2" : "bg-sandstone/90 border-jaipur-dark/10 py-2"}`}
+      className={`fixed w-full z-999 top-0 left-0 transition-all duration-500 border-b backdrop-blur-xl ${scrolled ? "bg-royal-blue/90 shadow-2xl shadow-black/10 border-gold/20 py-2" : "bg-sandstone/90 border-jaipur-dark/10 py-2"}`}
     >
-      <div className="max-w-7xl flex items-center justify-between mx-auto px-4 sm:px-6 lg:px-10 h-[60px]">
+      <div className="max-w-7xl flex items-center justify-between mx-auto px-4 sm:px-6 lg:px-10 h-15">
         <Link href="/" className="flex items-center gap-3 group">
           <img
             src={
