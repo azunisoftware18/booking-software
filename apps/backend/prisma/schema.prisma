@@ -11,17 +11,25 @@ datasource db {
 model User {
   id       String  @id @default(uuid())
   fullName String  @map("full_name")
-  role     String  @default("USER")
   email    String  @unique
   password String?
 
-  refreshToken String?  @map("refresh_token")
+  refreshToken String? @map("refresh_token")
   phone        String?
-  createdAt    DateTime @default(now()) @map("created_at")
+
+  roleId  String  @map("role_id")
+  placeId String? @map("place_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  role  Role  @relation(fields: [roleId], references: [id])
+  place Place? @relation(fields: [placeId], references: [id])
 
   tickets  Ticket[]
   bookings Booking[]
 
+  @@index([roleId])
+  @@index([placeId])
   @@map("users")
 }
 
@@ -45,6 +53,7 @@ model Place {
   slotOverrides SlotOverride[]
   bookings      Booking[]
   addons        Addon[]
+  users         User[]
 
   @@unique([name, location])
   @@map("places")
@@ -231,6 +240,20 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  roleName    String   @unique @map("role_name")
+  roleCode    String   @unique @map("role_code")
+  description String?  @db.LongText
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("roles")
 }
 
 enum GateType {

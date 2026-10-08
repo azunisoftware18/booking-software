@@ -8,12 +8,12 @@ import { settingUpload } from "../middlewares/multer.js";
 
 const router = Router();
 
-// ADMIN ONLY
+// SUPER_ADMIN ONLY
 router.post(
   "/",
   AuthMiddleware.isAuthenticated,
   settingUpload.single("image"),
-  AuthMiddleware.authorize(["ADMIN"]),
+  AuthMiddleware.authorize(["SUPER_ADMIN"]),
   ValidateRequest.validate(PlaceValidation.create),
   asyncHandler(PlaceController.create)
 );
@@ -22,7 +22,7 @@ router.put(
   "/:id",
   AuthMiddleware.isAuthenticated,
   settingUpload.single("image"),
-  AuthMiddleware.authorize(["ADMIN"]),
+  AuthMiddleware.authorize(["SUPER_ADMIN"]),
   ValidateRequest.validate(PlaceValidation.update),
   asyncHandler(PlaceController.update)
 );
@@ -30,7 +30,7 @@ router.put(
 router.delete(
   "/:id",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["ADMIN"]),
+  AuthMiddleware.authorize(["SUPER_ADMIN"]),
   asyncHandler(PlaceController.delete)
 );
 

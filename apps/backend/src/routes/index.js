@@ -8,6 +8,8 @@ import addonRoute from "./addon.routes.js";
 import ticketRoutes from "./ticket.routes.js";  
 import scanLogRoutes from "./scanLog.routes.js";
 import settingRoute from "./setting.routes.js";
+import roleRoute from "./role.routes.js";
+import userRoute from "./user.routes.js";
 
 const router = Router();
 
@@ -21,6 +23,9 @@ router.use("/addon", addonRoute);
 router.use("/ticket", ticketRoutes);
 router.use("/scan-log", scanLogRoutes);
 router.use("/setting", settingRoute);
+router.use("/role", roleRoute);
+router.use("/user", userRoute);
+
 
 
 export default router;

@@ -130,7 +130,7 @@ export default function DashboardNavbar() {
                 style={{ color: "var(--muted-foreground)" }}
                 className="text-[10px] font-bold uppercase mt-1 tracking-wider"
               >
-                {user?.role || "Admin"}
+                {user?.role?.roleName || "Admin"}
               </p>
             </div>
 
@@ -174,14 +174,14 @@ export default function DashboardNavbar() {
                       </p>
                       <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700">
                         <Shield size={10} />
-                        {user?.role || "Super Admin"}
+                        {user?.role?.roleName || "Super Admin"}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Quick Navigation for Super Admin */}
-                {user?.role === "SUPER_ADMIN" && (
+                {user?.role?.roleCode === "SUPER_ADMIN" && (
                   <div className="p-2 border-b" style={{ borderColor: "var(--border)" }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider px-3 pt-2 pb-1" style={{ color: "var(--muted-foreground)" }}>
                       Quick Navigation
