@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import {
   getSetting,
@@ -5,18 +6,22 @@ import {
 } from "../controllers/setting.controller.js";
 
 import AuthMiddleware from "../middlewares/auth.middleware.js";
+import PermissionMiddleware from "../middlewares/permission.middleware.js";
 import { settingUpload } from "../middlewares/multer.js";
+import { PermissionsRegistry } from "../lib/PermissionsRegistry.js";
 
 const router = Router();
 
-// Public
+// PUBLIC — GET SETTINGS
 router.get("/", getSetting);
 
-// Admin Only
+// UPDATE SETTINGS
 router.put(
   "/",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["ADMIN"]),
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.SETTING.UPDATE
+  ),
   settingUpload.single("logo"),
   updateSetting
 );

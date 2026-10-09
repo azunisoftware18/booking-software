@@ -2,6 +2,7 @@ import prisma from "../db/db.js";
 import bcrypt from "bcryptjs";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 import { ApiError } from "../utils/ApiError.js";
+import PermissionService from "./permission.service.js";
 
 class AuthService {
   static async login({ identifier, password }) {
@@ -37,14 +38,21 @@ class AuthService {
     };
   }
 
+
   static async getCurrentUser(userId) {
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: {
+        id: userId,
+      },
       select: {
         id: true,
         fullName: true,
         email: true,
         phone: true,
+        roleId: true,
+        placeId: true,
+        parentId: true,
+        level: true,
         role: true,
         createdAt: true,
       },
@@ -54,8 +62,16 @@ class AuthService {
       throw ApiError.notFound("User not found");
     }
 
-    return user;
+    // Fetch user-wise + role-wise assigned permissions
+    const { permissions } =
+      await PermissionService.getUserPermissions(user.id);
+
+    return {
+      ...user,
+      permissions,
+    };
   }
+
 
   static async refreshToken(oldRefreshToken) {
     if (!oldRefreshToken) {
@@ -101,69 +117,69 @@ class AuthService {
     return true;
   }
   // 🔥 UPDATE PROFILE
-static async updateProfile(userId, payload) {
+  static async updateProfile(userId, payload) {
 
-  const updatedUser = await prisma.user.update({
-    where: {
-      id: userId,
-    },
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: userId,
+      },
 
-    data: {
-      fullName: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
-    },
+      data: {
+        fullName: payload.fullName,
+        email: payload.email,
+        phone: payload.phone,
+      },
 
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      phone: true,
-      role: true,
-    },
-  });
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
+    });
 
-  return updatedUser;
-}
-
-// 🔥 UPDATE PASSWORD
-static async updatePassword(userId, payload) {
-
-  const { oldPassword, newPassword } = payload;
-
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-  });
-
-  if (!user) {
-    throw ApiError.notFound("User not found");
+    return updatedUser;
   }
 
-  const isMatch = await bcrypt.compare(
-    oldPassword,
-    user.password
-  );
+  // 🔥 UPDATE PASSWORD
+  static async updatePassword(userId, payload) {
 
-  if (!isMatch) {
-    throw ApiError.badRequest("Old password incorrect");
+    const { oldPassword, newPassword } = payload;
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw ApiError.notFound("User not found");
+    }
+
+    const isMatch = await bcrypt.compare(
+      oldPassword,
+      user.password
+    );
+
+    if (!isMatch) {
+      throw ApiError.badRequest("Old password incorrect");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return true;
   }
-
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-  await prisma.user.update({
-    where: {
-      id: userId,
-    },
-
-    data: {
-      password: hashedPassword,
-    },
-  });
-
-  return true;
-}
 }
 
 export default AuthService;
