@@ -2,10 +2,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash, User, Mail, ShieldCheck } from "lucide-react";
+import { Pencil, Trash, User, Mail, ShieldCheck, User2 } from "lucide-react";
 import ActionMenu from "../common/ActionMenu";
 
-export default function UserTable({ data, loading, onEdit, onDelete }) {
+export default function UserTable({ data, loading, onEdit, onDelete, onAssignPermission }) {
   const [search, setSearch] = useState("");
 
   const filteredUsers = useMemo(() => {
@@ -128,12 +128,21 @@ export default function UserTable({ data, loading, onEdit, onDelete }) {
                         icon: Pencil,
                         onClick: () => onEdit(user),
                       },
+
+                      {
+                        label: "Assign permission",
+                        icon: User2,
+                        onClick: () => onAssignPermission?.(user),
+                      },
+                      
                       {
                         label: "Delete",
                         icon: Trash,
                         danger: true,
                         onClick: () => onDelete(user),
                       },
+
+                      
                     ]}
                   />
                 </td>

@@ -1,4 +1,3 @@
-// frontend/src/app/dashboard/users-management/page.jsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -9,24 +8,23 @@ import StatCard from "@/components/common/StatCard";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import UserTable from "@/components/table/UserTable";
 import UserModal from "@/components/modals/UserModal";
+import AssignPermissionModal from "@/components/modals/AssignPermissionModal";
 
 import { useUsers } from "@/lib/queries/useUser";
 import { useHandleUser } from "@/lib/mutations/useUser";
 
 export default function UserManagementPage() {
-  // --------------------------------------------------
-  // React Query
-  // --------------------------------------------------
   const { data: users = [], isLoading } = useUsers();
   const { mutateAsync: handleUser } = useHandleUser();
 
-  // --------------------------------------------------
-  // Local State
-  // --------------------------------------------------
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
+
+  // ✅ Permission modal state
+  const [isPermissionOpen, setIsPermissionOpen] = useState(false);
+  const [permissionUser, setPermissionUser] = useState(null);
 
   const [dialogConfig, setDialogConfig] = useState({
     open: false,
@@ -35,9 +33,6 @@ export default function UserManagementPage() {
     variant: "success",
   });
 
-  // --------------------------------------------------
-  // Filter Users
-  // --------------------------------------------------
   const filteredUsers = useMemo(() => {
     const value = search.toLowerCase().trim();
     if (!value) return users;
@@ -52,15 +47,10 @@ export default function UserManagementPage() {
     });
   }, [users, search]);
 
-  // --------------------------------------------------
-  // Stats
-  // --------------------------------------------------
   const activeUsers = users.filter((user) => user.status === "Active").length;
   const assignedUsers = users.filter((user) => user.placeId).length;
 
-  // --------------------------------------------------
-  // Create / Update User
-  // --------------------------------------------------
+  // ---------------- User CRUD ----------------
   const handleFormSubmit = async (data) => {
     try {
       const payload = {
@@ -103,17 +93,11 @@ export default function UserManagementPage() {
     }
   };
 
-  // --------------------------------------------------
-  // Edit
-  // --------------------------------------------------
   const handleEdit = (user) => {
     setEditData(user);
     setIsModalOpen(true);
   };
 
-  // --------------------------------------------------
-  // Delete
-  // --------------------------------------------------
   const handleDelete = async () => {
     if (!deleteItem) return;
     try {
@@ -142,12 +126,25 @@ export default function UserManagementPage() {
     }
   };
 
-  // --------------------------------------------------
-  // Add User
-  // --------------------------------------------------
   const handleAddUser = () => {
     setEditData(null);
     setIsModalOpen(true);
+  };
+
+  // ---------------- Permissions ----------------
+  const handleAssignPermission = (user) => {
+    setPermissionUser(user);
+    setIsPermissionOpen(true);
+  };
+
+  // ✅ Called by modal AFTER successful save (mutation already ran inside modal)
+  const handlePermissionsSaved = () => {
+    setDialogConfig({
+      open: true,
+      title: "Permissions Updated",
+      description: `Permissions assigned to ${permissionUser?.fullName} successfully.`,
+      variant: "success",
+    });
   };
 
   return (
@@ -207,6 +204,7 @@ export default function UserManagementPage() {
           loading={isLoading}
           onEdit={handleEdit}
           onDelete={(user) => setDeleteItem(user)}
+          onAssignPermission={handleAssignPermission}
         />
       </div>
 
@@ -219,6 +217,17 @@ export default function UserManagementPage() {
         }}
         onSubmit={handleFormSubmit}
         defaultValues={editData}
+      />
+
+      {/* ✅ Assign Permission Modal — modal handles API internally */}
+      <AssignPermissionModal
+        open={isPermissionOpen}
+        user={permissionUser}
+        onClose={() => {
+          setIsPermissionOpen(false);
+          setPermissionUser(null);
+        }}
+        onSaved={handlePermissionsSaved}
       />
 
       {/* Delete Confirmation */}

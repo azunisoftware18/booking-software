@@ -181,6 +181,7 @@ export default function DashboardNavbar() {
                 </div>
 
                 {/* Quick Navigation for Super Admin */}
+{/*                 
                 {user?.role?.roleCode === "SUPER_ADMIN" && (
                   <div className="p-2 border-b" style={{ borderColor: "var(--border)" }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider px-3 pt-2 pb-1" style={{ color: "var(--muted-foreground)" }}>
@@ -208,7 +209,7 @@ export default function DashboardNavbar() {
                       ))}
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {/* Menu Items */}
                 <div className="p-2">
