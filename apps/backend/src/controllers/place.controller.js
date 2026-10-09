@@ -10,15 +10,22 @@ class PlaceController {
     return res.success(data, "Place created", 201);
   };
 
+
   static getAll = async (req, res) => {
-    const data = await PlaceService.getAllPlaces();
+    const data = await PlaceService.getAllPlaces(req.user);
+
     return res.success(data, "Places fetched");
   };
 
   static getById = async (req, res) => {
-    const data = await PlaceService.getPlaceById(req.params.id);
+    const data = await PlaceService.getPlaceById(
+      req.params.id,
+      req.user
+    );
+
     return res.success(data, "Place fetched");
   };
+
 
   static update = async (req, res) => {
     console.log("=== UPDATE PLACE ===");

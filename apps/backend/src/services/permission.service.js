@@ -7,15 +7,26 @@ class PermissionService {
   // GET ALL ACTIVE PERMISSIONS
   // =========================================================
 
-  static getAllPermissions = async () => {
+
+  static getAllPermissions = async (userId) => {
+    const { permissions } = await this.getUserPermissions(userId);
+
+    return permissions;
+  };
+
+  // Super Admin ke liye complete active permission list
+  static getAllAvailablePermissions = async () => {
     return prisma.permission.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+      },
       orderBy: [
         { resource: "asc" },
         { action: "asc" },
       ],
     });
   };
+
 
   // =========================================================
   // GET USER PERMISSIONS (DIRECT + ROLE)

@@ -45,24 +45,20 @@ router.delete(
   asyncHandler(PlaceController.delete)
 );
 
-// GET ALL PLACES
+
+ // GET ALL PLACES — no PLACE.READ permission required
 router.get(
   "/",
   AuthMiddleware.isAuthenticated,
-  PermissionMiddleware.hasPermission(
-    PermissionsRegistry.PLACE.READ
-  ),
   asyncHandler(PlaceController.getAll)
 );
 
-// GET PLACE BY ID
+// GET PLACE BY ID — no PLACE.READ permission required
 router.get(
   "/:id",
   AuthMiddleware.isAuthenticated,
-  PermissionMiddleware.hasPermission(
-    PermissionsRegistry.PLACE.READ
-  ),
   asyncHandler(PlaceController.getById)
 );
+
 
 export default router;

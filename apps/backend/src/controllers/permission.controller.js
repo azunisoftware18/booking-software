@@ -6,16 +6,29 @@ class PermissionController {
   // GET ALL PERMISSIONS
   // =========================================================
 
+
   static getAllPermissions = async (req, res) => {
     const permissions =
-      await PermissionService.getAllPermissions();
+      await PermissionService.getAllPermissions(req.user.id);
 
     return res.status(200).json({
       success: true,
-      message: "Permissions fetched successfully",
+      message: "Your permissions fetched successfully",
       data: permissions,
     });
   };
+
+  static getAllAvailablePermissions = async (req, res) => {
+    const permissions =
+      await PermissionService.getAllAvailablePermissions();
+
+    return res.status(200).json({
+      success: true,
+      message: "All active permissions fetched successfully",
+      data: permissions,
+    });
+  };
+
 
   // =========================================================
   // GET USER PERMISSIONS

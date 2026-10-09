@@ -64,11 +64,47 @@ class PlaceService {
     });
   }
 
+
   // =========================================================
-  // GET ALL
+  // GET ALL PLACES BY USER LEVEL
   // =========================================================
-  static async getAllPlaces() {
-    return await prisma.place.findMany({
+
+  static async getAllPlaces(currentUser) {
+    if (!currentUser?.id) {
+      throw ApiError.unauthorized("Authentication required");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        id: true,
+        level: true,
+        placeId: true,
+      },
+    });
+
+    if (!user) {
+      throw ApiError.notFound("User not found");
+    }
+
+    // Level 1: All places
+    if (user.level === 1) {
+      return prisma.place.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
+
+    // Level 2 and 3: Only assigned place
+    if (!user.placeId) {
+      return [];
+    }
+
+    return prisma.place.findMany({
+      where: {
+        id: user.placeId,
+      },
       orderBy: {
         createdAt: "desc",
       },
@@ -76,13 +112,35 @@ class PlaceService {
   }
 
   // =========================================================
-  // GET BY ID
+  // GET PLACE BY ID WITH LEVEL RESTRICTION
   // =========================================================
-  static async getPlaceById(id) {
-    const place = await prisma.place.findUnique({
-      where: {
-        id,
+
+  static async getPlaceById(id, currentUser) {
+    if (!currentUser?.id) {
+      throw ApiError.unauthorized("Authentication required");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        id: true,
+        level: true,
+        placeId: true,
       },
+    });
+
+    if (!user) {
+      throw ApiError.notFound("User not found");
+    }
+
+    // Level 1 can access any place
+    // Level 2 and 3 can access only their assigned place
+    if (user.level !== 1 && user.placeId !== id) {
+      throw ApiError.notFound("Place not found");
+    }
+
+    const place = await prisma.place.findUnique({
+      where: { id },
     });
 
     if (!place) {
@@ -91,6 +149,7 @@ class PlaceService {
 
     return place;
   }
+
 
   // =========================================================
   // UPDATE PLACE
