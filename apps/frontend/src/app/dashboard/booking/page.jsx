@@ -28,9 +28,7 @@ export default function Page() {
 
   const { data: ticketTypes = [] } = useTicketTypes(placeId);
 
-
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
-
 
   const [currentFilteredData, setCurrentFilteredData] = useState([]);
 
@@ -55,13 +53,9 @@ export default function Page() {
         booking.status === "PAID" || booking.paymentStatus === "PAID",
     ).length || 0;
 
-
   const activeData = hasActiveFilters ? currentFilteredData : bookings || [];
 
-
-
   const totalPages = Math.ceil(activeData.length / itemsPerPage) || 1;
-
 
   const paginatedBookings = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
@@ -71,12 +65,10 @@ export default function Page() {
     return activeData.slice(start, end);
   }, [activeData, page, itemsPerPage]);
 
- 
   useEffect(() => {
     setPage(1);
   }, [currentFilteredData.length, totalBookings, hasActiveFilters]);
 
- 
   const handleFilteredDataChange = useCallback(
     (filteredData, filtersActive) => {
       setCurrentFilteredData((prev) => {
@@ -258,15 +250,13 @@ export default function Page() {
           ================================================= */}
 
           <div className="flex gap-2">
-            <div className=" rounded-x border border-black p-2  ">
-              <Link
-                href={`/book-tickets/${placeId}`}
-                iconPosition="left"
-                icon={PlusCircle}
-                text="Ticket Book"
-              >
-                {/* <PlusCircle className="w-4 h-4" /> */}
-                Ticket Book
+            <div className="">
+              <Link href={`/book-tickets/${placeId}`}>
+                <Button
+                  icon={PlusCircle}
+                  iconPosition="left"
+                  text="Ticket Book"
+                />
               </Link>
             </div>
 

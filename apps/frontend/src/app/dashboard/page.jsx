@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-
 import { useSelector } from "react-redux";
 
 import StatCard from "@/components/common/StatCard";
@@ -12,100 +11,64 @@ import { useBookings } from "@/lib/queries/useBooking";
 import { useSlots } from "@/lib/queries/useSlot";
 
 export default function Page() {
-
   // =====================
   // PLACE
   // =====================
-
-  const currentPlace = useSelector(
-    (state) => state.place.currentPlace
-  );
-
+  const currentPlace = useSelector((state) => state.place.currentPlace);
   const placeId = currentPlace?.id;
 
-  const date = new Date()
-    .toISOString()
-    .split("T")[0];
+  const date = new Date().toISOString().split("T")[0];
 
   // =====================
   // APIs
   // =====================
-
-  const {
-    data: tickets,
-  } = useTickets();
-
-  const {
-    data: bookings,
-  } = useBookings();
-
-  const {
-    data: slots,
-  } = useSlots({
-    placeId,
-    date,
-  });
+  const { data: tickets } = useTickets();
+  const { data: bookings } = useBookings();
+  const { data: slots } = useSlots({ placeId, date });
 
   // =====================
   // TOTAL REVENUE
   // =====================
-
   const totalRevenue =
-  bookings?.reduce((sum, booking) => {
-    if (
-      booking.status === "PAID" ||
-      booking.paymentStatus === "PAID"
-    ) {
-      return sum + Number(booking.totalAmount || 0);
-    }
-    return sum;
-  }, 0) || 0;
+    bookings?.reduce((sum, booking) => {
+      if (booking.status === "PAID" || booking.paymentStatus === "PAID") {
+        return sum + Number(booking.totalAmount || 0);
+      }
+      return sum;
+    }, 0) || 0;
 
   // =====================
   // TOTAL BOOKINGS
   // =====================
-
   const totalBookings =
-  bookings?.filter(
-    (booking) =>
-      booking.status === "PAID" ||
-      booking.paymentStatus === "PAID"
-  ).length || 0;
+    bookings?.filter(
+      (booking) =>
+        booking.status === "PAID" || booking.paymentStatus === "PAID",
+    ).length || 0;
 
   // =====================
   // PENDING BOOKINGS
   // =====================
-
   const pendingBookings =
-    bookings?.filter(
-      (booking) =>
-        booking.status === "PENDING"
-    ).length || 0;
+    bookings?.filter((booking) => booking.status === "PENDING").length || 0;
 
   // =====================
   // TOTAL SLOTS
   // =====================
-
-  const totalSlots =
-    slots?.length || 0;
+  const totalSlots = slots?.length || 0;
 
   return (
     <div
-      style={{
-        backgroundColor: "var(--background)",
-      }}
+      style={{ backgroundColor: "var(--background)" }}
       className="p-8 space-y-8 min-h-screen w-full"
     >
-
       {/* ===================== */}
       {/* PAGE HEADER */}
       {/* ===================== */}
-
       <div>
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">
           Dashboard Overview
         </h1>
-
         <p className="text-slate-500 font-medium mt-1">
           Monitor bookings, visitors, revenue and slots.
         </p>
@@ -114,9 +77,7 @@ export default function Page() {
       {/* ===================== */}
       {/* STAT CARDS */}
       {/* ===================== */}
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-
         <StatCard
           title="Total Revenue"
           value={`₹${totalRevenue}`}
@@ -157,10 +118,10 @@ export default function Page() {
       {/* ===================== */}
       {/* VISITOR CHART */}
       {/* ===================== */}
-
-      <VisitorChart
-        tickets={tickets || []}
-      />
+      {/* ✅ Wrapper with min-w-0 so flex/grid don't collapse */}
+      <div className="w-full min-w-0">
+        <VisitorChart tickets={tickets || []} />
+      </div>
     </div>
   );
 }
