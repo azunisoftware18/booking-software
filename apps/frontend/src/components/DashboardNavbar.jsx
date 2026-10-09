@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLogout } from "@/lib/mutations/useLogout";
+import { hasPermission } from "@/lib/dashboardPermissions";
 
 export default function DashboardNavbar() {
   const { user } = useSelector((state) => state.auth);
@@ -229,19 +230,21 @@ export default function DashboardNavbar() {
                   </button>
 
                   {/* Settings Option */}
-                  <button
-                    onClick={handleSettingsClick}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-all"
-                    style={{ color: "var(--foreground)" }}
-                  >
-                    <Globe size={18} />
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium">Website Settings</p>
-                      <p className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>
-                        Manage Website 
-                      </p>
-                    </div>
-                  </button>
+                  {hasPermission(user, "SETTING.READ") && (
+                    <button
+                      onClick={handleSettingsClick}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-all"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      <Globe size={18} />
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium">Website Settings</p>
+                        <p className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>
+                          Manage Website
+                        </p>
+                      </div>
+                    </button>
+                  )}
 
                   {/* Divider */}
                   <div className="my-2 h-px" style={{ backgroundColor: "var(--border)" }} />

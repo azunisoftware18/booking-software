@@ -24,17 +24,19 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLogout } from "@/lib/mutations/useLogout";
+import { useSelector } from "react-redux";
+import { hasPermission } from "@/lib/dashboardPermissions";
 
 const menuItems = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: Map, label: "Place", href: "/dashboard/place" },
-  { icon: Calendar, label: "Slots", href: "/dashboard/slots" },
-  { icon: TicketIcon, label: "Ticket Type", href: "/dashboard/ticket" },
-  { icon: MapPlus, label: "Addon", href: "/dashboard/addon" },
-  { icon: BookCheck, label: "Booking", href: "/dashboard/booking" },
-  { icon: Scan, label: "Ticket Scanner", href: "/dashboard/ticket-scanner" },
-  { icon: Users, label: "User Management", href: "/dashboard/users-management" },
-  { icon: User, label: "Role Management", href: "/dashboard/role-management" },
+  { icon: Home, label: "Dashboard", href: "/dashboard", permission: "DASHBOARD.READ" },
+  { icon: Map, label: "Place", href: "/dashboard/place", permission: "PLACE.READ" },
+  { icon: Calendar, label: "Slots", href: "/dashboard/slots", permission: "SLOT.READ" },
+  { icon: TicketIcon, label: "Ticket Type", href: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
+  { icon: MapPlus, label: "Addon", href: "/dashboard/addon", permission: "ADDON.READ" },
+  { icon: BookCheck, label: "Booking", href: "/dashboard/booking", permission: "BOOKING.READ" },
+  { icon: Scan, label: "Ticket Scanner", href: "/dashboard/ticket-scanner", permission: "TICKET.SCAN" },
+  { icon: Users, label: "User Management", href: "/dashboard/users-management", permission: "USER.READ" },
+  { icon: User, label: "Role Management", href: "/dashboard/role-management", permission: "ROLE.READ" },
 ];
 
 export default function Sidebar() {
@@ -43,6 +45,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { mutate: logoutUser, isPending } = useLogout();
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
+  const accessibleMenuItems = menuItems.filter((item) =>
+    hasPermission(user, item.permission)
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -116,7 +122,7 @@ export default function Sidebar() {
 
         {/* --- NAVIGATION --- */}
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto overflow-x-hidden">
-          {menuItems.map((item) => {
+          {accessibleMenuItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link key={item.href} href={item.href}>

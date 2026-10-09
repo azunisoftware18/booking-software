@@ -21,6 +21,10 @@ class PermissionMiddleware {
           );
         }
 
+        if (req.user.role?.roleCode === "SUPER_ADMIN") {
+          return next();
+        }
+
         // =====================================
         // CHECK PERMISSION
         // =====================================

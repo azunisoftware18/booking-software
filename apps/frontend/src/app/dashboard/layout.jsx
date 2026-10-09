@@ -4,25 +4,35 @@ import DashboardNavbar from "@/components/DashboardNavbar";
 import Sidebar from "@/components/Sidebar";
 
 import { useSelector, useDispatch } from "react-redux";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Menu, X } from "lucide-react";
 
 import { usePlaces } from "@/lib/queries/usePlace";
 import { setCurrentPlace } from "@/store/slices/placeSlice";
+import {
+  canAccessDashboardRoute,
+  getFirstAccessibleDashboardRoute,
+} from "@/lib/dashboardPermissions";
 
 export default function DashboardLayout({ children }) {
-  const { isAuthChecked, isLoggedIn } = useSelector(
+  const { isAuthChecked, isLoggedIn, user } = useSelector(
     (state) => state.auth
   );
 
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useDispatch();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: places } = usePlaces();
+  const canAccessCurrentRoute = canAccessDashboardRoute(user, pathname);
+  const fallbackRoute =
+    pathname === "/dashboard" && !canAccessCurrentRoute
+      ? getFirstAccessibleDashboardRoute(user)
+      : null;
 
   // 🔥 Redirect if not logged in
   useEffect(() => {
@@ -30,6 +40,12 @@ export default function DashboardLayout({ children }) {
       router.replace("/login");
     }
   }, [isAuthChecked, isLoggedIn, router]);
+
+  useEffect(() => {
+    if (fallbackRoute) {
+      router.replace(fallbackRoute);
+    }
+  }, [fallbackRoute, router]);
 
   // 🔥 Set current place
   useEffect(() => {
@@ -39,7 +55,7 @@ export default function DashboardLayout({ children }) {
   }, [places, dispatch]);
 
   // 🔥 Loading screen
-  if (!isAuthChecked) {
+  if (!isAuthChecked || !isLoggedIn || fallbackRoute) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -116,7 +132,20 @@ export default function DashboardLayout({ children }) {
 
         {/* PAGE CONTENT */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {children}
+          {canAccessCurrentRoute ? (
+            children
+          ) : (
+            <div className="flex min-h-full items-center justify-center p-6">
+              <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                <h1 className="text-xl font-bold text-slate-900">
+                  Access denied
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  You do not have permission to view this page.
+                </p>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

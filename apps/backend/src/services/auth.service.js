@@ -10,6 +10,15 @@ class AuthService {
       where: {
         OR: [{ email: identifier }, { phone: identifier }],
       },
+      include: {
+        role: {
+          select: {
+            id: true,
+            roleName: true,
+            roleCode: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -24,6 +33,9 @@ class AuthService {
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
+    const { permissions } = await PermissionService.getUserPermissions(
+      user.id
+    );
 
     return {
       accessToken,
@@ -34,6 +46,7 @@ class AuthService {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        permissions,
       },
     };
   }
