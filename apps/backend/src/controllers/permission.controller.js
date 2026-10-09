@@ -1,3 +1,4 @@
+
 import PermissionService from "../services/permission.service.js";
 
 class PermissionController {
@@ -34,7 +35,27 @@ class PermissionController {
   };
 
   // =========================================================
-  // ASSIGN PERMISSION TO USER
+  // GET PERMISSIONS ASSIGNABLE TO TARGET USER
+  // =========================================================
+
+  static getAssignablePermissions = async (req, res) => {
+    const { userId } = req.params;
+
+    const permissions =
+      await PermissionService.getAssignablePermissions(
+        req.user.id,
+        userId
+      );
+
+    return res.status(200).json({
+      success: true,
+      message: "Assignable permissions fetched successfully",
+      data: permissions,
+    });
+  };
+
+  // =========================================================
+  // ASSIGN SINGLE PERMISSION
   // =========================================================
 
   static assignPermissionToUser = async (req, res) => {
@@ -44,7 +65,8 @@ class PermissionController {
     const assignedPermission =
       await PermissionService.assignPermissionToUser(
         userId,
-        permissionId
+        permissionId,
+        req.user.id
       );
 
     return res.status(201).json({
@@ -55,7 +77,7 @@ class PermissionController {
   };
 
   // =========================================================
-  // REMOVE PERMISSION FROM USER
+  // REMOVE SINGLE PERMISSION
   // =========================================================
 
   static removePermissionFromUser = async (req, res) => {
@@ -64,12 +86,34 @@ class PermissionController {
     const result =
       await PermissionService.removePermissionFromUser(
         userId,
-        permissionId
+        permissionId,
+        req.user.id
       );
 
     return res.status(200).json({
       success: true,
       message: result.message,
+    });
+  };
+
+  // =========================================================
+  // BULK ASSIGN + REMOVE
+  // =========================================================
+
+  static bulkUpdateUserPermissions = async (req, res) => {
+    const { userId } = req.params;
+
+    const result =
+      await PermissionService.bulkUpdateUserPermissions(
+        req.user.id,
+        userId,
+        req.body
+      );
+
+    return res.status(200).json({
+      success: true,
+      message: "Permissions updated successfully",
+      data: result,
     });
   };
 }
