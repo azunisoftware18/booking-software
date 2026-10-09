@@ -2,21 +2,28 @@ import { Router } from "express";
 
 import ValidateRequest from "../middlewares/validateRequest.middleware.js";
 import AuthMiddleware from "../middlewares/auth.middleware.js";
+import PermissionMiddleware from "../middlewares/permission.middleware.js";
+
 import asyncHandler from "../utils/AsyncHandler.js";
+
 import UserController from "../controllers/user.controller.js";
 import UserValidation from "../validations/user.validation.js";
+
+import { PermissionsRegistry } from "../lib/PermissionsRegistry.js";
 
 const router = Router();
 
 // =========================================================
-// SUPER_ADMIN ONLY
+// USER PERMISSIONS
 // =========================================================
 
 // CREATE USER
 router.post(
   "/",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.USER.CREATE
+  ),
   ValidateRequest.validate(UserValidation.create),
   asyncHandler(UserController.create)
 );
@@ -25,7 +32,9 @@ router.post(
 router.put(
   "/:id",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.USER.UPDATE
+  ),
   ValidateRequest.validate(UserValidation.update),
   asyncHandler(UserController.update)
 );
@@ -34,7 +43,9 @@ router.put(
 router.delete(
   "/:id",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.USER.DELETE
+  ),
   asyncHandler(UserController.delete)
 );
 
@@ -46,7 +57,9 @@ router.delete(
 router.get(
   "/",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.USER.READ
+  ),
   asyncHandler(UserController.getAll)
 );
 
@@ -54,7 +67,9 @@ router.get(
 router.get(
   "/:id",
   AuthMiddleware.isAuthenticated,
-  AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.USER.READ
+  ),
   asyncHandler(UserController.getById)
 );
 

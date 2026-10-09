@@ -20,16 +20,28 @@ model User {
   roleId  String  @map("role_id")
   placeId String? @map("place_id")
 
+  // Only parent ID is stored in the database
+  parentId String? @map("parent_id")
+  level    Int     @default(1)
+
   createdAt DateTime @default(now()) @map("created_at")
 
-  role  Role  @relation(fields: [roleId], references: [id])
+  role  Role   @relation(fields: [roleId], references: [id])
   place Place? @relation(fields: [placeId], references: [id])
+
+  // Prisma relations; no child ID column is created
+  parent   User?  @relation("UserHierarchy", fields: [parentId], references: [id])
+  children User[] @relation("UserHierarchy")
 
   tickets  Ticket[]
   bookings Booking[]
 
+  assignedPermissions AssignedPermission[]
+
   @@index([roleId])
   @@index([placeId])
+  @@index([parentId])
+  @@index([level])
   @@map("users")
 }
 
@@ -253,7 +265,52 @@ model Role {
 
   users User[]
 
+  assignedPermissions AssignedPermission[]
+
   @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  resource    String
+  action      String
+  serviceCode String? @map("service_code")
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assignedPermissions AssignedPermission[]
+
+  @@unique([resource, action])
+  @@index([resource])
+  @@index([action])
+  @@index([serviceCode])
+  @@map("permissions")
+}
+
+model AssignedPermission {
+  id String @id @default(uuid())
+
+  permissionId String @map("permission_id")
+  roleId       String? @map("role_id")
+  userId       String? @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role?      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([permissionId, roleId])
+  @@unique([permissionId, userId])
+
+  @@index([permissionId])
+  @@index([roleId])
+  @@index([userId])
+
+  @@map("assigned_permissions")
 }
 
 enum GateType {

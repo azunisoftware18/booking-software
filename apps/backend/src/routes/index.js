@@ -10,6 +10,7 @@ import scanLogRoutes from "./scanLog.routes.js";
 import settingRoute from "./setting.routes.js";
 import roleRoute from "./role.routes.js";
 import userRoute from "./user.routes.js";
+import permissionRoute from "./permission.routes.js";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.use("/scan-log", scanLogRoutes);
 router.use("/setting", settingRoute);
 router.use("/role", roleRoute);
 router.use("/user", userRoute);
+router.use("/permission", permissionRoute);
 
 
 

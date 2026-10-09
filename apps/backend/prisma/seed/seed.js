@@ -1,6 +1,7 @@
 import "dotenv/config";
-import prisma from "../src/db/db.js";
+import prisma from "../../src/db/db.js";
 import bcrypt from "bcryptjs";
+import { seedPermissions } from "./permission.seed.js";
 
 async function main() {
   console.log("🌱 Seeding started...");
@@ -9,7 +10,13 @@ async function main() {
 
   try {
     // =====================================
-    // 1. CREATE / GET SUPER ADMIN ROLE
+    // 1. SEED PERMISSIONS
+    // =====================================
+
+    await seedPermissions();
+
+    // =====================================
+    // 2. CREATE / GET SUPER ADMIN ROLE
     // =====================================
 
     let superAdminRole = await prisma.role.findUnique({
@@ -33,7 +40,46 @@ async function main() {
     }
 
     // =====================================
-    // 2. CHECK EXISTING ADMIN
+    // 3. GET ALL PERMISSIONS
+    // =====================================
+
+    const permissions = await prisma.permission.findMany({
+      where: {
+        isActive: true,
+      },
+    });
+
+    console.log(`🔐 Found ${permissions.length} active permissions`);
+
+    // =====================================
+    // 4. ASSIGN ALL PERMISSIONS TO
+    //    SUPER ADMIN ROLE
+    // =====================================
+
+    for (const permission of permissions) {
+      await prisma.assignedPermission.upsert({
+        where: {
+          permissionId_roleId: {
+            permissionId: permission.id,
+            roleId: superAdminRole.id,
+          },
+        },
+
+        update: {},
+
+        create: {
+          permissionId: permission.id,
+          roleId: superAdminRole.id,
+        },
+      });
+    }
+
+    console.log(
+      `✅ Assigned ${permissions.length} permissions to Super Admin`
+    );
+
+    // =====================================
+    // 5. CHECK EXISTING ADMIN
     // =====================================
 
     const existingAdmin = await prisma.user.findUnique({
@@ -43,7 +89,7 @@ async function main() {
     });
 
     // =====================================
-    // 3. UPDATE EXISTING ADMIN
+    // 6. UPDATE EXISTING ADMIN
     // =====================================
 
     if (existingAdmin) {
@@ -51,6 +97,7 @@ async function main() {
         where: {
           id: existingAdmin.id,
         },
+
         data: {
           role: {
             connect: {
@@ -63,6 +110,7 @@ async function main() {
             disconnect: true,
           },
         },
+
         include: {
           role: true,
           place: true,
@@ -84,13 +132,13 @@ async function main() {
     }
 
     // =====================================
-    // 4. HASH PASSWORD
+    // 7. HASH PASSWORD
     // =====================================
 
     const hashedPassword = await bcrypt.hash("Admin@123", 10);
 
     // =====================================
-    // 5. CREATE SUPER ADMIN
+    // 8. CREATE SUPER ADMIN
     // =====================================
 
     const admin = await prisma.user.create({
@@ -106,9 +154,8 @@ async function main() {
           },
         },
 
-        // IMPORTANT:
-        // No place relation is provided.
-        // place_id will remain NULL.
+        // No place relation
+        // place_id will remain NULL
       },
 
       include: {
@@ -118,7 +165,7 @@ async function main() {
     });
 
     // =====================================
-    // 6. SUCCESS
+    // 9. SUCCESS
     // =====================================
 
     console.log("=================================");
@@ -135,6 +182,8 @@ async function main() {
   } catch (error) {
     console.error("❌ Error during seeding:");
     console.error(error);
+
+    throw error;
   }
 }
 
