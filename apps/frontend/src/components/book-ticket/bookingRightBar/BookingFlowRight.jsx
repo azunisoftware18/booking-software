@@ -245,7 +245,7 @@ export default function BookingFlowRight() {
               className="
                 flex
                 flex-1
-                min-h-[300px]
+                min-h-75
                 items-center
                 justify-center
                 font-serif
@@ -371,9 +371,9 @@ const StartStep = ({ onNext }) => (
       max-w-md
       mx-auto
       flex-1
-      min-h-[500px]
-      sm:min-h-[550px]
-      lg:min-h-[600px]
+      min-h-125
+      sm:min-h-137.5
+      lg:min-h-150
       select-none
       py-8
     "
@@ -420,7 +420,7 @@ const StartStep = ({ onNext }) => (
       className="
         w-full
         max-w-xs
-        bg-gradient-to-r
+        bg-linear-to-r
         from-jaipur-dark
         to-[#994113]
         text-white
