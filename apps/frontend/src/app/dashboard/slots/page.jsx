@@ -20,6 +20,7 @@ import {
 import Button from "@/components/ui/Button";
 import { useSelector } from "react-redux";
 import StatCard from "@/components/common/StatCard";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function SlotPage() {
   const [activeTab, setActiveTab] = useState("template");
@@ -99,6 +100,28 @@ export default function SlotPage() {
     setIsOverrideOpen(false);
   };
 
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canCreateSlot = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "CREATE"
+  );
+
+  const canUpdateSlot = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "UPDATE"
+  );
+
+
   return (
     <div className=" bg-slate-50 min-h-screen">
       {/* HEADER */}
@@ -162,18 +185,34 @@ export default function SlotPage() {
             />
           </div>
 
-          <Button
-            text={activeTab === "template" ? "Create Template" : "Add Override"}
-            icon={Plus}
-            iconPosition="left"
-            variant="primary"
-            onClick={() =>
-              activeTab === "template"
-                ? setIsOpen(true)
-                : setIsOverrideOpen(true)
-            }
-            className="shadow-sm"
-          />
+
+          {activeTab === "template" ? (
+            canCreateSlot && (
+              <Button
+                text="Create Template"
+                icon={Plus}
+                iconPosition="left"
+                variant="primary"
+                onClick={() => {
+                  setEditData(null);
+                  setIsOpen(true);
+                }}
+                className="shadow-sm"
+              />
+            )
+          ) : (
+            canUpdateSlot && (
+              <Button
+                text="Add Override"
+                icon={Plus}
+                iconPosition="left"
+                variant="primary"
+                onClick={() => setIsOverrideOpen(true)}
+                className="shadow-sm"
+              />
+            )
+          )}
+
         </div>
 
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -219,11 +258,10 @@ function TabButton({ active, onClick, icon, label }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
-        active
+      className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${active
           ? "bg-white text-gray-600 shadow-sm"
           : "text-slate-500 hover:text-slate-700 hover:bg-white/40"
-      }`}
+        }`}
     >
       {icon}
       {label}

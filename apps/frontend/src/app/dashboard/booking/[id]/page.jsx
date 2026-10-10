@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import Button from "@/components/ui/Button";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function BookingDetailsPage() {
   const { id } = useParams();
@@ -26,6 +27,23 @@ export default function BookingDetailsPage() {
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canReadTicket = permissions.some(
+    (permission) =>
+      permission.resource === "TICKET" &&
+      permission.action === "READ" &&
+      permission.isActive
+  );
+
 
   useEffect(() => {
     if (id) {
@@ -119,18 +137,22 @@ export default function BookingDetailsPage() {
               <Printer className="w-4 h-4" />
               Print
             </button> */}
-            <Button
-              text="Download Ticket"
-              icon={Download}
-              iconPosition="left"
-              onClick={() => {
-                window.open(
-                  `${process.env.NEXT_PUBLIC_API_URL}/ticket/download/${booking.id}`,
-                  "_blank",
-                );
-              }}
-              className="border border-slate-200 rounded-lg text-slate-600"
-            />
+
+            {canReadTicket && (
+              <Button
+                text="Download Ticket"
+                icon={Download}
+                iconPosition="left"
+                onClick={() => {
+                  window.open(
+                    `${process.env.NEXT_PUBLIC_API_URL}/ticket/download/${booking.id}`,
+                    "_blank"
+                  );
+                }}
+                className="border border-slate-200 rounded-lg text-slate-600"
+              />
+            )}
+
 
             {/* <button
               onClick={fetchBookingDetails}
@@ -285,15 +307,14 @@ export default function BookingDetailsPage() {
                     </label>
                     <div className="mt-1">
                       <span
-                        className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                          booking.status === "PAID"
+                        className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${booking.status === "PAID"
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                             : booking.status === "PENDING"
                               ? "bg-yellow-50 text-yellow-700 border border-yellow-100"
                               : booking.status === "CANCELLED"
                                 ? "bg-red-50 text-red-700 border border-red-100"
                                 : "bg-slate-50 text-slate-700 border border-slate-100"
-                        }`}
+                          }`}
                       >
                         {booking.status || "PENDING"}
                       </span>
@@ -332,13 +353,12 @@ export default function BookingDetailsPage() {
                         {/* Status */}
                         <div>
                           <span
-                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                              ticket.status === "SCANNED"
+                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${ticket.status === "SCANNED"
                                 ? "bg-blue-50 text-blue-700 border border-blue-100"
                                 : ticket.status === "PENDING"
                                   ? "bg-yellow-50 text-yellow-700 border border-yellow-100"
                                   : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                            }`}
+                              }`}
                           >
                             {ticket.status}
                           </span>

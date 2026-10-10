@@ -12,6 +12,7 @@ import {
 import ActionMenu from "@/components/common/ActionMenu";
 import { Pencil, Trash } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function AddonTable({
   data = [],
@@ -44,6 +45,30 @@ export default function AddonTable({
 
   const columns = ["Addon Name", "Price", "Status", "Created At", "Actions"];
 
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canUpdateAddon = permissions.some(
+    (permission) =>
+      permission.resource === "ADDON" &&
+      permission.action === "UPDATE" &&
+      permission.isActive
+  );
+
+  const canDeleteAddon = permissions.some(
+    (permission) =>
+      permission.resource === "ADDON" &&
+      permission.action === "DELETE" &&
+      permission.isActive
+  );
+
+
   return (
     <div className="p-6">
       <TableShell
@@ -71,26 +96,39 @@ export default function AddonTable({
             <TableEmpty colSpan={5} message="No addons found" />
           ) : (
             currentData.map((addon) => (
-              <TableRow 
+              <TableRow
                 key={addon.id}
                 // ✅ renderActions ka use karein jo aapne TableRow mein banaya hai
-                renderActions={() => (
-                  <ActionMenu
-                    items={[
-                      {
-                        label: "Edit",
-                        icon: Pencil,
-                        onClick: () => onEdit?.(addon),
-                      },
-                      {
-                        label: "Delete",
-                        icon: Trash,
-                        danger: true,
-                        onClick: () => onDelete?.(addon),
-                      },
-                    ]}
-                  />
-                )}
+
+                renderActions={() =>
+                  canUpdateAddon || canDeleteAddon ? (
+                    <ActionMenu
+                      items={[
+                        ...(canUpdateAddon
+                          ? [
+                            {
+                              label: "Edit",
+                              icon: Pencil,
+                              onClick: () => onEdit?.(addon),
+                            },
+                          ]
+                          : []),
+
+                        ...(canDeleteAddon
+                          ? [
+                            {
+                              label: "Delete",
+                              icon: Trash,
+                              danger: true,
+                              onClick: () => onDelete?.(addon),
+                            },
+                          ]
+                          : []),
+                      ]}
+                    />
+                  ) : null
+                }
+
               >
                 {/* Addon Name */}
                 <td className="px-6 py-4 font-medium text-slate-900">
@@ -105,11 +143,10 @@ export default function AddonTable({
                 {/* Status */}
                 <td className="px-6 py-4">
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      addon.isActive
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${addon.isActive
                         ? "bg-emerald-100 text-emerald-700"
                         : "bg-rose-100 text-rose-700"
-                    }`}
+                      }`}
                   >
                     {addon.isActive ? "Active" : "Inactive"}
                   </span>

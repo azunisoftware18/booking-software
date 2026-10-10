@@ -14,6 +14,7 @@ import ScanLogTable from "@/components/table/ScanLogTable";
 import { useScanLogs } from "@/lib/queries/useScanLogs";
 import StatCard from "@/components/common/StatCard";
 import Button from "@/components/ui/Button";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function Page() {
   const [openScanner, setOpenScanner] = useState(false);
@@ -21,7 +22,7 @@ export default function Page() {
   const [filteredData, setFilteredData] = useState([]);
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const itemsPerPage = 10;
-  
+
   const { data: scanLogs, isLoading } = useScanLogs();
 
   // Calculate total pages based on filtered or all data
@@ -42,9 +43,9 @@ export default function Page() {
   // ✅ Stats always calculate from complete data
   const stats = useMemo(() => {
     if (!scanLogs) return { total: 0, entry: 0, today: 0 };
-    
+
     const today = new Date().toDateString();
-    
+
     return {
       total: scanLogs.length,
       entry: scanLogs.filter((log) => log.type === "ENTRY").length,
@@ -62,15 +63,15 @@ export default function Page() {
       'Type': log.type || 'N/A',
       'Scanned Date': log.scannedAt?.split("T")[0] || 'N/A',
       'Scanned Time': log.scannedAt?.split("T")[1]?.slice(0, 8) || 'N/A',
-      'Full Timestamp': log.scannedAt 
+      'Full Timestamp': log.scannedAt
         ? new Date(log.scannedAt).toLocaleString("en-IN", {
-            day: '2-digit', 
-            month: 'short', 
-            year: 'numeric',
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit'
-          }) 
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
         : 'N/A',
     }));
   };
@@ -90,7 +91,7 @@ export default function Page() {
   // ✅ Excel download utility
   const downloadExcel = (data, filename) => {
     const ws = XLSX.utils.json_to_sheet(data);
-    
+
     // Set column widths
     const colWidths = [
       { wch: 8 },   // Sr. No
@@ -104,11 +105,11 @@ export default function Page() {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Scan Logs");
-    
+
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
-    
+
     setShowDownloadOptions(false);
   };
 
@@ -116,6 +117,23 @@ export default function Page() {
   const handleFilteredDataChange = (filteredLogs) => {
     setFilteredData(filteredLogs);
   };
+
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canScanTicket = permissions.some(
+    (permission) =>
+      permission.resource === "TICKET" &&
+      permission.action === "SCAN" &&
+      permission.isActive
+  );
+
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -143,26 +161,26 @@ export default function Page() {
               icon={Download}
               text="Download Excel"
               onClick={() => setShowDownloadOptions(!showDownloadOptions)}
-              
+
               disabled={!scanLogs || scanLogs.length === 0}
-           />
-              
-            
+            />
+
+
             {/* Download Options Dropdown */}
             {showDownloadOptions && (
               <>
                 {/* Backdrop to close dropdown */}
-                <div 
+                <div
                   className="fixed inset-0 z-10"
                   onClick={() => setShowDownloadOptions(false)}
                 />
-                
+
                 <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-20 overflow-hidden">
                   <div className="p-3 border-b border-slate-100">
                     <h3 className="text-sm font-semibold text-slate-900">Download Options</h3>
                     <p className="text-xs text-slate-500 mt-1">Select what data you want to export</p>
                   </div>
-                  
+
                   <div className="p-2">
                     {/* Option 1: Current Page */}
                     <button
@@ -183,7 +201,7 @@ export default function Page() {
                         </div>
                       </div>
                     </button>
-                    
+
                     {/* Option 2: All Data */}
                     <button
                       onClick={downloadAllData}
@@ -204,7 +222,7 @@ export default function Page() {
                       </div>
                     </button>
                   </div>
-                  
+
                   <div className="p-2 border-t border-slate-100">
                     <button
                       onClick={() => setShowDownloadOptions(false)}
@@ -219,14 +237,18 @@ export default function Page() {
           </div>
 
           {/* Scan Ticket Button */}
-          <Button
-          icon={ScanLine}
-          iconPosition="left"
-          text="Scan Ticket"
-            onClick={() => setOpenScanner(true)}
-            className="px-6 rounded-2xl font-bold text-white flex items-center justify-center gap-3 shadow-lg hover:scale-[1.02] transition-all"
-          />
-           
+
+          {canScanTicket && (
+            <Button
+              icon={ScanLine}
+              iconPosition="left"
+              text="Scan Ticket"
+              onClick={() => setOpenScanner(true)}
+              
+            />
+          )}
+
+
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import RoleTable from "@/components/table/RoleTable";
 import RoleModal from "@/components/modals/RoleModal";
 import { useRoles } from "@/lib/queries/useRole";
 import { useHandleRole } from "@/lib/mutations/useRole";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function RoleManagementPage() {
   // Redux
@@ -131,6 +132,21 @@ export default function RoleManagementPage() {
     }
   };
 
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canCreateRole = permissions.some(
+    (permission) =>
+      permission.resource === "ROLE" &&
+      permission.action === "CREATE" &&
+      permission.isActive
+  );
+
   return (
     <div className="bg-slate-50 min-h-screen p-7">
       {/* Header */}
@@ -143,16 +159,18 @@ export default function RoleManagementPage() {
             Manage system roles and their access locations.
           </p>
         </div>
-        <Button
-          text="Add New Role"
-          icon={Plus}
-          iconPosition="left"
-          onClick={() => {
-            setEditData(null);
-            setIsModalOpen(true);
-          }}
-          className="px-6 py-3.5 rounded-2xl"
-        />
+        {canCreateRole && (
+          <Button
+            text="Add New Role"
+            icon={Plus}
+            iconPosition="left"
+            onClick={() => {
+              setEditData(null);
+              setIsModalOpen(true);
+            }}
+            className="px-6 py-3.5 rounded-2xl"
+          />
+        )}
       </div>
 
       {/* STAT CARDS */}

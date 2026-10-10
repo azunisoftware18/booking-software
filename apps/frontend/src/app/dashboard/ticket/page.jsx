@@ -12,6 +12,7 @@ import { useTicketTypes } from "@/lib/queries/useTicketType";
 import { useSelector } from "react-redux";
 import StatCard from "@/components/common/StatCard";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function TicketTypePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,76 +66,91 @@ export default function TicketTypePage() {
       });
     } catch (err) {
       setDialogConfig({
-  open: true,
-  title: "Delete Failed",
-  description: err?.message || "Something went wrong.",
-  variant: "danger",
-});
+        open: true,
+        title: "Delete Failed",
+        description: err?.message || "Something went wrong.",
+        variant: "danger",
+      });
     }
   };
   // 🔥 SUBMIT
   const handleFormSubmit = async (formData) => {
 
-  try {
+    try {
 
-    const payload = {
-      action: editData ? "update" : "create",
+      const payload = {
+        action: editData ? "update" : "create",
 
-      data: {
-        id: editData?.id,
+        data: {
+          id: editData?.id,
 
-        name: formData.name,
+          name: formData.name,
 
-        price: Number(formData.price),
+          price: Number(formData.price),
 
-        maxPerBooking: Number(formData.maxPerBooking),
+          maxPerBooking: Number(formData.maxPerBooking),
 
-        placeId: currentPlace?.id,
-      },
-    };
+          placeId: currentPlace?.id,
+        },
+      };
 
-    await handleTicketType(payload);
+      await handleTicketType(payload);
 
-    setDialogConfig({
-      open: true,
+      setDialogConfig({
+        open: true,
 
-      title: editData
-        ? "Updated Successfully"
-        : "Created Successfully",
+        title: editData
+          ? "Updated Successfully"
+          : "Created Successfully",
 
-      description: editData
-        ? "Ticket type updated successfully."
-        : "New ticket type created successfully.",
+        description: editData
+          ? "Ticket type updated successfully."
+          : "New ticket type created successfully.",
 
-      variant: "success",
-    });
+        variant: "success",
+      });
 
-    setIsModalOpen(false);
-    setEditData(null);
+      setIsModalOpen(false);
+      setEditData(null);
 
-  } catch (err) {
+    } catch (err) {
 
-    console.error(err);
+      console.error(err);
 
-    setDialogConfig({
-      open: true,
+      setDialogConfig({
+        open: true,
 
-      title: "Operation Failed",
+        title: "Operation Failed",
 
-      description:
-        err?.response?.data?.message ||
-        err?.message ||
-        "Something went wrong.",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Something went wrong.",
 
-      variant: "danger",
-    });
-  }
-};
+        variant: "danger",
+      });
+    }
+  };
   // 🔥 EDIT
   const handleEdit = (ticket) => {
     setEditData(ticket);
     setIsModalOpen(true);
   };
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canCreateTicketType = permissions.some(
+    (permission) =>
+      permission.resource === "TICKET_TYPE" &&
+      permission.action === "CREATE" &&
+      permission.isActive
+  );
 
   return (
     <div className=" bg-slate-50 ">
@@ -150,15 +166,19 @@ export default function TicketTypePage() {
           </p>
         </div>
 
-        <Button
-        icon={Plus}
-        iconPosition="left"
-          onClick={() => {
-            setEditData(null);
-            setIsModalOpen(true);
-          }}
-          text="Create Ticket Type"
-        />
+
+        {canCreateTicketType && (
+          <Button
+            icon={Plus}
+            iconPosition="left"
+            onClick={() => {
+              setEditData(null);
+              setIsModalOpen(true);
+            }}
+            text="Create Ticket Type"
+          />
+        )}
+
       </div>
       {/* ===================== */}
       {/* STAT CARDS */}
@@ -227,25 +247,25 @@ export default function TicketTypePage() {
         onConfirm={handleDelete}
       />
       <ConfirmationDialog
-  open={dialogConfig.open}
-  title={dialogConfig.title}
-  description={dialogConfig.description}
-  confirmText="Okay"
-  variant={dialogConfig.variant}
-  onCancel={() =>
-    setDialogConfig((prev) => ({
-      ...prev,
-      open: false,
-    }))
-  }
-  onConfirm={() =>
-    setDialogConfig((prev) => ({
-      ...prev,
-      open: false,
-    }))
-  }
-  showCancelButton={false}
-/>  
+        open={dialogConfig.open}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        confirmText="Okay"
+        variant={dialogConfig.variant}
+        onCancel={() =>
+          setDialogConfig((prev) => ({
+            ...prev,
+            open: false,
+          }))
+        }
+        onConfirm={() =>
+          setDialogConfig((prev) => ({
+            ...prev,
+            open: false,
+          }))
+        }
+        showCancelButton={false}
+      />
     </div>
   );
 }

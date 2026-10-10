@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import CounterBtn from "../../../ui/CounterBtn";
 import { setAddons, setTotalAmount } from "@/store/slices/bookingSlice";
 import { usePlace } from "@/hooks/useCurrentPlace";
-import { useAddons } from "@/hooks/useAddon";
 import FullPageLoader from "@/components/ui/FullPageLoader";
+import { useAddons } from "@/lib/queries/useAddon";
 
 export default function GuideSelector({ addons, onNext, onBack }) {
   const dispatch = useDispatch();
@@ -78,7 +78,7 @@ export default function GuideSelector({ addons, onNext, onBack }) {
             <h2 className="text-2xl sm:text-3xl font-serif font-normal text-royal-blue leading-tight">
               Select your Add-ons
             </h2>
-            <div className="h-[1px] w-12 bg-gold/40 mt-2" />
+            <div className="h-px w-12 bg-gold/40 mt-2" />
           </div>
           <button
             onClick={handleSkip}
@@ -99,7 +99,7 @@ export default function GuideSelector({ addons, onNext, onBack }) {
                   className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl transition-all duration-300 border text-left select-none w-full gap-2
                                     ${
                                       isSelected
-                                        ? "border-gold bg-gradient-to-br from-royal-blue to-[#112952] text-white shadow-lg"
+                                        ? "border-gold bg-linear-to-br from-royal-blue to-[#112952] text-white shadow-lg"
                                         : "border-gold/15 bg-white hover:border-gold/40 text-royal-blue"
                                     }`}
                 >
@@ -156,7 +156,7 @@ export default function GuideSelector({ addons, onNext, onBack }) {
                       className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-[2px] transition-all duration-300 border ${
                         isSelected
                           ? "bg-white text-royal-blue border-white"
-                          : "bg-gradient-to-r from-jaipur-dark to-[#994113] text-white border-gold/30"
+                          : "bg-linear-to-r from-jaipur-dark to-[#994113] text-white border-gold/30"
                       }`}
                     >
                       {isSelected ? "Applied ✔️" : "Apply"}
@@ -167,7 +167,7 @@ export default function GuideSelector({ addons, onNext, onBack }) {
             })}
         </div>
 
-        <div className="p-4 rounded-xl bg-gradient-to-r from-royal-blue to-[#0b2149] text-white shadow-xl relative overflow-hidden border border-gold/20">
+        <div className="p-4 rounded-xl bg-linear-to-r from-royal-blue to-royal-blue text-white shadow-xl relative overflow-hidden border border-gold/20">
           <div className="absolute inset-0 opacity-[0.06] bg-mandala pointer-events-none scale-120"></div>
           <div className="relative z-10 space-y-2.5">
             <div className="flex justify-between text-[10px] tracking-[2px] uppercase font-bold font-sans text-gold/80">
@@ -217,7 +217,7 @@ export default function GuideSelector({ addons, onNext, onBack }) {
           </button>
           <button
             onClick={handleContinue}
-            className="flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] text-white border border-gold/30 font-serif text-xs font-bold tracking-[3px] transition-all duration-300 uppercase shadow-md shadow-jaipur-dark/10 cursor-pointer"
+            className="flex-2 py-3.5 rounded-xl bg-linear-to-r from-jaipur-dark to-[#994113] text-white border border-gold/30 font-serif text-xs font-bold tracking-[3px] transition-all duration-300 uppercase shadow-md shadow-jaipur-dark/10 cursor-pointer"
           >
             PROCEED TO DETAILS ⟶
           </button>

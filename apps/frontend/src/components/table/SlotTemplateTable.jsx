@@ -12,6 +12,7 @@ import {
 import ActionMenu from "@/components/common/ActionMenu";
 import { Pencil, Trash } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 
 export default function SlotTemplateTable({
@@ -33,19 +34,41 @@ export default function SlotTemplateTable({
   const columns = ["Start Time", "End Time", "Capacity", "Action"];
   const formatTime12Hour = (time) => {
 
-  const [hour, minute] = time.split(":");
+    const [hour, minute] = time.split(":");
 
-  const date = new Date();
+    const date = new Date();
 
-  date.setHours(hour);
-  date.setMinutes(minute);
+    date.setHours(hour);
+    date.setMinutes(minute);
 
-  return date.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
+    return date.toLocaleTimeString("en-IN", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canUpdateSlot = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "UPDATE"
+  );
+
+  const canDeleteSlot = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "DELETE"
+  );
+
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
@@ -70,21 +93,32 @@ export default function SlotTemplateTable({
               <TableRow
                 key={slot.id}
                 renderActions={() => (
+
                   <ActionMenu
                     items={[
-                      {
-                        label: "Edit",
-                        icon: Pencil,
-                        onClick: () => onEdit?.(slot),
-                      },
-                      {
-                        label: "Delete",
-                        icon: Trash,
-                        danger: true,
-                        onClick: () => onDelete?.(slot),
-                      },
+                      ...(canUpdateSlot
+                        ? [
+                          {
+                            label: "Edit",
+                            icon: Pencil,
+                            onClick: () => onEdit?.(slot),
+                          },
+                        ]
+                        : []),
+
+                      ...(canDeleteSlot
+                        ? [
+                          {
+                            label: "Delete",
+                            icon: Trash,
+                            danger: true,
+                            onClick: () => onDelete?.(slot),
+                          },
+                        ]
+                        : []),
                     ]}
                   />
+
                 )}
               >
                 {/* Start Time */}

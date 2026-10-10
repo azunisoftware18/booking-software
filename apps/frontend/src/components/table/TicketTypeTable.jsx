@@ -12,6 +12,7 @@ import {
 import ActionMenu from "../common/ActionMenu";
 import { Pencil, Trash, Eye } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function TicketTypeTable({
   data = [],
@@ -55,6 +56,30 @@ export default function TicketTypeTable({
     "Action",
   ];
 
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canUpdateTicketType = permissions.some(
+    (permission) =>
+      permission.resource === "TICKET_TYPE" &&
+      permission.action === "UPDATE" &&
+      permission.isActive
+  );
+
+  const canDeleteTicketType = permissions.some(
+    (permission) =>
+      permission.resource === "TICKET_TYPE" &&
+      permission.action === "DELETE" &&
+      permission.isActive
+  );
+
+
   return (
     <TableShell
       title="Ticket Types"
@@ -84,28 +109,36 @@ export default function TicketTypeTable({
           currentData.map((ticket) => (
             <TableRow
               key={ticket.id}
-              renderActions={() => (
-                <ActionMenu
-                  items={[
-                    {
-                      label: "View",
-                      icon: Eye,
-                      onClick: () => onView?.(ticket),
-                    },
-                    {
-                      label: "Edit",
-                      icon: Pencil,
-                      onClick: () => onEdit?.(ticket),
-                    },
-                    {
-                      label: "Delete",
-                      icon: Trash,
-                      danger: true,
-                      onClick: () => onDelete?.(ticket),
-                    },
-                  ]}
-                />
-              )}
+
+              renderActions={() =>
+                (canUpdateTicketType || canDeleteTicketType) ? (
+                  <ActionMenu
+                    items={[
+                      ...(canUpdateTicketType
+                        ? [
+                          {
+                            label: "Edit",
+                            icon: Pencil,
+                            onClick: () => onEdit?.(ticket),
+                          },
+                        ]
+                        : []),
+
+                      ...(canDeleteTicketType
+                        ? [
+                          {
+                            label: "Delete",
+                            icon: Trash,
+                            danger: true,
+                            onClick: () => onDelete?.(ticket),
+                          },
+                        ]
+                        : []),
+                    ]}
+                  />
+                ) : null
+              }
+
             >
               <td className="px-6 py-4 font-semibold text-slate-900">
                 {ticket.name}

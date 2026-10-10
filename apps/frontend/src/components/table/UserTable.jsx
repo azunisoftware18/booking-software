@@ -4,9 +4,30 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash, User, Mail, ShieldCheck, User2 } from "lucide-react";
 import ActionMenu from "../common/ActionMenu";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function UserTable({ data, loading, onEdit, onDelete, onAssignPermission }) {
   const [search, setSearch] = useState("");
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const hasPermission = (resource, action) =>
+    permissions.some(
+      (permission) =>
+        permission.resource === resource &&
+        permission.action === action &&
+        permission.isActive
+    );
+
+  const canUpdateUser = hasPermission("USER", "UPDATE");
+  const canDeleteUser = hasPermission("USER", "DELETE");
+  const canAssignPermission = hasPermission("USER", "ASSIGN_PERMISSIONS");
 
   const filteredUsers = useMemo(() => {
     const value = search.toLowerCase().trim();
@@ -102,18 +123,16 @@ export default function UserTable({ data, loading, onEdit, onDelete, onAssignPer
                 {/* Status */}
                 <td className="px-6 py-4 text-center">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                      user.status === "Active"
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${user.status === "Active"
                         ? "bg-green-100 text-green-700"
                         : "bg-slate-100 text-slate-600"
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        user.status === "Active"
+                      className={`w-1.5 h-1.5 rounded-full ${user.status === "Active"
                           ? "bg-green-500"
                           : "bg-slate-400"
-                      }`}
+                        }`}
                     />
                     {user.status || "Active"}
                   </span>
@@ -121,30 +140,42 @@ export default function UserTable({ data, loading, onEdit, onDelete, onAssignPer
 
                 {/* Actions */}
                 <td className="px-6 py-4 text-right">
-                  <ActionMenu
-                    items={[
-                      {
-                        label: "Edit User",
-                        icon: Pencil,
-                        onClick: () => onEdit(user),
-                      },
+                  {(canUpdateUser || canDeleteUser || canAssignPermission) && (
+                    <ActionMenu
+                      items={[
+                        ...(canUpdateUser
+                          ? [
+                            {
+                              label: "Edit User",
+                              icon: Pencil,
+                              onClick: () => onEdit(user),
+                            },
+                          ]
+                          : []),
 
-                      {
-                        label: "Assign permission",
-                        icon: User2,
-                        onClick: () => onAssignPermission?.(user),
-                      },
-                      
-                      {
-                        label: "Delete",
-                        icon: Trash,
-                        danger: true,
-                        onClick: () => onDelete(user),
-                      },
+                        ...(canAssignPermission
+                          ? [
+                            {
+                              label: "Assign permission",
+                              icon: User2,
+                              onClick: () => onAssignPermission?.(user),
+                            },
+                          ]
+                          : []),
 
-                      
-                    ]}
-                  />
+                        ...(canDeleteUser
+                          ? [
+                            {
+                              label: "Delete",
+                              icon: Trash,
+                              danger: true,
+                              onClick: () => onDelete(user),
+                            },
+                          ]
+                          : []),
+                      ]}
+                    />
+                  )}
                 </td>
               </tr>
             ))}

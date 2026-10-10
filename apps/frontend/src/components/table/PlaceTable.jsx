@@ -6,6 +6,7 @@ import { Pencil, Trash, MapPin, Calendar, Globe } from "lucide-react";
 import ActionMenu from "../common/ActionMenu";
 import { TableLoader, TableEmpty } from "@/components/table/core";
 import SearchField from "@/components/ui/SearchField"; // SearchField import karein
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function PlaceCards({
   data = [],
@@ -24,10 +25,26 @@ export default function PlaceCards({
     );
   }, [data, search]);
 
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canUpdatePlace = permissions.some(
+    (permission) =>
+      permission.resource === "PLACE" &&
+      permission.action === "UPDATE"
+  );
+
+
   return (
     // 🔥 FIX: TableShell ki jagah simple div wrapper use karein
     <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      
+
       {/* Header Section (Same as TableShell) */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-5 border-b border-slate-100 gap-4">
         <div>
@@ -82,19 +99,18 @@ export default function PlaceCards({
                       {
                         label: "View",
                         icon: MapPin,
-                        onClick: () => router.push(`/dashboard/place/${place.id}`),
+                        onClick: () =>
+                          router.push(`/dashboard/place/${place.id}`),
                       },
-                      {
-                        label: "Edit",
-                        icon: Pencil,
-                        onClick: () => onEdit?.(place),
-                      },
-                      // {
-                      //   label: "Delete",
-                      //   icon: Trash,
-                      //   danger: true,
-                      //   onClick: () => onDelete?.(place),
-                      // },
+                      ...(canUpdatePlace
+                        ? [
+                          {
+                            label: "Edit",
+                            icon: Pencil,
+                            onClick: () => onEdit?.(place),
+                          },
+                        ]
+                        : []),
                     ]}
                   />
                 </div>

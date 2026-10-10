@@ -10,6 +10,7 @@ import { useHandleAddon } from "@/lib/mutations/useAddon";
 import { useSelector } from "react-redux";
 import StatCard from "@/components/common/StatCard";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function AddonPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +26,7 @@ export default function AddonPage() {
 
   const currentPlace = useSelector((state) => state.place.currentPlace);
   const placeId = currentPlace?.id;
-  
+
   const { mutateAsync: handleAddon } = useHandleAddon();
   const { data: addons, isLoading } = useAddons(placeId);
 
@@ -98,6 +99,23 @@ export default function AddonPage() {
     }
   };
 
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canCreateAddon = permissions.some(
+    (permission) =>
+      permission.resource === "ADDON" &&
+      permission.action === "CREATE" &&
+      permission.isActive
+  );
+
+
   return (
     <div className="bg-slate-50 min-h-screen">
       {/* --- Header Section --- */}
@@ -111,16 +129,20 @@ export default function AddonPage() {
           </p>
         </div>
 
-        <Button
-          text="Create New Add-on"
-          onClick={() => {
-            setEditData(null);
-            setIsModalOpen(true);
-          }}
-          icon={Plus}
-          iconPosition="left"
-          className="px-6 py-3.5 rounded-2xl   "
-        />
+
+        {canCreateAddon && (
+          <Button
+            text="Create New Add-on"
+            onClick={() => {
+              setEditData(null);
+              setIsModalOpen(true);
+            }}
+            icon={Plus}
+            iconPosition="left"
+            className="px-6 py-3.5 rounded-2xl"
+          />
+        )}
+
       </div>
 
       {/* --- STAT CARDS --- */}
@@ -146,12 +168,12 @@ export default function AddonPage() {
 
       {/* --- Main Content Table --- */}
       <div className="w-full ">
-            <AddonTable
-              data={addons || []}
-              loading={isLoading}
-              onEdit={handleEdit}
-              onDelete={(addon) => setDeleteItem(addon)}
-            />
+        <AddonTable
+          data={addons || []}
+          loading={isLoading}
+          onEdit={handleEdit}
+          onDelete={(addon) => setDeleteItem(addon)}
+        />
       </div>
 
       {/* Modals & Dialogs */}

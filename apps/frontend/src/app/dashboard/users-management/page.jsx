@@ -12,6 +12,7 @@ import AssignPermissionModal from "@/components/modals/AssignPermissionModal";
 
 import { useUsers } from "@/lib/queries/useUser";
 import { useHandleUser } from "@/lib/mutations/useUser";
+import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function UserManagementPage() {
   const { data: users = [], isLoading } = useUsers();
@@ -25,6 +26,23 @@ export default function UserManagementPage() {
   // ✅ Permission modal state
   const [isPermissionOpen, setIsPermissionOpen] = useState(false);
   const [permissionUser, setPermissionUser] = useState(null);
+
+
+  const { data: me } = useGetMe();
+
+  const permissions =
+    me?.data?.permissions ??
+    me?.permissions ??
+    me?.data?.data?.permissions ??
+    [];
+
+  const canCreateUser = permissions.some(
+    (permission) =>
+      permission.resource === "USER" &&
+      permission.action === "CREATE" &&
+      permission.isActive
+  );
+
 
   const [dialogConfig, setDialogConfig] = useState({
     open: false,
@@ -160,13 +178,17 @@ export default function UserManagementPage() {
           </p>
         </div>
 
-        <Button
-          text="Add New User"
-          icon={Plus}
-          iconPosition="left"
-          onClick={handleAddUser}
-          className="px-6 py-3.5 rounded-2xl"
-        />
+
+        {canCreateUser && (
+          <Button
+            text="Add New User"
+            icon={Plus}
+            iconPosition="left"
+            onClick={handleAddUser}
+            className="px-6 py-3.5 rounded-2xl"
+          />
+        )}
+
       </div>
 
       {/* Stat Cards */}
