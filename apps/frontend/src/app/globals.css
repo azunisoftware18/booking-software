@@ -119,22 +119,24 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
     @apply bg-background text-foreground;
-    }
+  }
   html {
     @apply font-sans;
-    }
+  }
 }
 
+/* ✅ Calibri font variable */
 @theme {
   --color-jaipur-pink: #E38B8D;
   --color-jaipur-dark: #B3541E;
   --color-royal-blue: #0b2149;
   --color-sandstone: #FFF9F1;
   --color-gold: #D4AF37;
-  
+
+  --font-calibri: var(--font-carlito), Calibri, "Segoe UI", Candara, Optima, Arial, sans-serif;
 }
 
 html.lenis,
@@ -155,18 +157,16 @@ html {
   scroll-behavior: auto;
 }
 
+/* ✅ Body font → Calibri */
 body {
   background-color: var(--color-sandstone);
   color: #1d1d1d;
-  font-family: serif;
+  font-family: var(--font-carlito), Calibri, "Segoe UI", Candara, Optima, Arial, sans-serif;
   overflow-x: hidden;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-
-
-  
 .bg-mandala {
   background-image: url('https://www.transparenttextures.com/patterns/mandala-light.png');
   background-repeat: repeat;
@@ -195,9 +195,6 @@ img {
   transform: translateY(-8px);
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
 }
-
-
-
 
 @keyframes floatUpDown {
   0% { transform: translateY(0px) rotate(-8deg); }

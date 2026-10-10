@@ -1,15 +1,12 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Carlito } from "next/font/google";
 import "./globals.css";
 import Providers from "@/providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// ✅ Calibri-compatible font (cross-platform)
+const carlito = Carlito({
+  variable: "--font-carlito",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata = {
@@ -19,15 +16,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      {/* Add suppressHydrationWarning to the body tag */}
+    <html lang="en" className={`${carlito.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

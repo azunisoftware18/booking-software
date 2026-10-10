@@ -117,7 +117,7 @@ export default function RoleModal({ open, onClose, onSubmit, defaultValues }) {
             />
 
             {/* Place - Dynamic from DB */}
-            <div>
+            {/* <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Place{" "}
                 <span className="font-normal text-gray-400">(Optional)</span>
@@ -148,7 +148,7 @@ export default function RoleModal({ open, onClose, onSubmit, defaultValues }) {
               <p className="mt-1.5 text-[11px] text-gray-400">
                 Select the place this role is associated with.
               </p>
-            </div>
+            </div> */}
 
             {/* Description */}
             <TextareaField
@@ -181,3 +181,4 @@ export default function RoleModal({ open, onClose, onSubmit, defaultValues }) {
     </div>
   );
 }
+ 

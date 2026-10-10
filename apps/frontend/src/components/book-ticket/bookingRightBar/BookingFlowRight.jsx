@@ -21,10 +21,8 @@ export default function BookingFlowRight() {
 
   const { placeId, isPlaceLoaded } = usePlace();
 
-  const {
-    mutateAsync: createBooking,
-    isPending: isSubmitting,
-  } = useBookingMutation();
+  const { mutateAsync: createBooking, isPending: isSubmitting } =
+    useBookingMutation();
 
   // ============================================================
   // SCROLL CONTROL
@@ -73,9 +71,7 @@ export default function BookingFlowRight() {
   // ============================================================
   const handleFinalBooking = async (visitorInfo) => {
     try {
-      const paymentMethod = isLoggedIn
-        ? visitorInfo?.paymentMethod
-        : "ONLINE";
+      const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
 
       if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
         throw new Error("Please select a valid payment method");
@@ -119,7 +115,7 @@ export default function BookingFlowRight() {
 
       const totalSeats = tickets.reduce(
         (total, ticket) => total + Number(ticket.quantity),
-        0
+        0,
       );
 
       const payload = {
@@ -245,7 +241,7 @@ export default function BookingFlowRight() {
               className="
                 flex
                 flex-1
-                min-h-75
+                min-h-[300px]
                 items-center
                 justify-center
                 font-serif
@@ -294,9 +290,7 @@ export default function BookingFlowRight() {
         </AnimatePresence>
       </div>
 
-      {isSubmitting && (
-        <FullPageLoader message="Generating Secure Ledger..." />
-      )}
+      {isSubmitting && <FullPageLoader message="Generating Secure Ledger..." />}
     </div>
   );
 }
@@ -305,13 +299,8 @@ export default function BookingFlowRight() {
 // STEP RENDERER
 // ============================================================
 function renderStep(step, props) {
-  const {
-    setStep,
-    handleFinalBooking,
-    reduxData,
-    isSubmitting,
-    isLoggedIn,
-  } = props;
+  const { setStep, handleFinalBooking, reduxData, isSubmitting, isLoggedIn } =
+    props;
 
   switch (step) {
     case 0:
@@ -371,14 +360,15 @@ const StartStep = ({ onNext }) => (
       max-w-md
       mx-auto
       flex-1
-      min-h-125
-      sm:min-h-137.5
-      lg:min-h-150
+      min-h-[500px]
+      sm:min-h-[550px]
+      lg:min-h-[600px]
       select-none
       py-8
     "
   >
-    <div className="relative mb-8 sm:mb-10">
+    {/* Images */}
+    {/* <div className="relative mb-8 sm:mb-10">
       <div className="absolute inset-0 bg-gold/10 rounded-full blur-xl scale-150 animate-pulse" />
       <div className="absolute inset-0 border border-gold/15 rounded-full animate-ping opacity-20 scale-110" />
 
@@ -405,13 +395,14 @@ const StartStep = ({ onNext }) => (
           hover:scale-105
         "
       >
+        
         <img
           src="/images/logo.jpeg"
           alt="Place Image"
           className="h-full w-full object-cover"
         />
       </div>
-    </div>
+    </div> */}
 
     <motion.button
       whileHover={{ scale: 1.02 }}
@@ -420,7 +411,7 @@ const StartStep = ({ onNext }) => (
       className="
         w-full
         max-w-xs
-        bg-linear-to-r
+        bg-gradient-to-r
         from-jaipur-dark
         to-[#994113]
         text-white
@@ -477,7 +468,7 @@ const StartStep = ({ onNext }) => (
       <span>Authorized State Booking Gateway</span>
     </div>
 
-    <div className="mt-6 sm:mt-8 pt-5 border-t border-gray-200/70 w-full max-w-xs">
+    {/* <div className="mt-6 sm:mt-8 pt-5 border-t border-gray-200/70 w-full max-w-xs">
       <p
         className="
           text-[9px]
@@ -503,7 +494,7 @@ const StartStep = ({ onNext }) => (
           sm:gap-4
         "
       >
-        {/* <a
+        <a
           href="mailto:springfieldschool.events@gmail.com"
           className="
             text-[11px]
@@ -516,7 +507,7 @@ const StartStep = ({ onNext }) => (
           "
         >
           springfieldschool.events@gmail.com
-        </a> */} 
+        </a>
 
         <span className="hidden sm:block text-gray-300">|</span>
 
@@ -532,10 +523,11 @@ const StartStep = ({ onNext }) => (
             whitespace-nowrap
           "
         >
-          +91 90249 24594 <br/> +91 78785 49539
+          +91 90249 24594 <br /> +91 78785 49539
         </a>
       </div>
-    </div>
+    </div> */}
+
   </motion.div>
 );
 
@@ -590,9 +582,8 @@ const StepIndicator = ({ currentStep }) => {
   );
 };
 
-// ============================================================
-// LOADING OVERLAY
-// ============================================================
+
+
 const LoadingOverlay = () => (
   <motion.div
     initial={{ opacity: 0 }}
