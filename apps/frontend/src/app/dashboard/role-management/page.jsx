@@ -147,6 +147,22 @@ export default function RoleManagementPage() {
       permission.isActive
   );
 
+
+  const canUpdateRole = permissions.some(
+    (permission) =>
+      permission.resource === "ROLE" &&
+      permission.action === "UPDATE" &&
+      permission.isActive
+  );
+
+  const canDeleteRole = permissions.some(
+    (permission) =>
+      permission.resource === "ROLE" &&
+      permission.action === "DELETE" &&
+      permission.isActive
+  );
+
+
   return (
     <div className="bg-slate-50 min-h-screen p-7">
       {/* Header */}
@@ -220,12 +236,18 @@ export default function RoleManagementPage() {
           </div>
         </div>
 
+
         <RoleTable
           data={filteredRoles}
           loading={isLoading}
-          onEdit={handleEdit}
-          onDelete={(role) => setDeleteItem(role)}
+          onEdit={canUpdateRole ? handleEdit : undefined}
+          onDelete={
+            canDeleteRole
+              ? (role) => setDeleteItem(role)
+              : undefined
+          }
         />
+
       </div>
 
       {/* Modals & Dialogs */}

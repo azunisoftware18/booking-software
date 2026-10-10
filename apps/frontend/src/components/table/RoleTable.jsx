@@ -149,51 +149,62 @@ export default function RoleTable({ data, loading, onEdit, onDelete }) {
                   <StatusBadge status={role.status || "Active"} />
                 </td>
 
-                {/* ACTIONS - 3 DOTS DROPDOWN */}
-                <td className="px-5 py-4">
-                  <div className="flex justify-end relative">
-                    <button
-                      onClick={() =>
-                        setOpenDropdownId(
-                          openDropdownId === role.id ? null : role.id,
-                        )
-                      }
-                      className="rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
-                      title="Actions"
-                    >
-                      <MoreVertical size={18} />
-                    </button>
 
-                    {/* DROPDOWN MENU */}
-                    {openDropdownId === role.id && (
-                      <div
-                        ref={dropdownRef}
-                        className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
-                      >
+                {/* ACTIONS - PERMISSION BASED */}
+                <td className="px-5 py-4">
+                  <div className="relative flex justify-end">
+                    {(onEdit || onDelete) && (
+                      <>
                         <button
-                          onClick={() => {
-                            onEdit(role);
-                            setOpenDropdownId(null);
-                          }}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
+                          onClick={() =>
+                            setOpenDropdownId(
+                              openDropdownId === role.id ? null : role.id
+                            )
+                          }
+                          className="rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                          title="Actions"
+                          aria-label="Role actions"
                         >
-                          <Edit size={15} />
-                          Edit
+                          <MoreVertical size={18} />
                         </button>
-                        <button
-                          onClick={() => {
-                            onDelete(role);
-                            setOpenDropdownId(null);
-                          }}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-                        >
-                          <Trash2 size={15} />
-                          Delete
-                        </button>
-                      </div>
+
+                        {openDropdownId === role.id && (
+                          <div
+                            ref={dropdownRef}
+                            className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                          >
+                            {onEdit && (
+                              <button
+                                onClick={() => {
+                                  onEdit(role);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
+                              >
+                                <Edit size={15} />
+                                Edit
+                              </button>
+                            )}
+
+                            {onDelete && (
+                              <button
+                                onClick={() => {
+                                  onDelete(role);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
+                              >
+                                <Trash2 size={15} />
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </td>
+
               </tr>
             ))}
           </tbody>
