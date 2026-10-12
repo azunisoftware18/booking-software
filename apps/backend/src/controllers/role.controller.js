@@ -16,11 +16,19 @@ class RoleController {
   // =========================================================
   // GET ALL ROLES
   // =========================================================
-  static getAll = async (req, res) => {
-    const data = await RoleService.getAllRoles();
+  
+static getAll = async (req, res) => {
+  const currentUserId = req.user?.id;
 
-    return res.success(data, "Roles fetched");
-  };
+  if (!currentUserId) {
+    throw ApiError.unauthorized("Authentication required");
+  }
+
+  const data = await RoleService.getAllRoles(currentUserId);
+
+  return res.success(data, "Roles fetched");
+};
+
 
   // =========================================================
   // GET ROLE BY ID

@@ -22,13 +22,19 @@ class AuthService {
     });
 
     if (!user) {
-      throw ApiError.unauthorized("Invalid credentials");
+      throw ApiError.unauthorized("Invalid Username or Password");
+    }
+
+    if (!user.isActive) {
+      throw ApiError.forbidden(
+        "Your account is inactive. Please contact the administrator."
+      );
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      throw ApiError.unauthorized("Invalid credentials");
+      throw ApiError.unauthorized("Invalid Username or Password");
     }
 
     const accessToken = generateAccessToken(user);
@@ -68,11 +74,18 @@ class AuthService {
         level: true,
         role: true,
         createdAt: true,
+        isActive: true,
       },
     });
 
     if (!user) {
       throw ApiError.notFound("User not found");
+    }
+
+    if (!user.isActive) {
+      throw ApiError.forbidden(
+        "Your account is inactive. Please contact the administrator."
+      );
     }
 
     // Fetch user-wise + role-wise assigned permissions
@@ -104,6 +117,18 @@ class AuthService {
 
     if (!user || user.refreshToken !== oldRefreshToken) {
       throw ApiError.unauthorized("Refresh token mismatch");
+    }
+
+    if (!user.isActive) {
+      // Invalidate the stored refresh token
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { refreshToken: null },
+      });
+
+      throw ApiError.forbidden(
+        "Your account is inactive. Please contact the administrator."
+      );
     }
 
     const newAccessToken = generateAccessToken(user);

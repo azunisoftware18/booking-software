@@ -90,20 +90,23 @@ export default function Sidebar() {
                     style={{ backgroundColor: "var(--sidebar-primary)" }}
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
                   >
-                    <Ticket
+                    <User
                       style={{ color: "var(--sidebar-primary-foreground)" }}
                       size={22}
                     />
                   </div>
-                  <span
-                    className="font-black text-xl tracking-tighter italic uppercase"
-                    style={{ color: "var(--sidebar-foreground)" }}
-                  >
-                    Go
-                    <span style={{ color: "var(--muted-foreground)" }}>
-                      Ticket
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-sm truncate">
+                      {user?.fullName || user?.name || "User"}
                     </span>
-                  </span>
+
+                    <span
+                      className="text-xs truncate"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      {user?.role?.roleName || user?.role?.roleCode || "User"}
+                    </span>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

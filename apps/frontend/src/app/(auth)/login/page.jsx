@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import { Mail, Lock, EyeOff, Eye } from "lucide-react";
 
 export default function LoginPage() {
-  const { mutate, isPending } = useLogin();
+  const { mutate, isPending, isError, error } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     identifier: "",
@@ -79,6 +79,16 @@ export default function LoginPage() {
             text={isPending ? "Logging in..." : "Login"}
             className="w-full mt-2"
           />
+          {isError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {error?.response?.data?.message ||
+                error?.message ||
+                "Login failed. Please try again."}
+            </div>
+          )}
         </form>
 
         {/* Footer */}

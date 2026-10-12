@@ -13,7 +13,7 @@ const defaultForm = {
   password: "",
   roleId: "",
   placeId: "",
-  status: "Active",
+  isActive: true,
 };
 
 export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
@@ -36,7 +36,7 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
         password: "",
         roleId: defaultValues.roleId || defaultValues.role?.id || "",
         placeId: defaultValues.placeId || defaultValues.place?.id || "",
-        status: defaultValues.status || "Active",
+        isActive: defaultValues.isActive ?? true,
       });
     } else {
       setFormData(defaultForm);
@@ -83,12 +83,13 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
     e.preventDefault();
     if (!validate()) return;
 
+
     const payload = {
       fullName: formData.fullName.trim(),
       email: formData.email.trim().toLowerCase(),
       roleId: formData.roleId,
       placeId: formData.placeId,
-      status: formData.status,
+      isActive: formData.isActive,
     };
 
     if (formData.password.trim()) {
@@ -142,11 +143,10 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
                 value={formData.fullName}
                 onChange={handleChange}
                 placeholder="Enter full name"
-                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition ${
-                  errors.fullName
+                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition ${errors.fullName
                     ? "border-red-400"
                     : "border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                }`}
+                  }`}
               />
               {errors.fullName && (
                 <p className="mt-1 text-xs text-red-500">{errors.fullName}</p>
@@ -164,11 +164,10 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="user@example.com"
-                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition ${
-                  errors.email
+                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition ${errors.email
                     ? "border-red-400"
                     : "border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                }`}
+                  }`}
               />
               {errors.email && (
                 <p className="mt-1 text-xs text-red-500">{errors.email}</p>
@@ -191,11 +190,10 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
                       ? "Leave blank to keep current password"
                       : "Minimum 6 characters"
                   }
-                  className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition ${
-                    errors.password
+                  className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition ${errors.password
                       ? "border-red-400"
                       : "border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  }`}
+                    }`}
                 />
                 <button
                   type="button"
@@ -220,11 +218,10 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
                 value={formData.roleId}
                 onChange={handleChange}
                 disabled={rolesLoading}
-                className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition ${
-                  errors.roleId
+                className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition ${errors.roleId
                     ? "border-red-400"
                     : "border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                }`}
+                  }`}
               >
                 <option value="">
                   {rolesLoading ? "Loading roles..." : "Select Role"}
@@ -241,19 +238,26 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
               )}
             </div>
 
+
             {/* Status */}
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">
                 Status
               </label>
+
               <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
+                name="isActive"
+                value={String(formData.isActive)}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isActive: e.target.value === "true",
+                  }))
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
               </select>
             </div>
           </div>
@@ -268,11 +272,10 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
               value={formData.placeId}
               onChange={handleChange}
               disabled={placesLoading}
-              className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition ${
-                errors.placeId
+              className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition ${errors.placeId
                   ? "border-red-400"
                   : "border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              }`}
+                }`}
             >
               <option value="">
                 {placesLoading ? "Loading places..." : "Select Place"}

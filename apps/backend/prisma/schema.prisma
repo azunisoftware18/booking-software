@@ -24,6 +24,8 @@ model User {
   parentId String? @map("parent_id")
   level    Int     @default(1)
 
+  isActive Boolean @default(true) @map("is_active")
+
   createdAt DateTime @default(now()) @map("created_at")
 
   role  Role   @relation(fields: [roleId], references: [id])

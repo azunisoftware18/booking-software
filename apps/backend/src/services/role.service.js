@@ -56,13 +56,70 @@ class RoleService {
   // =========================================================
   // GET ALL ROLES
   // =========================================================
-  static async getAllRoles() {
-    return await prisma.role.findMany({
-      orderBy: {
-        createdAt: "desc",
+  
+
+static async getAllRoles(currentUserId) {
+  const currentUser = await prisma.user.findUnique({
+    where: {
+      id: currentUserId,
+    },
+    select: {
+      parentId: true,
+      roleId: true,
+    },
+  });
+
+  if (!currentUser) {
+    throw ApiError.notFound("User not found");
+  }
+
+  // Parent ka assigned role
+  let parentRoleId = null;
+
+  if (currentUser.parentId) {
+    const parentUser = await prisma.user.findUnique({
+      where: {
+        id: currentUser.parentId,
+      },
+      select: {
+        roleId: true,
       },
     });
+
+    parentRoleId = parentUser?.roleId ?? null;
   }
+
+  // Super Admin, parent ka role aur current user ka role exclude karo
+  const excludedRoleIds = [
+    parentRoleId,
+    currentUser.roleId,
+  ].filter(Boolean);
+
+  const roles = await prisma.role.findMany({
+    where: {
+      roleName: {
+        not: "Super Admin",
+      },
+      roleCode: {
+        not: "SUPER_ADMIN",
+      },
+      ...(excludedRoleIds.length > 0
+        ? {
+            id: {
+              notIn: excludedRoleIds,
+            },
+          }
+        : {}),
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return roles;
+}
+
+
 
   // =========================================================
   // GET ROLE BY ID

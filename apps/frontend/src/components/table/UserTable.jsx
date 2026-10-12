@@ -43,7 +43,7 @@ export default function UserTable({
 
   const canUpdateUser = hasPermission("USER", "UPDATE");
   const canDeleteUser = hasPermission("USER", "DELETE");
-  const canAssignPermission = hasPermission("USER", "ASSIGN_PERMISSIONS");
+  const canAssignPermission = hasPermission("PERMISSION", "ASSIGN");
 
   // ✅ Search filter
   const filteredUsers = useMemo(() => {

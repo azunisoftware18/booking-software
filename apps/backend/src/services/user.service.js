@@ -79,6 +79,7 @@ class UserService {
       phone,
       roleId,
       placeId,
+      isActive,
     } = payload;
 
     // Validate required fields
@@ -95,6 +96,10 @@ class UserService {
       throw ApiError.badRequest(
         "Full name, email, password and role are required"
       );
+    }
+
+    if (isActive !== undefined && typeof isActive !== "boolean") {
+      throw ApiError.badRequest("isActive must be true or false");
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -199,6 +204,7 @@ class UserService {
         level: true,
         placeId: true,
         createdAt: true,
+        isActive: true,
         role: {
           select: {
             id: true,
@@ -235,9 +241,9 @@ class UserService {
       where: isSuperAdmin
         ? {}
         : {
-            parentId: actor.id,
-            placeId: actor.placeId,
-          },
+          parentId: actor.id,
+          placeId: actor.placeId,
+        },
       orderBy: {
         createdAt: "desc",
       },
@@ -250,6 +256,7 @@ class UserService {
         level: true,
         placeId: true,
         createdAt: true,
+        isActive: true,
         role: {
           select: {
             id: true,
@@ -289,6 +296,7 @@ class UserService {
         level: true,
         placeId: true,
         createdAt: true,
+        isActive: true,
         role: {
           select: {
             id: true,
@@ -337,6 +345,7 @@ class UserService {
         parentId: true,
         level: true,
         createdAt: true,
+        isActive: true,
         role: {
           select: {
             roleCode: true,
@@ -360,6 +369,7 @@ class UserService {
       phone,
       roleId,
       placeId,
+      isActive,
     } = payload;
 
     // Validate supplied values
@@ -484,6 +494,9 @@ class UserService {
       nextPassword = await bcrypt.hash(password, 10);
     }
 
+    const nextIsActive =
+      isActive !== undefined ? isActive : existing.isActive;
+
     // Detect whether anything changed
     const isSame =
       existing.fullName === nextFullName &&
@@ -491,6 +504,7 @@ class UserService {
       existing.phone === nextPhone &&
       existing.roleId === nextRoleId &&
       existing.placeId === nextPlaceId &&
+      existing.isActive === nextIsActive &&
       password === undefined;
 
     if (isSame) {
@@ -510,6 +524,7 @@ class UserService {
         phone: nextPhone,
         roleId: nextRoleId,
         placeId: nextPlaceId,
+        isActive: nextIsActive,
       },
       select: {
         id: true,
@@ -520,6 +535,7 @@ class UserService {
         level: true,
         placeId: true,
         createdAt: true,
+        isActive: true,
         role: {
           select: {
             id: true,

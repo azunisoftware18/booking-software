@@ -3,8 +3,8 @@ export const PermissionsRegistry = {
     CREATE: "USER.CREATE",
     READ: "USER.READ",
     UPDATE: "USER.UPDATE",
-    DELETE: "USER.DELETE",
-    ASSIGN_PERMISSIONS: "USER.ASSIGN_PERMISSIONS",
+    // DELETE: "USER.DELETE",
+    // ASSIGN_PERMISSIONS: "USER.ASSIGN_PERMISSIONS",
   },
 
   ROLE: {
@@ -12,7 +12,7 @@ export const PermissionsRegistry = {
     READ: "ROLE.READ",
     UPDATE: "ROLE.UPDATE",
     DELETE: "ROLE.DELETE",
-    ASSIGN_PERMISSIONS: "ROLE.ASSIGN_PERMISSIONS",
+    // ASSIGN_PERMISSIONS: "ROLE.ASSIGN_PERMISSIONS",
   },
 
   PERMISSION: {
@@ -24,7 +24,7 @@ export const PermissionsRegistry = {
     CREATE: "PLACE.CREATE",
     READ: "PLACE.READ",
     UPDATE: "PLACE.UPDATE",
-    DELETE: "PLACE.DELETE",
+    // DELETE: "PLACE.DELETE",
   },
 
   SLOT: {
@@ -51,16 +51,16 @@ export const PermissionsRegistry = {
   BOOKING: {
     CREATE: "BOOKING.CREATE",
     READ: "BOOKING.READ",
-    UPDATE: "BOOKING.UPDATE",
-    DELETE: "BOOKING.DELETE",
-    CANCEL: "BOOKING.CANCEL",
+    // UPDATE: "BOOKING.UPDATE",
+    // DELETE: "BOOKING.DELETE",
+    // CANCEL: "BOOKING.CANCEL",
   },
 
   TICKET: {
-    CREATE: "TICKET.CREATE",
+    // CREATE: "TICKET.CREATE",
     READ: "TICKET.READ",
-    UPDATE: "TICKET.UPDATE",
-    DELETE: "TICKET.DELETE",
+    // UPDATE: "TICKET.UPDATE",
+    // DELETE: "TICKET.DELETE",
     SCAN: "TICKET.SCAN",
   },
 
@@ -70,7 +70,7 @@ export const PermissionsRegistry = {
   },
 
   SETTING: {
-    READ: "SETTING.READ",
+    // READ: "SETTING.READ",
     UPDATE: "SETTING.UPDATE",
   },
 

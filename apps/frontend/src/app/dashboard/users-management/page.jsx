@@ -65,21 +65,26 @@ export default function UserManagementPage() {
     });
   }, [users, search]);
 
-  const activeUsers = users.filter((user) => user.status === "Active").length;
+  const activeUsers = users.filter(
+    (user) => user.isActive === true
+  ).length;
   const assignedUsers = users.filter((user) => user.placeId).length;
 
   // ---------------- User CRUD ----------------
+
   const handleFormSubmit = async (data) => {
     try {
       const payload = {
         action: editData ? "update" : "create",
         data: {
-          ...(editData?.id && { id: editData.id }),
+          ...((editData?.id || editData?._id) && {
+            id: editData.id || editData._id,
+          }),
           fullName: data.fullName,
           email: data.email,
           roleId: data.roleId,
           placeId: data.placeId,
-          status: data.status,
+          isActive: data.isActive ?? true,
           ...(data.password && { password: data.password }),
         },
       };
@@ -88,7 +93,9 @@ export default function UserManagementPage() {
 
       setDialogConfig({
         open: true,
-        title: editData ? "Updated Successfully" : "Created Successfully",
+        title: editData
+          ? "Updated Successfully"
+          : "Created Successfully",
         description: editData
           ? "User updated successfully."
           : "New user created successfully.",
@@ -98,7 +105,8 @@ export default function UserManagementPage() {
       setIsModalOpen(false);
       setEditData(null);
     } catch (err) {
-      console.error(err);
+      console.error("User save error:", err);
+
       setDialogConfig({
         open: true,
         title: "Operation Failed",

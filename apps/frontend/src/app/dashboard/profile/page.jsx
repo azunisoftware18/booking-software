@@ -235,7 +235,7 @@ export default function ProfileSettingsPage() {
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full backdrop-blur-sm">
               <Shield size={14} />
-              <span className="text-sm font-medium">{user?.role || "User"}</span>
+              <span className="text-sm font-medium"> {user?.role?.roleName || "User"}</span>
             </div>
           </div>
         </motion.div>
@@ -503,7 +503,7 @@ export default function ProfileSettingsPage() {
         loading={passwordLoading}
         variant="danger"
         icon={AlertTriangle}
-        showRemark={true}
+        showRemark={false}
       >
         <p>Make sure to remember your new password. You won't be able to recover it if forgotten.</p>
       </ConfirmationDialog>
