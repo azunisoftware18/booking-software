@@ -44,6 +44,8 @@ class AuthMiddleware {
         // Required for permission middleware
         roleId: true,
         placeId: true,
+        locationId: true,
+        level: true,
 
         role: {
           select: {

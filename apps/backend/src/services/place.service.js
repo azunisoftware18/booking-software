@@ -80,6 +80,10 @@ class PlaceService {
         id: true,
         level: true,
         placeId: true,
+        locationId: true,
+        role: {
+          select: { roleCode: true },
+        },
       },
     });
 
@@ -87,13 +91,49 @@ class PlaceService {
       throw ApiError.notFound("User not found");
     }
 
-    // Level 1: All places
-    if (user.level === 1) {
+    if (user.role?.roleCode === "SUPER_ADMIN") {
       return prisma.place.findMany({
         orderBy: {
           createdAt: "desc",
         },
       });
+    }
+
+    if (user.locationId) {
+      const location = await prisma.location.findUnique({
+        where: { id: user.locationId },
+        select: { name: true },
+      });
+
+      if (!location) {
+        return [];
+      }
+
+      if (!location.name) {
+        return [];
+      }
+
+      return prisma.place.findMany({
+        where: { location: location.name },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
+    // Preserve existing access for legacy level-one users.
+    if (
+      user.level === 1 &&
+      user.role?.roleCode !== "ADMIN" &&
+      user.role?.roleCode !== "LOCATION_ADMIN"
+    ) {
+      return prisma.place.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
+
+    if (["ADMIN", "LOCATION_ADMIN"].includes(user.role?.roleCode)) {
+      return [];
     }
 
     // Level 2 and 3: Only assigned place
@@ -126,6 +166,10 @@ class PlaceService {
         id: true,
         level: true,
         placeId: true,
+        locationId: true,
+        role: {
+          select: { roleCode: true },
+        },
       },
     });
 
@@ -133,15 +177,10 @@ class PlaceService {
       throw ApiError.notFound("User not found");
     }
 
-    // Level 1 can access any place
-    // Level 2 and 3 can access only their assigned place
-    if (user.level !== 1 && user.placeId !== id) {
-      throw ApiError.notFound("Place not found");
-    }
-
-    const place = await prisma.place.findUnique({
-      where: { id },
-    });
+    const availablePlaces = await this.getAllPlaces(currentUser);
+    const place = availablePlaces.find(
+      (availablePlace) => availablePlace.id === id,
+    );
 
     if (!place) {
       throw ApiError.notFound("Place not found");

@@ -11,6 +11,8 @@ import settingRoute from "./setting.routes.js";
 import roleRoute from "./role.routes.js";
 import userRoute from "./user.routes.js";
 import permissionRoute from "./permission.routes.js";
+import locationRoute from "./location.routes.js"
+import adminRoutes from "./admin.routes.js"
 
 const router = Router();
 
@@ -27,6 +29,8 @@ router.use("/setting", settingRoute);
 router.use("/role", roleRoute);
 router.use("/user", userRoute);
 router.use("/permission", permissionRoute);
+router.use("/location", locationRoute)
+router.use("/admin", adminRoutes)
 
 
 

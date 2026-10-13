@@ -6,9 +6,13 @@ import PermissionService from "./permission.service.js";
 
 class AuthService {
   static async login({ identifier, password }) {
+    const normalizedIdentifier = identifier.trim();
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { phone: identifier }],
+        OR: [
+          { email: normalizedIdentifier.toLowerCase() },
+          { phone: normalizedIdentifier },
+        ],
       },
       include: {
         role: {
@@ -16,6 +20,14 @@ class AuthService {
             id: true,
             roleName: true,
             roleCode: true,
+          },
+        },
+        location: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            state: true,
           },
         },
       },
@@ -31,7 +43,9 @@ class AuthService {
       );
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = user.password
+      ? await bcrypt.compare(password, user.password)
+      : false;
 
     if (!isMatch) {
       throw ApiError.unauthorized("Invalid Username or Password");
@@ -52,6 +66,10 @@ class AuthService {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        locationId: user.locationId,
+        location: user.location,
+        placeId: user.placeId,
+        level: user.level,
         permissions,
       },
     };
@@ -70,9 +88,18 @@ class AuthService {
         phone: true,
         roleId: true,
         placeId: true,
+        locationId: true,
         parentId: true,
         level: true,
         role: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            state: true,
+          },
+        },
         createdAt: true,
         isActive: true,
       },

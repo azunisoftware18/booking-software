@@ -7,7 +7,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "prestart": "prisma generate",
     "start": "node src/index.js",
+    "predev": "prisma generate",
     "dev": "node --watch src/index.js",
     "seed": "node prisma/seed/seed.js"
   },
