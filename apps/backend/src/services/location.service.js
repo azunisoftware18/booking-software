@@ -20,6 +20,19 @@ const locationSelect = {
 };
 
 export const locationService = {
+  async getActiveBookingOptions() {
+    return prisma.location.findMany({
+      where: { status: "ACTIVE" },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        state: true,
+      },
+      orderBy: [{ city: "asc" }, { name: "asc" }],
+    });
+  },
+
   async getAll({
     search = "",
     status,

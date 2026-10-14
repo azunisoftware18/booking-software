@@ -2,6 +2,7 @@
 import { Router } from "express";
 import {
   getLocations,
+  getBookingLocationOptions,
   getLocationById,
   createLocation,
   updateLocation,
@@ -13,6 +14,7 @@ import { PermissionsRegistry } from "../lib/PermissionsRegistry.js";
 
 const router = Router();
 
+router.get("/booking-options", getBookingLocationOptions);
 router.get(
   "/",
   AuthMiddleware.isAuthenticated,

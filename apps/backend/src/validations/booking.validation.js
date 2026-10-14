@@ -4,6 +4,7 @@ class BookingValidation {
   static get createBooking() {
     return z.object({
       placeId: z.string().uuid(),
+      locationId: z.string().min(1),
       slotDateTime: z.string(),
 
       bookingType: z.enum(["TICKET", "PASS"]).optional(),

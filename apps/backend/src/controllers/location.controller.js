@@ -94,6 +94,20 @@ export const getLocations = async (req, res) => {
   }
 };
 
+export const getBookingLocationOptions = async (req, res) => {
+  try {
+    const locations = await locationService.getActiveBookingOptions();
+
+    return res.status(200).json({
+      success: true,
+      message: "Available booking locations fetched successfully.",
+      data: locations,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
 export const getLocationById = async (req, res) => {
   try {
     if (
