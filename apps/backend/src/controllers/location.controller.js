@@ -1,4 +1,3 @@
-
 import { locationService } from "../services/location.service.js";
 import {
   createLocationSchema,
@@ -138,7 +137,10 @@ export const createLocation = async (req, res) => {
       });
     }
 
-    const location = await locationService.create(parsed.data);
+    const location = await locationService.create({
+      ...parsed.data,
+      createdById: req.user.id,
+    });
 
     return res.status(201).json({
       success: true,

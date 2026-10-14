@@ -73,6 +73,15 @@ class TicketTypeService {
 
             include: {
               place: true,
+              ...(data.includeCreator && {
+                createdBy: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                  },
+                },
+              }),
             },
 
             orderBy: {
@@ -81,20 +90,30 @@ class TicketTypeService {
           });
 
         case "upsert":
-          const { name, placeId, price, maxPerBooking } = data;
+          const {
+            name,
+            center = "Jaipur",
+            placeId,
+            price,
+            isAvailable = true,
+            maxPerBooking,
+          } = data;
 
           return await prisma.ticketType.upsert({
             where: {
-              name_placeId: { name, placeId },
+              center_name_placeId: { center, name, placeId },
             },
             update: {
               price,
+              isAvailable,
               maxPerBooking,
             },
             create: {
               name,
+              center,
               placeId,
               price,
+              isAvailable,
               maxPerBooking,
             },
           });

@@ -10,8 +10,9 @@ import {
 } from "@/components/table/core";
 
 import ActionMenu from "../common/ActionMenu";
+import Link from "next/link";
 import { Pencil, Trash, Eye } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function TicketTypeTable({
@@ -28,7 +29,7 @@ export default function TicketTypeTable({
   // 🔍 Search Logic
   const filteredData = useMemo(() => {
     return data.filter((item) =>
-      [item.name, item.place?.name].some((val) =>
+      [item.center, item.name, item.place?.name, item.createdBy?.fullName, item.createdBy?.email].some((val) =>
         val?.toLowerCase().includes(search.toLowerCase())
       )
     );
@@ -43,20 +44,6 @@ export default function TicketTypeTable({
     return filteredData.slice(start, start + itemsPerPage);
   }, [filteredData, page]);
 
-  // Agar search karne par items kam ho jayein, toh page 1 par reset karein
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
-
-  const columns = [
-    "Ticket Name",
-    "Place",
-    "Price",
-    "Max Per Booking",
-    "Action",
-  ];
-
-
   const { data: me } = useGetMe();
 
   const permissions =
@@ -64,15 +51,26 @@ export default function TicketTypeTable({
     me?.permissions ??
     me?.data?.data?.permissions ??
     [];
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
-  const canUpdateTicketType = permissions.some(
+  const columns = [
+    "Location",
+    "Ticket Category",
+    "Place",
+    "Entry Fees",
+    ...(isSuperAdmin ? ["Created By"] : []),
+    "Book Now",
+    "Action",
+  ];
+
+  const canUpdateTicketType = !isSuperAdmin && permissions.some(
     (permission) =>
       permission.resource === "TICKET_TYPE" &&
       permission.action === "UPDATE" &&
       permission.isActive
   );
 
-  const canDeleteTicketType = permissions.some(
+  const canDeleteTicketType = !isSuperAdmin && permissions.some(
     (permission) =>
       permission.resource === "TICKET_TYPE" &&
       permission.action === "DELETE" &&
@@ -82,13 +80,19 @@ export default function TicketTypeTable({
 
   return (
     <TableShell
-      title="Ticket Types"
-      subtitle={`${filteredData.length} total ticket types`}
+      title="Entry Fees"
+      subtitle={`${filteredData.length} total entry fees`}
       searchProps={{
         value: search,
-        onChange: (e) => setSearch(e.target.value),
-        onClear: () => setSearch(""),
-        placeholder: "Search ticket or place...",
+        onChange: (e) => {
+          setSearch(e.target.value);
+          setPage(1);
+        },
+        onClear: () => {
+          setSearch("");
+          setPage(1);
+        },
+        placeholder: "Search entry fee, creator or place...",
       }}
       paginationProps={{
         page,
@@ -103,7 +107,7 @@ export default function TicketTypeTable({
         {loading ? (
           <TableLoader rows={5} />
         ) : currentData.length === 0 ? (
-          <TableEmpty colSpan={5} message="No ticket types found." />
+          <TableEmpty colSpan={isSuperAdmin ? 7 : 6} message="No entry fees found." />
         ) : (
           /* ✅ filteredData ki jagah currentData map karein */
           currentData.map((ticket) => (
@@ -141,6 +145,10 @@ export default function TicketTypeTable({
 
             >
               <td className="px-6 py-4 font-semibold text-slate-900">
+                {ticket.center || "Jaipur"}
+              </td>
+
+              <td className="px-6 py-4 font-semibold text-slate-900">
                 {ticket.name}
               </td>
 
@@ -149,11 +157,41 @@ export default function TicketTypeTable({
               </td>
 
               <td className="px-6 py-4 font-medium text-slate-800">
-                ₹{ticket.price}
+                {ticket.isAvailable === false
+                  ? "N.A."
+                  : Number(ticket.price) === 0
+                    ? "Free"
+                    : `₹${ticket.price}/-`}
               </td>
 
-              <td className="px-6 py-4 text-slate-500">
-                {ticket.maxPerBooking}
+              {isSuperAdmin && (
+                <td className="px-6 py-4 text-slate-600">
+                  <div className="font-medium text-slate-800">
+                    {ticket.createdBy?.fullName || "Unknown"}
+                  </div>
+                  {ticket.createdBy?.email && (
+                    <div className="text-xs text-slate-500">{ticket.createdBy.email}</div>
+                  )}
+                </td>
+              )}
+
+              <td className="px-6 py-4">
+                {ticket.isAvailable === false || !(ticket.place?.id || ticket.placeId) ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400"
+                  >
+                    Unavailable
+                  </button>
+                ) : (
+                  <Link
+                    href={`/book-tickets/${ticket.place?.id || ticket.placeId}`}
+                    className="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+                  >
+                    Book Now
+                  </Link>
+                )}
               </td>
             </TableRow>
           ))

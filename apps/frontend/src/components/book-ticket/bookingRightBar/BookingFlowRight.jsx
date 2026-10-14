@@ -7,7 +7,6 @@ import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
 import DateSelector from "./bookingParts/DateSelector";
 import TicketCounter from "./bookingParts/TicketCounter";
-import GuideSelector from "./bookingParts/GuideSelector";
 import VisitorForm from "./bookingParts/VisitorForm";
 import { ArrowRight, Lock } from "lucide-react";
 import FullPageLoader from "@/components/ui/FullPageLoader";
@@ -104,13 +103,6 @@ export default function BookingFlowRight() {
         throw new Error("Please select at least one ticket");
       }
 
-      const addons = Object.entries(reduxData?.addons || {})
-        .filter(([, quantity]) => Number(quantity) > 0)
-        .map(([addonId, quantity]) => ({
-          addonId,
-          quantity: Number(quantity),
-        }));
-
       const slotDateTime = `${reduxData.date}T${reduxData.slot.time}:00.000Z`;
 
       const totalSeats = tickets.reduce(
@@ -129,7 +121,6 @@ export default function BookingFlowRight() {
         totalAmount: parseFloat(reduxData?.totalAmount || 0),
         totalSeats,
         tickets,
-        addons,
       };
 
       console.log("BOOKING PAYLOAD:", payload);
@@ -320,18 +311,9 @@ function renderStep(step, props) {
 
     case 3:
       return (
-        <GuideSelector
-          onNext={() => setStep(4)}
-          onBack={() => setStep(2)}
-          addons={reduxData?.addons || {}}
-        />
-      );
-
-    case 4:
-      return (
         <VisitorForm
           onSubmit={handleFinalBooking}
-          onBack={() => setStep(3)}
+          onBack={() => setStep(2)}
           showCashOption={isLoggedIn}
         />
       );
@@ -535,7 +517,7 @@ const StartStep = ({ onNext }) => (
 // STEP INDICATOR
 // ============================================================
 const StepIndicator = ({ currentStep }) => {
-  const stepLabels = ["Date", "Tickets", "Guides", "Details"];
+  const stepLabels = ["Date", "Tickets", "Details"];
 
   return (
     <div className="w-full max-w-md mx-auto shrink-0 mb-6 sm:mb-8 pt-1">
@@ -564,7 +546,7 @@ const StepIndicator = ({ currentStep }) => {
       </div>
 
       <div className="flex justify-between gap-1 sm:gap-1.5">
-        {[1, 2, 3, 4].map((s) => (
+        {[1, 2, 3].map((s) => (
           <div
             key={s}
             className={`

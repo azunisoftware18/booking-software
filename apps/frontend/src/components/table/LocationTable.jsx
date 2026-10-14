@@ -72,7 +72,7 @@ export default function LocationTable({
   const showActions = Boolean(onView || onEdit || onDelete);
 
   const columns = useMemo(() => {
-    const base = ["Location Name", "City", "State", "Status"];
+    const base = ["Location Name", "City", "State", "Status", "Created By"];
     return showActions ? [...base, "Action"] : base;
   }, [showActions]);
 
@@ -173,6 +173,10 @@ export default function LocationTable({
                   {/* Status */}
                   <td className="px-4 py-3 md:px-6 md:py-4">
                     <StatusBadge status={location.status || "INACTIVE"} />
+                  </td>
+
+                  <td className="px-4 py-3 text-slate-600 md:px-6 md:py-4">
+                    {location.createdBy?.fullName || "Unknown"}
                   </td>
                 </TableRow>
               ))

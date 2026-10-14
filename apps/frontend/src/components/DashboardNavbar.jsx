@@ -21,8 +21,7 @@ export default function DashboardNavbar() {
     if (pathname === "/dashboard") return "Dashboard";
     if (pathname === "/dashboard/place") return "Place Management";
     if (pathname === "/dashboard/slots") return "Slots Management";
-    if (pathname === "/dashboard/ticket") return "Ticket Types";
-    if (pathname === "/dashboard/addon") return "Addon Management";
+    if (pathname === "/dashboard/ticket") return "Entry Fees";
     if (pathname === "/dashboard/booking") return "Bookings";
     if (pathname === "/dashboard/ticket-scanner") return "Ticket Scanner";
     return "Dashboard";
@@ -77,8 +76,7 @@ export default function DashboardNavbar() {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Place", href: "/dashboard/place", icon: MapPin },
     { name: "Slots", href: "/dashboard/slots", icon: Calendar },
-    { name: "Ticket Type", href: "/dashboard/ticket", icon: Ticket },
-    { name: "Addon", href: "/dashboard/addon", icon: BookOpen },
+    { name: "Entry Fees", href: "/dashboard/ticket", icon: Ticket },
     { name: "Booking", href: "/dashboard/booking", icon: BookOpen },
     { name: "Ticket Scanner", href: "/dashboard/ticket-scanner", icon: ScanLine },
   ];

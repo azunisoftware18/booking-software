@@ -60,6 +60,7 @@ export default function AdminTable({
         admin.name?.toLowerCase().includes(term) ||
         admin.email?.toLowerCase().includes(term) ||
         admin.location?.toLowerCase().includes(term) ||
+        admin.createdBy?.fullName?.toLowerCase().includes(term) ||
         admin.status?.toLowerCase().includes(term),
     );
   }, [sourceData, search]);
@@ -74,6 +75,7 @@ export default function AdminTable({
     "Assigned Location",
     "Status",
     "Created",
+    "Created By",
     "Action",
   ];
 
@@ -104,7 +106,7 @@ export default function AdminTable({
               <TableLoader rows={5} />
             ) : filteredData.length === 0 ? (
               <TableEmpty
-                colSpan={6}
+                colSpan={7}
                 message={
                   search
                     ? "No admins match your search"
@@ -184,6 +186,10 @@ export default function AdminTable({
                           },
                         )
                       : "N/A"}
+                  </td>
+
+                  <td className="px-4 py-3 text-slate-600 text-sm md:px-6 md:py-4">
+                    {admin.createdBy?.fullName || "Unknown"}
                   </td>
                 </TableRow>
               ))

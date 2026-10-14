@@ -36,7 +36,8 @@ export default function UserManagementPage() {
     me?.data?.data?.permissions ??
     [];
 
-  const canCreateUser = permissions.some(
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
+  const canCreateUser = isSuperAdmin || permissions.some(
     (permission) =>
       permission.resource === "USER" &&
       permission.action === "CREATE" &&

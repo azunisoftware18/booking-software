@@ -108,8 +108,9 @@ export default function SlotPage() {
     me?.permissions ??
     me?.data?.data?.permissions ??
     [];
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
-  const canCreateSlot = permissions.some(
+  const canCreateSlot = !isSuperAdmin && permissions.some(
     (permission) =>
       permission.resource === "SLOT" &&
       permission.action === "CREATE"
@@ -120,6 +121,7 @@ export default function SlotPage() {
       permission.resource === "SLOT" &&
       permission.action === "UPDATE"
   );
+  const canCreateOverride = !isSuperAdmin && canUpdateSlot;
 
 
   return (
@@ -201,7 +203,7 @@ export default function SlotPage() {
               />
             )
           ) : (
-            canUpdateSlot && (
+            canCreateOverride && (
               <Button
                 text="Add Override"
                 icon={Plus}

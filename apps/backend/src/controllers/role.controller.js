@@ -1,4 +1,5 @@
 import RoleService from "../services/role.service.js";
+import { ApiError } from "../utils/ApiError.js";
 
 class RoleController {
   // =========================================================
@@ -8,7 +9,10 @@ class RoleController {
     console.log("=== CREATE ROLE ===");
     console.log("BODY:", req.body);
 
-    const data = await RoleService.createRole(req.body);
+    const data = await RoleService.createRole({
+      ...req.body,
+      createdById: req.user.id,
+    });
 
     return res.success(data, "Role created", 201);
   };

@@ -130,6 +130,11 @@ class PermissionService {
       select: {
         id: true,
         parentId: true,
+        role: {
+          select: {
+            roleCode: true,
+          },
+        },
       },
     });
 
@@ -143,6 +148,12 @@ class PermissionService {
     if (actor.id === target.id) {
       throw ApiError.forbidden(
         "You cannot manage your own permissions using this endpoint"
+      );
+    }
+
+    if (target.role?.roleCode === "SUPER_ADMIN") {
+      throw ApiError.forbidden(
+        "Super Admin accounts cannot be assigned permissions"
       );
     }
 

@@ -65,6 +65,9 @@ export default function RoleTable({ data, loading, onEdit, onDelete }) {
                 Role Code
               </th>
               <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Created By
+              </th>
+              <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 Places
               </th>
               <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -109,6 +112,10 @@ export default function RoleTable({ data, loading, onEdit, onDelete }) {
                   <span className="rounded-md bg-gray-100 px-2.5 py-1 font-mono text-xs font-medium text-gray-700">
                     {role.roleCode}
                   </span>
+                </td>
+
+                <td className="px-5 py-4 text-sm text-gray-600">
+                  {role.createdBy?.fullName || "Unknown"}
                 </td>
 
                 {/* PLACES - Safe Access */}

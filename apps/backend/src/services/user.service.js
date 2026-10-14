@@ -220,6 +220,13 @@ class UserService {
             location: true,
           },
         },
+        parent: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -239,7 +246,7 @@ class UserService {
 
     const users = await prisma.user.findMany({
       where: isSuperAdmin
-        ? {}
+        ? { role: { roleCode: { not: "SUPER_ADMIN" } } }
         : {
           parentId: actor.id,
           placeId: actor.placeId,
@@ -269,6 +276,13 @@ class UserService {
             id: true,
             name: true,
             location: true,
+          },
+        },
+        parent: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
           },
         },
       },

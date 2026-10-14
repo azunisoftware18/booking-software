@@ -49,13 +49,6 @@ export const PermissionsRegistry = {
     DELETE: "TICKET_TYPE.DELETE",
   },
 
-  ADDON: {
-    CREATE: "ADDON.CREATE",
-    READ: "ADDON.READ",
-    UPDATE: "ADDON.UPDATE",
-    DELETE: "ADDON.DELETE",
-  },
-
   BOOKING: {
     CREATE: "BOOKING.CREATE",
     READ: "BOOKING.READ",

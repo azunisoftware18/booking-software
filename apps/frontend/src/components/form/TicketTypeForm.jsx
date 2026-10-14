@@ -1,30 +1,80 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
-import { Ticket, IndianRupee, Hash } from "lucide-react";
+import { MapPin, IndianRupee, Hash } from "lucide-react";
 import InputField from "../ui/InputField";
 import Button from "../ui/Button";
+
+const centerRates = {
+  "Jhalana Patan": [
+    { name: "Per Person", price: 5 },
+    { name: "Per Student*", price: 3 },
+    { name: "Group of Student**", price: 2 },
+  ],
+  Udaipur: [
+    { name: "General Public", unavailable: true },
+    { name: "Student", unavailable: true },
+    { name: "Group of Student**", unavailable: true },
+  ],
+  Nawalgarh: [
+    { name: "General Public", price: 20 },
+    { name: "Student", price: 15 },
+    { name: "Group of Student**", price: 10 },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
+  ],
+  Jodhpur: [
+    { name: "General Public", price: 20 },
+    { name: "Student", price: 15 },
+    { name: "Group of Student**", price: 0, free: true },
+    { name: "Planetarium", unavailable: true },
+    { name: "Planetarium (in Group)", unavailable: true },
+  ],
+};
 
 export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
     reset,
   } = useForm({
     defaultValues: {
+      center: "Jhalana Patan",
       name: "",
-      price: "",
+      price: 0,
+      isAvailable: true,
       maxPerBooking: 6,
       ...defaultValues,
     },
   });
 
+  const selectedCenter = useWatch({ control, name: "center" });
+  const selectedName = useWatch({ control, name: "name" });
+  const selectedRate = centerRates[selectedCenter]?.find(
+    (rate) => rate.name === selectedName
+  );
+  const rates = [...(centerRates[selectedCenter] || [])];
+
+  if (selectedName && !selectedRate) {
+    rates.push({
+      name: selectedName,
+      price: Number(defaultValues.price || 0),
+      unavailable: defaultValues.isAvailable === false,
+      free: Number(defaultValues.price) === 0 && defaultValues.isAvailable !== false,
+    });
+  }
+
+  const selectedFee = selectedRate || rates.find((rate) => rate.name === selectedName);
+
   const submitHandler = async (data) => {
     const formattedData = {
       ...data,
       price: Number(data.price),
+      isAvailable: data.isAvailable !== false && data.isAvailable !== "false",
       maxPerBooking: Number(data.maxPerBooking),
     };
 
@@ -40,7 +90,7 @@ export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
       {/* Heading */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800">
-          {defaultValues?.id ? "Update Ticket Type" : "Create Ticket Type"}
+          {defaultValues?.id ? "Update Entry Fee" : "Create Entry Fee"}
         </h2>
 
         <p className="text-sm text-gray-500 mt-1">
@@ -49,40 +99,79 @@ export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
       </div>
 
       <form onSubmit={handleSubmit(submitHandler)} className="space-y-5">
-        {/* Ticket Name */}
-        <InputField
-          label="Ticket Name"
-          placeholder="e.g. Adult / Child / VIP"
-          icon={Ticket}
-          error={errors.name?.message}
-          {...register("name", {
-            required: "Ticket name is required",
-            minLength: {
-              value: 2,
-              message: "Minimum 2 characters",
-            },
-          })}
-        />
+        <div className="w-full">
+          <label htmlFor="ticket-center" className="mb-1 block text-sm font-medium text-gray-700">
+            Location
+          </label>
+          <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 focus-within:border-black">
+            <MapPin size={18} className="mr-2 shrink-0 text-gray-400" />
+            <select
+              id="ticket-center"
+              className="w-full bg-transparent text-sm outline-none"
+              {...register("center", {
+                required: "Location is required",
+                onChange: () => {
+                  setValue("name", "");
+                  setValue("price", 0);
+                  setValue("isAvailable", true);
+                },
+              })}
+            >
+              {Object.keys(centerRates).map((center) => (
+                <option key={center} value={center}>{center}</option>
+              ))}
+              {selectedCenter && !centerRates[selectedCenter] && (
+                <option value={selectedCenter}>{selectedCenter}</option>
+              )}
+            </select>
+          </div>
+          {errors.center?.message && <p className="mt-1 text-xs text-red-500">{errors.center.message}</p>}
+        </div>
 
-        {/* Price */}
-        <InputField
-          label="Ticket Price"
-          type="number"
-          placeholder="e.g. 499"
-          icon={IndianRupee}
-          error={errors.price?.message}
-          {...register("price", {
-            required: "Price is required",
-            valueAsNumber: true,
-            min: {
-              value: 0,
-              message: "Price cannot be negative",
-            },
-          })}
-        />
+        <div className="w-full">
+          <label htmlFor="ticket-category" className="mb-1 block text-sm font-medium text-gray-700">
+            Ticket Category
+          </label>
+          <div className={`flex items-center rounded-lg border px-3 py-2 focus-within:border-black ${errors.name ? "border-red-500" : "border-gray-300"}`}>
+            <select
+              id="ticket-category"
+              className="w-full bg-transparent text-sm outline-none"
+              {...register("name", { required: "Ticket category is required" })}
+              onChange={(event) => {
+                const rate = centerRates[selectedCenter]?.find((item) => item.name === event.target.value);
+                const isLegacyRate = !rate && event.target.value === defaultValues.name;
+                setValue("name", event.target.value, { shouldValidate: true });
+                setValue("price", rate ? rate.price ?? 0 : isLegacyRate ? Number(defaultValues.price || 0) : 0);
+                setValue("isAvailable", rate ? !rate.unavailable : isLegacyRate ? defaultValues.isAvailable !== false : true);
+              }}
+            >
+              <option value="">Select a category</option>
+              {rates.map((rate) => (
+                <option key={rate.name} value={rate.name}>{rate.name}</option>
+              ))}
+            </select>
+          </div>
+          {errors.name?.message && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+        </div>
+
+        <input type="hidden" {...register("price", { valueAsNumber: true })} />
+        <input type="hidden" {...register("isAvailable")} />
+        <div className="w-full">
+          <label className="mb-1 block text-sm font-medium text-gray-700">Entry Fees (in Rs.)</label>
+          <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
+            <IndianRupee size={18} className="mr-2 text-gray-400" />
+            {selectedFee?.unavailable
+              ? "N.A."
+              : selectedFee?.free
+                ? "Free"
+                : selectedFee
+                  ? `${selectedFee.price}/-`
+                  : "Select a category"}
+          </div>
+        </div>
 
         {/* Max Per Booking */}
-        <InputField
+        {/* <InputField
           label="Max Per Booking"
           type="number"
           placeholder="e.g. 6"
@@ -96,7 +185,7 @@ export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
               message: "Minimum 1 ticket required",
             },
           })}
-        />
+        /> */}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
@@ -113,8 +202,8 @@ export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
               isSubmitting
                 ? "Saving..."
                 : defaultValues?.id
-                  ? "Update Ticket Type"
-                  : "Create Ticket Type"
+                  ? "Update Entry Fee"
+                  : "Create Entry Fee"
             }
             className="px-8"
           />

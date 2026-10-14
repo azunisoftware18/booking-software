@@ -139,8 +139,9 @@ export default function RoleManagementPage() {
     me?.permissions ??
     me?.data?.data?.permissions ??
     [];
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
-  const canCreateRole = permissions.some(
+  const canCreateRole = isSuperAdmin || permissions.some(
     (permission) =>
       permission.resource === "ROLE" &&
       permission.action === "CREATE" &&

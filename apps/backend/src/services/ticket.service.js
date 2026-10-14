@@ -555,63 +555,6 @@ class TicketService {
 
     if (!booking) throw new Error("Booking not found");
 
-    // 🔥 FIX: Addon IDs (JSON) se Addon ka naam fetch karo
-    // Yeh naye format [{ addonId, quantity }] aur purane format ["id1", "id2"] dono ko handle karta hai
-    let addonString = "None";
-
-    const rawAddonData = Array.isArray(booking.addonIds) ? booking.addonIds : [];
-
-    if (rawAddonData.length > 0) {
-      // Step 1: Normalize karo — har item ko { addonId, quantity } shape mein lao
-      const normalizedAddons = rawAddonData
-        .map((item) => {
-          // Old format: "addonId"
-          if (typeof item === "string") {
-            return { addonId: item, quantity: 1 };
-          }
-
-          // New format: { addonId: "id", quantity: 2 }
-          if (item && typeof item === "object") {
-            return {
-              addonId: item.addonId || item.id,
-              quantity: Number(item.quantity || 1),
-            };
-          }
-
-          return null;
-        })
-        .filter(
-          (item) =>
-            item?.addonId &&
-            Number.isInteger(item.quantity) &&
-            item.quantity > 0
-        );
-
-      // Step 2: Sirf unique addon IDs (strings) ka array banao
-      const uniqueAddonIds = [
-        ...new Set(normalizedAddons.map((item) => item.addonId)),
-      ];
-
-      if (uniqueAddonIds.length > 0) {
-        // Step 3: Prisma se addons fetch karo (ab yeh valid hai)
-        const dbAddons = await prisma.addon.findMany({
-          where: { id: { in: uniqueAddonIds } },
-          select: { id: true, name: true },
-        });
-
-        if (dbAddons.length > 0) {
-          addonString = normalizedAddons
-            .map((item) => {
-              const addon = dbAddons.find((a) => a.id === item.addonId);
-              if (!addon) return null;
-              return `${addon.name} (x${item.quantity})`;
-            })
-            .filter(Boolean)
-            .join(", ");
-        }
-      }
-    }
-
     const doc = new PDFDocument({ margin: 0, size: "A4" });
     const buffers = [];
     doc.on("data", buffers.push.bind(buffers));
@@ -659,7 +602,6 @@ class TicketService {
         colors,
         index: i,
         total: booking.tickets.length,
-        addonString, // 🔥 Formatted string pass karo
       });
     }
 
@@ -679,7 +621,6 @@ class TicketService {
       colors,
       index,
       total,
-      addonString,
     }
   ) {
     console.log(booking);
@@ -807,17 +748,6 @@ class TicketService {
     drawField(leftX, cursorY, "Ticket Type", ticket.type?.name || "Adult");
     drawField(rightX, cursorY, "Payment Mode", booking.paymentMethod);
     cursorY += 45;
-
-    // ─── 🔥 FIX 3: ADD-ONS SECTION (Full Width) ───
-    // AddonString ko full width mein render karo
-    drawField(
-      leftX,
-      cursorY,
-      "Add-ons",
-      addonString,
-      cardW - 100 // Full width
-    );
-    cursorY += 45; // Space for addons
 
     // ─── FIXED VENUE SECTION (Full Width) ───
     drawField(

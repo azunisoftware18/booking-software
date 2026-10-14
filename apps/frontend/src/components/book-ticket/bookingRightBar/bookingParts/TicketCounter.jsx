@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import CounterBtn from "../../../ui/CounterBtn";
-import { setTickets, setTicketTotal } from "@/store/slices/bookingSlice";
+import { setTickets, setTotalAmount } from "@/store/slices/bookingSlice";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useTicketTypes } from "@/hooks/useTicketType";
 import FullPageLoader from "@/components/ui/FullPageLoader"; 
@@ -12,18 +12,11 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
     const dispatch = useDispatch();
     const { placeId } = usePlace();
     const { data: ticketTypes = [], isLoading } = useTicketTypes(placeId);
+    const availableTicketTypes = ticketTypes.filter((ticketType) => ticketType.isAvailable !== false);
     const [counts, setCounts] = useState(tickets || {});
-
-    useEffect(() => {
-        if (ticketTypes.length > 0 && (Object.keys(counts).length === 0 || Object.values(counts).every((v) => v === 0))) {
-            const init = {};
-            ticketTypes.forEach((t) => {
-                const key = t._id || t.id;
-                init[key] = 0;
-            });
-            setCounts(init);
-        }
-    }, [ticketTypes]);
+    const selectedCounts = Object.keys(counts).length
+        ? counts
+        : Object.fromEntries(availableTicketTypes.map((ticketType) => [ticketType._id || ticketType.id, 0]));
 
     const updateCount = (id, value, max) => {
         setCounts((prev) => {
@@ -37,16 +30,18 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
     };
 
     const total = useMemo(() => {
-        return ticketTypes.reduce((acc, t) => {
+        return availableTicketTypes.reduce((acc, t) => {
             const key = t._id || t.id;
-            return acc + ((counts[key] || 0) * t.price);
+            return acc + ((selectedCounts[key] || 0) * t.price);
         }, 0);
-    }, [ticketTypes, counts]);
+    }, [availableTicketTypes, selectedCounts]);
+
+    const hasSelectedTickets = Object.values(selectedCounts).some((count) => count > 0);
 
     const handleContinue = () => {
-        if (total === 0) return;
+        if (!hasSelectedTickets) return;
         dispatch(setTickets(counts));
-        dispatch(setTicketTotal(total));
+        dispatch(setTotalAmount(total));
         onNext();
     };
 
@@ -68,9 +63,9 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                 </div>
 
                 <div className="w-full space-y-2.5 rounded-xl border border-dashed border-gold/15 p-2 bg-sandstone/10">
-                    {!isLoading && ticketTypes.map((t, index) => {
+                    {!isLoading && availableTicketTypes.map((t, index) => {
                         const uniqueKey = t._id || t.id || index;
-                        const isSelected = (counts[uniqueKey] || 0) > 0;
+                        const isSelected = (selectedCounts[uniqueKey] || 0) > 0;
                         return (
                             <motion.div
                                 key={uniqueKey}
@@ -82,7 +77,7 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                             >
                                 <div className="mb-3 sm:mb-0 space-y-0.5 flex-1">
                                     <p className={`font-serif font-bold text-base tracking-wide ${isSelected ? "text-gold" : "text-royal-blue"}`}>
-                                        {t.name}
+                                        {t.center ? `${t.center} · ${t.name}` : t.name}
                                     </p>
                                     <p className={`text-[10px] font-bold tracking-wider uppercase font-sans ${isSelected ? "text-white/60" : "text-jaipur-dark/70"}`}>
                                         Max limit: {t.maxPerBooking} Visitors
@@ -91,7 +86,7 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
 
                                 <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-6 shrink-0">
                                     <p className={`font-serif text-xl font-bold tracking-wide ${isSelected ? "text-gold drop-shadow-sm" : "text-royal-blue"}`}>
-                                        ₹{t.price}
+                                        {Number(t.price) === 0 ? "Free" : `₹${t.price}`}
                                     </p>
 
                                     <div className={`flex items-center gap-3 px-2 py-1.5 rounded-lg border transition-colors duration-300
@@ -103,15 +98,15 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                                         <CounterBtn
                                             text="-"
                                             onClick={() => updateCount(uniqueKey, -1, t.maxPerBooking)}
-                                            disabled={(counts[uniqueKey] || 0) <= 0}
+                                            disabled={(selectedCounts[uniqueKey] || 0) <= 0}
                                         />
                                         <div className={`w-8 text-center font-bold font-serif text-xl ${isSelected ? "text-white" : "text-royal-blue"}`}>
-                                            {counts[uniqueKey] || 0}
+                                            {selectedCounts[uniqueKey] || 0}
                                         </div>
                                         <CounterBtn
                                             text="+"
                                             onClick={() => updateCount(uniqueKey, 1, t.maxPerBooking)}
-                                            disabled={(counts[uniqueKey] || 0) >= t.maxPerBooking}
+                                            disabled={(selectedCounts[uniqueKey] || 0) >= t.maxPerBooking}
                                         />
                                     </div>
                                 </div>
@@ -133,7 +128,7 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
 
                 <div className="flex justify-between items-center pt-2 gap-4 mb-5">
                     <button onClick={onBack} className="flex-1 py-3.5 font-bold font-serif text-xs text-jaipur-dark hover:text-royal-blue transition-colors uppercase tracking-[2px]">← Back</button>
-                    <button disabled={total === 0} onClick={handleContinue} className={`flex-[2] py-3.5 rounded-xl font-serif text-xs font-bold tracking-[3px] transition-all duration-300 uppercase border ${total === 0 ? "bg-sandstone/50 text-gray-400 cursor-not-allowed border-gray-200/60" : "bg-gradient-to-r from-jaipur-dark to-[#994113] text-white border-gold/30 cursor-pointer shadow-md shadow-jaipur-dark/10"}`}>CONTINUE ⟶</button>
+                    <button disabled={!hasSelectedTickets} onClick={handleContinue} className={`flex-[2] py-3.5 rounded-xl font-serif text-xs font-bold tracking-[3px] transition-all duration-300 uppercase border ${!hasSelectedTickets ? "bg-sandstone/50 text-gray-400 cursor-not-allowed border-gray-200/60" : "bg-gradient-to-r from-jaipur-dark to-[#994113] text-white border-gold/30 cursor-pointer shadow-md shadow-jaipur-dark/10"}`}>CONTINUE ⟶</button>
                 </div>
             </motion.div>
         </>

@@ -12,8 +12,17 @@ import AuthMiddleware from "../middlewares/auth.middleware.js";
 import PermissionMiddleware from "../middlewares/permission.middleware.js";
 import asyncHandler from "../utils/AsyncHandler.js";
 import { PermissionsRegistry } from "../lib/PermissionsRegistry.js";
+import { ApiError } from "../utils/ApiError.js";
 
 const router = Router();
+
+const denySuperAdminOverride = (req, res, next) => {
+  if (req.user?.role?.roleCode === "SUPER_ADMIN") {
+    return next(ApiError.forbidden("Super Admin cannot create slot overrides"));
+  }
+
+  return next();
+};
 
 // CREATE SLOT TEMPLATE
 router.post(
@@ -61,6 +70,7 @@ router.delete(
 router.post(
   "/override",
   AuthMiddleware.isAuthenticated,
+  denySuperAdminOverride,
   PermissionMiddleware.hasPermission(
     PermissionsRegistry.SLOT.UPDATE
   ),

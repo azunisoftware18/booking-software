@@ -27,9 +27,10 @@ export default function TicketTypePage() {
   });
 
   const { mutateAsync: handleTicketType } = useHandleTicketType();
+  const { data: me } = useGetMe();
   const currentPlace = useSelector((state) => state.place.currentPlace);
 
-  const placeId = currentPlace?.id;
+  const placeId = me?.placeId || currentPlace?.id || currentPlace?._id;
   const { data: ticketTypes, isLoading } = useTicketTypes(placeId);
 
   const totalTicketTypes = ticketTypes?.length || 0;
@@ -86,11 +87,15 @@ export default function TicketTypePage() {
 
           name: formData.name,
 
+          center: formData.center,
+
           price: Number(formData.price),
+
+          isAvailable: formData.isAvailable,
 
           maxPerBooking: Number(formData.maxPerBooking),
 
-          placeId: currentPlace?.id,
+          placeId: editData?.placeId || placeId,
         },
       };
 
@@ -137,7 +142,7 @@ export default function TicketTypePage() {
     setIsModalOpen(true);
   };
 
-  const { data: me } = useGetMe();
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
   const permissions =
     me?.data?.permissions ??
@@ -145,7 +150,7 @@ export default function TicketTypePage() {
     me?.data?.data?.permissions ??
     [];
 
-  const canCreateTicketType = permissions.some(
+  const canCreateTicketType = !isSuperAdmin && permissions.some(
     (permission) =>
       permission.resource === "TICKET_TYPE" &&
       permission.action === "CREATE" &&
@@ -158,11 +163,11 @@ export default function TicketTypePage() {
       <div className="w-full mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Ticket Types
+            Entry Fees
           </h1>
 
           <p className="text-slate-500 font-medium">
-            Configure pricing tiers and booking restrictions.
+            View and manage location entry fees.
           </p>
         </div>
 
@@ -175,7 +180,7 @@ export default function TicketTypePage() {
               setEditData(null);
               setIsModalOpen(true);
             }}
-            text="Create Ticket Type"
+            text="Create Entry Fee"
           />
         )}
 
@@ -186,16 +191,16 @@ export default function TicketTypePage() {
 
       <div className="w-full mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
         <StatCard
-          title="Ticket Types"
+          title="Entry Fees"
           value={totalTicketTypes}
           percentage={12}
           isUp={true}
-          trendingText="Available ticket categories"
-          subText="Total configured ticket types"
+          trendingText="Available entry fee categories"
+          subText="Total configured entry fees"
         />
 
         <StatCard
-          title="Total Pricing"
+          title="Total Entry Fees"
           value={`₹${totalPrice}`}
           percentage={8}
           isUp={true}
@@ -204,12 +209,12 @@ export default function TicketTypePage() {
         />
 
         <StatCard
-          title="Booking Limit"
+          title="Configured Categories"
           value={totalBookingLimit}
           percentage={5}
           isUp={false}
           trendingText="Max booking capacity"
-          subText="Combined per booking limits"
+          subText="Total configured rate categories"
         />
       </div>
       {/* --- Table Container --- */}
@@ -238,9 +243,9 @@ export default function TicketTypePage() {
       />
       <ConfirmationDialog
         open={!!deleteItem}
-        title="Delete Ticket Type?"
-        description="This action cannot be undone. The selected ticket type will be permanently deleted."
-        confirmText="Delete Ticket"
+        title="Delete Entry Fee?"
+        description="This action cannot be undone. The selected entry fee will be permanently deleted."
+        confirmText="Delete Entry Fee"
         cancelText="Cancel"
         variant="danger"
         onCancel={() => setDeleteItem(null)}

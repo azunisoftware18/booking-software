@@ -10,6 +10,7 @@ class RoleService {
       roleName,
       roleCode,
       description,
+      createdById,
     } = payload;
 
     const normalizedName = roleName.trim();
@@ -49,6 +50,7 @@ class RoleService {
         roleName: normalizedName,
         roleCode: normalizedCode,
         description: description?.trim() || null,
+        createdById,
       },
     });
   }
@@ -113,6 +115,15 @@ static async getAllRoles(currentUserId) {
     },
     orderBy: {
       createdAt: "desc",
+    },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+        },
+      },
     },
   });
 

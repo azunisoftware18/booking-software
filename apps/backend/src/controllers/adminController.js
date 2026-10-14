@@ -106,6 +106,7 @@ export const createAdmin = async (req, res) => {
           location: { select: { id: true, name: true, city: true } },
           isActive: true,
           createdAt: true,
+          parent: { select: { id: true, fullName: true, email: true } },
         },
       });
     });
@@ -248,6 +249,9 @@ export const getAllAdmins = async (req, res) => {
       locationId: admin.locationId,
       status: admin.isActive ? "ACTIVE" : "INACTIVE",
       createdAt: admin.createdAt,
+      createdBy: admin.parent
+        ? { id: admin.parent.id, fullName: admin.parent.fullName, email: admin.parent.email }
+        : null,
     }));
 
     return res.status(200).json({ success: true, data: formattedAdmins });

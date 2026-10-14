@@ -31,7 +31,7 @@ export default function TicketTypeModal({
               </div>
               <div>
                 <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-                  {defaultValues?.id ? "Edit Ticket Type" : "Create Ticket Type"}
+                  {defaultValues?.id ? "Edit Entry Fee" : "Create Entry Fee"}
                 </h2>
                 <p className="text-slate-500 text-sm font-medium">
                   Set pricing, limits and details

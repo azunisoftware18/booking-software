@@ -23,7 +23,6 @@ class BookingService {
       placeId,
       slotDateTime,
       tickets,
-      addons,
       name,
       email,
       phone,
@@ -111,6 +110,10 @@ class BookingService {
             throw ApiError.badRequest("Invalid ticket type");
           }
 
+          if (!type.isAvailable) {
+            throw ApiError.badRequest(`${type.name} is not available at this center`);
+          }
+
           const quantity = Number(ticket.quantity);
 
           if (!Number.isInteger(quantity) || quantity <= 0) {
@@ -126,87 +129,6 @@ class BookingService {
           totalAmount += type.price * quantity;
           totalSeats += quantity;
         });
-
-        // --------------------------------------------------------
-        // ADDONS
-        // --------------------------------------------------------
-
-        const rawAddons = Array.isArray(addons) ? addons : [];
-
-        // Support both:
-        // Old: ["addonId1", "addonId2"]
-        // New: [{ addonId: "addonId1", quantity: 2 }]
-        const normalizedAddons = rawAddons
-          .map((item) => {
-            // Old format
-            if (typeof item === "string") {
-              return {
-                addonId: item,
-                quantity: 1,
-              };
-            }
-
-            // New format
-            if (item && typeof item === "object") {
-              return {
-                addonId: item.addonId || item.id,
-                quantity: Number(item.quantity || 1),
-              };
-            }
-
-            return null;
-          })
-          .filter(
-            (item) =>
-              item?.addonId &&
-              Number.isInteger(item.quantity) &&
-              item.quantity > 0
-          );
-
-        // Get unique addon IDs
-        const requestedAddonIds = normalizedAddons.map((item) => item.addonId);
-
-        const uniqueAddonIds = [...new Set(requestedAddonIds)];
-
-        // Fetch addons from DB
-        const addonList = await tx.addon.findMany({
-          where: {
-            id: {
-              in: uniqueAddonIds,
-            },
-            placeId,
-            isActive: true,
-          },
-        });
-
-        // Validate addons
-        if (uniqueAddonIds.length !== addonList.length) {
-          throw ApiError.badRequest(
-            "One or more addons are invalid or inactive"
-          );
-        }
-
-        // Calculate addon amount
-        let addonAmount = 0;
-
-        // Final addon payload with quantity
-        const addonPayload = normalizedAddons.map((item) => {
-          const addon = addonList.find((record) => record.id === item.addonId);
-
-          if (!addon) {
-            throw ApiError.badRequest(`Invalid addon: ${item.addonId}`);
-          }
-
-          addonAmount += Number(addon.price) * item.quantity;
-
-          return {
-            addonId: addon.id,
-            quantity: item.quantity,
-          };
-        });
-
-        // Final booking amount
-        const finalAmount = totalAmount + addonAmount;
 
         // --------------------------------------------------------
         // SLOT CAPACITY
@@ -273,7 +195,7 @@ class BookingService {
             email,
             phone,
             paymentMethod,
-            totalAmount: finalAmount,
+            totalAmount,
             totalSeats,
 
             // CASH / UPI direct complete honge
@@ -284,7 +206,6 @@ class BookingService {
             txnId,
 
             ticketPayload: tickets,
-            addonIds: addonPayload,
           },
         });
 
@@ -322,7 +243,7 @@ class BookingService {
         bookingId: createdBooking.id,
         // Unique merchant transaction reference
         txnId: createdBooking.txnId,
-        // Amount calculated from DB ticket and addon prices
+        // Amount calculated from database ticket prices
         amount: Number(createdBooking.totalAmount).toFixed(2),
         name: createdBooking.name,
         email: createdBooking.email,
@@ -697,95 +618,7 @@ We can't wait to welcome you! 🎉`;
       },
     });
 
-    const result = await Promise.all(
-      bookings.map(async (booking) => {
-        const rawAddonData = Array.isArray(booking.addonIds)
-          ? booking.addonIds
-          : [];
-
-        if (rawAddonData.length === 0) {
-          return {
-            ...booking,
-            addons: [],
-            bookingAddon: [],
-          };
-        }
-
-        const normalizedAddons = rawAddonData
-          .map((item) => {
-            if (typeof item === "string") {
-              return {
-                addonId: item,
-                quantity: 1,
-              };
-            }
-
-            if (item && typeof item === "object") {
-              return {
-                addonId: item.addonId || item.id,
-                quantity: Number(item.quantity || 1),
-              };
-            }
-
-            return null;
-          })
-          .filter(
-            (item) =>
-              item?.addonId &&
-              Number.isInteger(item.quantity) &&
-              item.quantity > 0
-          );
-
-        const addonIds = [
-          ...new Set(normalizedAddons.map((item) => item.addonId)),
-        ];
-
-        if (addonIds.length === 0) {
-          return {
-            ...booking,
-            addons: [],
-            bookingAddon: [],
-          };
-        }
-
-        const addonList = await prisma.addon.findMany({
-          where: {
-            id: {
-              in: addonIds,
-            },
-          },
-        });
-
-        const bookingAddon = normalizedAddons
-          .map((item) => {
-            const addon = addonList.find(
-              (record) => record.id === item.addonId
-            );
-
-            if (!addon) {
-              return null;
-            }
-
-            return {
-              id: `${booking.id}-${addon.id}`,
-              addonId: addon.id,
-              name: addon.name,
-              price: Number(addon.price),
-              quantity: item.quantity,
-              addon,
-            };
-          })
-          .filter(Boolean);
-
-        return {
-          ...booking,
-          addons: bookingAddon,
-          bookingAddon,
-        };
-      })
-    );
-
-    return result;
+    return bookings;
   }
 
   // ============================================================
@@ -811,85 +644,7 @@ We can't wait to welcome you! 🎉`;
       throw ApiError.notFound("Booking not found");
     }
 
-    const rawAddonData = Array.isArray(booking.addonIds)
-      ? booking.addonIds
-      : [];
-
-    if (rawAddonData.length === 0) {
-      return {
-        ...booking,
-        addons: [],
-        bookingAddon: [],
-      };
-    }
-
-    const normalizedAddons = rawAddonData
-      .map((item) => {
-        // Old format
-        if (typeof item === "string") {
-          return {
-            addonId: item,
-            quantity: 1,
-          };
-        }
-
-        // New format
-        if (item && typeof item === "object") {
-          return {
-            addonId: item.addonId || item.id,
-            quantity: Number(item.quantity || 1),
-          };
-        }
-
-        return null;
-      })
-      .filter(
-        (item) =>
-          item?.addonId && Number.isInteger(item.quantity) && item.quantity > 0
-      );
-
-    const addonIds = [...new Set(normalizedAddons.map((item) => item.addonId))];
-
-    if (addonIds.length === 0) {
-      return {
-        ...booking,
-        addons: [],
-        bookingAddon: [],
-      };
-    }
-
-    const addonList = await prisma.addon.findMany({
-      where: {
-        id: {
-          in: addonIds,
-        },
-      },
-    });
-
-    const bookingAddon = normalizedAddons
-      .map((item) => {
-        const addon = addonList.find((record) => record.id === item.addonId);
-
-        if (!addon) {
-          return null;
-        }
-
-        return {
-          id: `${booking.id}-${addon.id}`,
-          addonId: addon.id,
-          name: addon.name,
-          price: Number(addon.price),
-          quantity: item.quantity,
-          addon,
-        };
-      })
-      .filter(Boolean);
-
-    return {
-      ...booking,
-      bookingAddon,
-      addons: bookingAddon,
-    };
+    return booking;
   }
 }
 

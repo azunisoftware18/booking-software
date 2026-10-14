@@ -22,6 +22,21 @@ class PermissionMiddleware {
         }
 
         if (req.user.role?.roleCode === "SUPER_ADMIN") {
+          const allowedCreatePermissions = new Set([
+            "LOCATION.CREATE",
+            "ROLE.CREATE",
+            "USER.CREATE",
+          ]);
+
+          if (
+            action === "CREATE" &&
+            !allowedCreatePermissions.has(permission)
+          ) {
+            throw ApiError.forbidden(
+              "Super Admin cannot create this resource"
+            );
+          }
+
           return next();
         }
 

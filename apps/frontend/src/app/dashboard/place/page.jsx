@@ -151,8 +151,9 @@ export default function PlacePage() {
     me?.permissions ??
     me?.data?.data?.permissions ??
     [];
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
-  const canCreatePlace = permissions.some(
+  const canCreatePlace = !isSuperAdmin && permissions.some(
     (permission) =>
       permission.resource === "PLACE" &&
       permission.action === "CREATE"

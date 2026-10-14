@@ -11,7 +11,7 @@ import {
 
 import ActionMenu from "../common/ActionMenu";
 import { Pencil, Trash, Mail, ShieldCheck, User2 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function UserTable({
@@ -32,6 +32,7 @@ export default function UserTable({
     me?.permissions ??
     me?.data?.data?.permissions ??
     [];
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
   const hasPermission = (resource, action) =>
     permissions.some(
@@ -43,13 +44,17 @@ export default function UserTable({
 
   const canUpdateUser = hasPermission("USER", "UPDATE");
   const canDeleteUser = hasPermission("USER", "DELETE");
-  const canAssignPermission = hasPermission("PERMISSION", "ASSIGN");
+  const canAssignPermission =
+    isSuperAdmin || hasPermission("PERMISSION", "ASSIGN");
 
   // ✅ Search filter
   const filteredUsers = useMemo(() => {
     const value = search.toLowerCase().trim();
-    if (!value) return data || [];
-    return (data || []).filter((user) =>
+    const visibleUsers = (data || []).filter(
+      (user) => user.role?.roleCode !== "SUPER_ADMIN",
+    );
+    if (!value) return visibleUsers;
+    return visibleUsers.filter((user) =>
       [user?.fullName, user?.email, user?.role?.roleName]
         .filter(Boolean)
         .some((val) => val.toLowerCase().includes(value)),
@@ -64,12 +69,7 @@ export default function UserTable({
     return filteredUsers.slice(start, start + itemsPerPage);
   }, [filteredUsers, page]);
 
-  // Search badalne par page 1 par reset karein
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
-
-  const columns = ["User Details", "Role", "Status", "Actions"];
+  const columns = ["User Details", "Role", "Created By", "Status", "Actions"];
 
   return (
     <div className="p-6">
@@ -78,8 +78,14 @@ export default function UserTable({
         subtitle={`${filteredUsers.length} total users found`}
         searchProps={{
           value: search,
-          onChange: (e) => setSearch(e.target.value),
-          onClear: () => setSearch(""),
+          onChange: (e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          },
+          onClear: () => {
+            setSearch("");
+            setPage(1);
+          },
           placeholder: "Search users...",
         }}
         paginationProps={{
@@ -95,7 +101,7 @@ export default function UserTable({
           {loading ? (
             <TableLoader rows={5} />
           ) : currentData.length === 0 ? (
-            <TableEmpty colSpan={4} message="No users found" />
+            <TableEmpty colSpan={5} message="No users found" />
           ) : (
             currentData.map((user) => (
               <TableRow
@@ -114,7 +120,9 @@ export default function UserTable({
                             ]
                           : []),
 
-                        ...(canAssignPermission
+                        ...(canAssignPermission &&
+                        user.id !== me?.id &&
+                        user.role?.roleCode !== "SUPER_ADMIN"
                           ? [
                               {
                                 label: "Assign Permission",
@@ -162,6 +170,10 @@ export default function UserTable({
                     
                       {user.role?.roleName || "No Role"}
                   </div>
+                </td>
+
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  {user.parent?.fullName || "Unknown"}
                 </td>
 
                 {/* Status */}

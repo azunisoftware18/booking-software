@@ -403,13 +403,12 @@ export default function BookingDetailsPage() {
               </div>
             </div>
 
-            {/* Ticket Types */}
-            {/* Ticket Types */}
+            {/* Entry Fees */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="border-b border-slate-100 px-6 py-4">
                 <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                   <Ticket className="w-5 h-5 text-slate-600" />
-                  Ticket Types
+                  Entry Fees
                 </h2>
               </div>
 
@@ -449,55 +448,7 @@ export default function BookingDetailsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-500">No ticket types found</p>
-                )}
-              </div>
-            </div>
-
-            {/* Addons */}
-
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="border-b border-slate-100 px-6 py-4">
-                <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-slate-600" />
-                  Addons
-                </h2>
-              </div>
-
-              <div className="p-6">
-                {booking?.bookingAddon?.length > 0 ? (
-                  <div className="space-y-4">
-                    {booking.bookingAddon.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between border border-slate-100 rounded-xl p-4"
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {item.name}
-                          </p>
-
-                          <p className="text-sm text-slate-500">
-                            Quantity: {item.quantity}
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="font-bold text-emerald-600">
-                            ₹{item.price}
-                          </p>
-
-                          {item.quantity > 1 && (
-                            <p className="text-xs text-slate-400">
-                              Total: ₹{item.price * item.quantity}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-slate-500">No addons selected</p>
+                  <p className="text-slate-500">No entry fees found</p>
                 )}
               </div>
             </div>

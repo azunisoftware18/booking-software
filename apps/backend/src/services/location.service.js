@@ -10,6 +10,13 @@ const locationSelect = {
   status: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+  },
 };
 
 export const locationService = {

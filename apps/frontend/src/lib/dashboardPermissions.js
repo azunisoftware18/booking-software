@@ -4,7 +4,6 @@ export const dashboardRoutePermissions = [
   { path: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
   { path: "/dashboard/slots", permission: "SLOT.READ" },
   { path: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
-  { path: "/dashboard/addon", permission: "ADDON.READ" },
   { path: "/dashboard/booking", permission: "BOOKING.READ" },
   { path: "/dashboard/ticket-scanner", permission: "TICKET.SCAN" },
   { path: "/dashboard/users-management", permission: "USER.READ" },
