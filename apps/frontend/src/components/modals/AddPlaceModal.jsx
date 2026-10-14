@@ -9,6 +9,8 @@ export default function AddPlaceModal({
   onClose,
   onSubmit,
   defaultValues,
+  annexures = [],
+  existingPlaces = [],
 }) {
   if (!open) return null;
 
@@ -72,9 +74,12 @@ flex flex-col
         {/* Content Area - No changes here */}
         <div className="flex-1 overflow-y-auto">
           <AddPlaceForm
+            annexures={annexures}
+            submitText="Save Venue"
+            defaultValues={defaultValues || {}}
             onSubmit={onSubmit}
-            defaultValues={defaultValues}
             onCancel={onClose}
+            existingPlaces={existingPlaces}
           />
         </div>
       </div>

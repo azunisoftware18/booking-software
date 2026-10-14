@@ -2,12 +2,25 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { usePlaceById } from "@/lib/queries/usePlace";
-import { MapPin, Globe, ArrowLeft, Calendar, Compass } from "lucide-react";
+import {
+  MapPin,
+  Globe,
+  ArrowLeft,
+  Calendar,
+  Compass,
+  Building2,
+  Image as ImageIcon,
+} from "lucide-react";
+import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 
 export default function PlaceDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { data: place, isLoading } = usePlaceById(id);
+  const annexureOption = ANNEXURE_OPTIONS[place?.annexure]?.find(
+    (option) => option.value === place?.annexureOption,
+  );
+  const imageUrl = place?.imageUrl || place?.image || place?.images?.[0];
 
   if (isLoading) {
     return (
@@ -51,6 +64,18 @@ export default function PlaceDetailPage() {
           {/* Left Column: Main Content */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={`${place.name} venue`}
+                  className="h-72 w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-72 w-full items-center justify-center bg-slate-100 text-slate-400">
+                  <ImageIcon className="h-14 w-14" aria-hidden="true" />
+                </div>
+              )}
+
               <div className="p-8">
                 <div className="flex justify-between items-start mb-4">
                   <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -67,6 +92,37 @@ export default function PlaceDetailPage() {
                 </div>
 
                 <div className="space-y-8">
+                  {place.annexure && (
+                    <section className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                      <h2 className="flex items-center text-sm font-bold uppercase tracking-widest text-blue-700">
+                        <Building2 size={16} className="mr-2" /> Annexure
+                      </h2>
+                      <p className="mt-2 font-semibold text-slate-900">
+                        Annexure {place.annexure}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {annexureOption?.label || place.annexureOption || "—"}
+                      </p>
+                      {(annexureOption?.rate4Hours ||
+                        annexureOption?.rate8Hours) && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {annexureOption.rate4Hours && (
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-green-700">
+                              4 hours: ₹
+                              {annexureOption.rate4Hours.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                          {annexureOption.rate8Hours && (
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-orange-700">
+                              8 hours: ₹
+                              {annexureOption.rate8Hours.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </section>
+                  )}
+
                   <section>
                     <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center">
                       <Globe size={16} className="mr-2" /> Overview
@@ -94,7 +150,7 @@ export default function PlaceDetailPage() {
           {/* Right Column: Metadata & Stats */}
           <div className="space-y-6">
             {/* Quick Stats Card */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+            {/* <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-slate-900 font-bold mb-6 text-lg">Location Details</h3>
               
               <div className="space-y-4">
@@ -122,7 +178,7 @@ export default function PlaceDetailPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Time Metadata */}
             <div className="bg-slate-900 rounded-3xl shadow-lg p-6 text-white">

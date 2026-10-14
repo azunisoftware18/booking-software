@@ -2,29 +2,26 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash, MapPin, Calendar, Globe } from "lucide-react";
+import { Pencil, Trash, MapPin, Calendar, Globe, Image, PlusCircle } from "lucide-react";
 import ActionMenu from "../common/ActionMenu";
 import { TableLoader, TableEmpty } from "@/components/table/core";
 import SearchField from "@/components/ui/SearchField"; // SearchField import karein
 import { useGetMe } from "@/lib/queries/useGetMe";
+import Link from "next/link";
+import Button from "../ui/Button";
+import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 
-export default function PlaceCards({
-  data = [],
-  loading,
-  onEdit,
-  onDelete,
-}) {
+export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
   const [search, setSearch] = useState("");
   const router = useRouter();
 
   const filteredPlaces = useMemo(() => {
     return data.filter((place) =>
       [place.name, place.location].some((val) =>
-        val?.toLowerCase().includes(search.toLowerCase())
-      )
+        val?.toLowerCase().includes(search.toLowerCase()),
+      ),
     );
   }, [data, search]);
-
 
   const { data: me } = useGetMe();
 
@@ -36,15 +33,12 @@ export default function PlaceCards({
 
   const canUpdatePlace = permissions.some(
     (permission) =>
-      permission.resource === "PLACE" &&
-      permission.action === "UPDATE"
+      permission.resource === "PLACE" && permission.action === "UPDATE",
   );
-
 
   return (
     // 🔥 FIX: TableShell ki jagah simple div wrapper use karein
     <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-
       {/* Header Section (Same as TableShell) */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-5 border-b border-slate-100 gap-4">
         <div>
@@ -77,83 +71,126 @@ export default function PlaceCards({
         ) : (
           /* Card Grid Layout */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPlaces.map((place) => (
-              <div
-                key={place.id}
-                className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative group"
-              >
-                {/* Top Row: Name & Action Menu */}
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                      {place.name}
-                    </h3>
-                    <div className="flex items-center text-slate-500 text-sm mt-1">
-                      <MapPin className="w-3.5 h-3.5 mr-1" />
-                      {place.location || "Unknown Location"}
-                    </div>
-                  </div>
+            {filteredPlaces.map((place) => {
+              const annexureOption = ANNEXURE_OPTIONS[place.annexure]?.find(
+                (option) => option.value === place.annexureOption,
+              );
 
-                  <ActionMenu
-                    items={[
-                      {
-                        label: "View",
-                        icon: MapPin,
-                        onClick: () =>
-                          router.push(`/dashboard/place/${place.id}`),
-                      },
-                      ...(canUpdatePlace
-                        ? [
-                          {
-                            label: "Edit",
-                            icon: Pencil,
-                            onClick: () => onEdit?.(place),
-                          },
-                        ]
-                        : []),
-                    ]}
+              return (
+                <div
+                  key={place.id}
+                  className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow relative group overflow-hidden"
+                >
+                {place.imageUrl || place.image || place.images?.[0] ? (
+                  <img
+                    src={place.imageUrl || place.image || place.images?.[0]}
+                    alt={`${place.name} venue`}
+                    className="h-48 w-full object-cover"
                   />
-                </div>
+                ) : (
+                  <div className="flex h-48 w-full items-center justify-center bg-slate-100 text-slate-400">
+                    <Image className="h-10 w-10" aria-hidden="true" />
+                  </div>
+                )}
 
-                {/* Coordinates Section */}
-                <div className="bg-slate-50 rounded-lg p-3 flex justify-between mb-4">
-                  <div className="text-center flex-1 border-r border-slate-200">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                      Latitude
-                    </p>
-                    <p className="font-mono text-sm text-slate-700">
-                      {place.latitude?.toFixed(6) ?? "0.000000"}
-                    </p>
-                  </div>
-                  <div className="text-center flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                      Longitude
-                    </p>
-                    <p className="font-mono text-sm text-slate-700">
-                      {place.longitude?.toFixed(6) ?? "0.000000"}
-                    </p>
-                  </div>
-                </div>
+                <div className="p-5">
+                  {/* Top Row: Name & Action Menu */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        {place.name}
+                      </h3>
+                      <div className="flex items-center text-slate-500 text-sm mt-1">
+                        <MapPin className="w-3.5 h-3.5 mr-1" />
+                        {place.location || "Unknown Location"}
+                      </div>
+                      {annexureOption &&
+                        (annexureOption.rate4Hours ||
+                          annexureOption.rate8Hours) && (
+                          <div className="mt-2 flex flex-wrap gap-x-3 text-sm font-semibold text-emerald-700">
+                            {annexureOption.rate4Hours && (
+                              <span>
+                                4 hours: ₹
+                                {annexureOption.rate4Hours.toLocaleString(
+                                  "en-IN",
+                                )}
+                              </span>
+                            )}
+                            {annexureOption.rate8Hours && (
+                              <span>
+                                8 hours: ₹
+                                {annexureOption.rate8Hours.toLocaleString(
+                                  "en-IN",
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                    </div>
 
-                {/* Footer: Date */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
-                  <div className="flex items-center text-xs text-slate-400">
-                    <Calendar className="w-3.5 h-3.5 mr-1" />
-                    {new Date(place.createdAt).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                    <ActionMenu
+                      items={[
+                        {
+                          label: "View",
+                          icon: MapPin,
+                          onClick: () =>
+                            router.push(`/dashboard/place/${place.id}`),
+                        },
+                        ...(canUpdatePlace
+                          ? [
+                              {
+                                label: "Edit",
+                                icon: Pencil,
+                                onClick: () => onEdit?.(place),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
                   </div>
-                  <button
-                    onClick={() => router.push(`/dashboard/place/${place.id}`)}
-                    className="text-xs font-medium text-blue-600 hover:underline"
-                  >
-                    View Details →
-                  </button>
+
+                  {/* Coordinates Section */}
+                  {/* <div className="bg-slate-50 rounded-lg p-3 flex justify-between mb-4">
+                    <div className="text-center flex-1 border-r border-slate-200">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                        Latitude
+                      </p>
+                      <p className="font-mono text-sm text-slate-700">
+                        {place.latitude?.toFixed(6) ?? "0.000000"}
+                      </p>
+                    </div>
+                    <div className="text-center flex-1">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                        Longitude
+                      </p>
+                      <p className="font-mono text-sm text-slate-700">
+                        {place.longitude?.toFixed(6) ?? "0.000000"}
+                      </p>
+                    </div>
+                  </div> */}
+
+                  {/* Footer: Date */}
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+                    <div className="flex items-center text-xs text-slate-400">
+                      <Calendar className="w-3.5 h-3.5 mr-1" />
+                      {new Date(place.createdAt).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </div>
+                    <Link href={`/book-tickets/${place.id || place._id}`}>
+                      <Button
+                        icon={PlusCircle}
+                        iconPosition="left"
+                        text="Book Now"
+                      />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

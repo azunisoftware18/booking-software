@@ -41,6 +41,8 @@ export default function PlacePage() {
   const handleFormSubmit = async (formData) => {
     try {
       const payload = {
+        annexure: formData.annexure,
+        annexureOption: formData.annexureOption,
         name: formData.name.trim(),
         location: formData.location.trim(),
         latitude: Number(formData.latitude),
@@ -111,6 +113,7 @@ export default function PlacePage() {
           "Something went wrong",
         type: "error",
       });
+      throw err;
     }
   };
 
@@ -217,6 +220,7 @@ export default function PlacePage() {
         }}
         onSubmit={handleFormSubmit}
         defaultValues={editData}
+        existingPlaces={places}
       />
     </div>
   );

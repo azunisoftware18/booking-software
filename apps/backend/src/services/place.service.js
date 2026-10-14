@@ -2,6 +2,16 @@ import prisma from "../db/db.js";
 import { ApiError } from "../utils/ApiError.js";
 import { upload, deleteByKey } from "../utils/s3Service.js";
 
+const throwIfAnnexureOptionConflict = (error) => {
+  const target = JSON.stringify(error?.meta?.target ?? "");
+
+  if (error?.code === "P2002" && target.includes("annexure")) {
+    throw ApiError.conflict("This field already exists.");
+  }
+
+  throw error;
+};
+
 class PlaceService {
   // =========================================================
   // CREATE PLACE
@@ -12,6 +22,8 @@ class PlaceService {
     }
 
     const {
+      annexure,
+      annexureOption,
       name,
       location,
       shortDescription,
@@ -30,6 +42,15 @@ class PlaceService {
 
     if (existing) {
       throw ApiError.conflict("Place already exists");
+    }
+
+    const existingAnnexureOption = await prisma.place.findFirst({
+      where: { annexure, annexureOption },
+      select: { id: true },
+    });
+
+    if (existingAnnexureOption) {
+      throw ApiError.conflict("This field already exists.");
     }
 
     let imageUrl = null;
@@ -54,19 +75,25 @@ class PlaceService {
       imageKey = uploaded?.key || null;
     }
 
-    return await prisma.place.create({
-      data: {
-        createdById: currentUser.id,
-        name,
-        location,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        shortDescription: shortDescription || null,
-        description: description || null,
-        imageUrl,
-        imageKey,
-      },
-    });
+    try {
+      return await prisma.place.create({
+        data: {
+          createdById: currentUser.id,
+          annexure,
+          annexureOption,
+          name,
+          location,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          shortDescription: shortDescription || null,
+          description: description || null,
+          imageUrl,
+          imageKey,
+        },
+      });
+    } catch (error) {
+      throwIfAnnexureOptionConflict(error);
+    }
   }
 
 
@@ -226,6 +253,8 @@ class PlaceService {
     }
 
     const {
+      annexure,
+      annexureOption,
       name,
       location,
       shortDescription,
@@ -236,6 +265,8 @@ class PlaceService {
 
     const nextName = name ?? existing.name;
     const nextLocation = location ?? existing.location;
+    const nextAnnexure = annexure ?? existing.annexure;
+    const nextAnnexureOption = annexureOption ?? existing.annexureOption;
 
     // Check duplicate
     const duplicate = await prisma.place.findFirst({
@@ -250,6 +281,22 @@ class PlaceService {
 
     if (duplicate) {
       throw ApiError.conflict("Place already exists");
+    }
+
+    const duplicateAnnexureOption =
+      nextAnnexure && nextAnnexureOption
+        ? await prisma.place.findFirst({
+            where: {
+              annexure: nextAnnexure,
+              annexureOption: nextAnnexureOption,
+              NOT: { id },
+            },
+            select: { id: true },
+          })
+        : null;
+
+    if (duplicateAnnexureOption) {
+      throw ApiError.conflict("This field already exists.");
     }
 
     let imageUrl = existing.imageUrl;
@@ -300,6 +347,8 @@ class PlaceService {
         : existing.description;
 
     const isSame =
+      nextAnnexure === existing.annexure &&
+      nextAnnexureOption === existing.annexureOption &&
       nextName === existing.name &&
       nextLocation === existing.location &&
       nextLatitude === Number(existing.latitude) &&
@@ -316,21 +365,29 @@ class PlaceService {
     // =======================================================
     // UPDATE DATABASE
     // =======================================================
-    const updatedPlace = await prisma.place.update({
-      where: {
-        id,
-      },
-      data: {
-        name: nextName,
-        location: nextLocation,
-        latitude: nextLatitude,
-        longitude: nextLongitude,
-        shortDescription: nextShortDescription,
-        description: nextDescription,
-        imageUrl,
-        imageKey,
-      },
-    });
+    let updatedPlace;
+
+    try {
+      updatedPlace = await prisma.place.update({
+        where: {
+          id,
+        },
+        data: {
+          annexure: nextAnnexure,
+          annexureOption: nextAnnexureOption,
+          name: nextName,
+          location: nextLocation,
+          latitude: nextLatitude,
+          longitude: nextLongitude,
+          shortDescription: nextShortDescription,
+          description: nextDescription,
+          imageUrl,
+          imageKey,
+        },
+      });
+    } catch (error) {
+      throwIfAnnexureOptionConflict(error);
+    }
 
     // =======================================================
     // DELETE OLD S3 IMAGE

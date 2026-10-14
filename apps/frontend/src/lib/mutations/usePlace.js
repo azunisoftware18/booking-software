@@ -61,6 +61,8 @@ export const useCreatePlace = () => {
     mutationFn: async (payload) => {
       const formData = new FormData();
 
+      formData.append("annexure", payload.annexure);
+      formData.append("annexureOption", payload.annexureOption);
       formData.append("name", payload.name);
       formData.append("location", payload.location);
       formData.append("latitude", String(payload.latitude));
@@ -99,6 +101,8 @@ export const useUpdatePlace = () => {
     mutationFn: async ({ id, payload }) => {
       const formData = new FormData();
 
+      formData.append("annexure", payload.annexure);
+      formData.append("annexureOption", payload.annexureOption);
       formData.append("name", payload.name);
       formData.append("location", payload.location);
       formData.append("latitude", String(payload.latitude));
