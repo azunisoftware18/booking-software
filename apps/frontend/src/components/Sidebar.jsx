@@ -29,16 +29,16 @@ import { hasPermission } from "@/lib/dashboardPermissions";
 
 const menuItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", permission: "DASHBOARD.READ" },
+  { icon: User, label: "Location", href: "/dashboard/location", permission: "LOCATION.READ" },
   { icon: Map, label: "Place", href: "/dashboard/place", permission: "PLACE.READ" },
-  { icon: User, label: "Entry Fee", href: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
+  // { icon: User, label: "Entry Fee", href: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
   { icon: Calendar, label: "Slots", href: "/dashboard/slots", permission: "SLOT.READ" },
   { icon: TicketIcon, label: "Ticket Type", href: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
   { icon: MapPlus, label: "Addon", href: "/dashboard/addon", permission: "ADDON.READ" },
   { icon: BookCheck, label: "Booking", href: "/dashboard/booking", permission: "BOOKING.READ" },
   { icon: Scan, label: "Ticket Scanner", href: "/dashboard/ticket-scanner", permission: "TICKET.SCAN" },
-  { icon: Users, label: "User Management", href: "/dashboard/users-management", permission: "USER.READ" },
-  { icon: User, label: "Role Management", href: "/dashboard/role-management", permission: "ROLE.READ" },
-  { icon: User, label: "Location", href: "/dashboard/location", permission: "LOCATION.READ" },
+  { icon: Users, label: "Employee Management", href: "/dashboard/users-management", permission: "USER.READ" },
+  { icon: User, label: "Employee Role Management", href: "/dashboard/role-management", permission: "ROLE.READ" },
 ];
 
 export default function Sidebar() {
