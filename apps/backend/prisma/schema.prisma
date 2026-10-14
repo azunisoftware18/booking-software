@@ -31,6 +31,9 @@ model User {
   role  Role   @relation(fields: [roleId], references: [id])
   place Place? @relation(fields: [placeId], references: [id])
   createdPlaces Place[] @relation("PlaceCreator")
+  createdTicketTypes TicketType[] @relation("TicketTypeCreator")
+  createdLocations Location[] @relation("LocationCreator")
+  createdRoles Role[] @relation("RoleCreator")
 
   // Prisma relations; no child ID column is created
   parent   User?  @relation("UserHierarchy", fields: [parentId], references: [id])
@@ -53,8 +56,6 @@ model User {
 model Place {
   id               String  @id @default(uuid())
   createdById      String? @map("created_by_id")
-  annexure         String?
-  annexureOption   String? @map("annexure_option")
   name             String
   location         String?
   latitude         Float?
@@ -72,12 +73,10 @@ model Place {
   slotTemplates SlotTemplate[]
   slotOverrides SlotOverride[]
   bookings      Booking[]
-  addons        Addon[]
   users         User[]
   createdBy     User?   @relation("PlaceCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([createdById])
-  @@unique([annexure, annexureOption])
   @@unique([name, location])
   @@map("places")
 }
@@ -116,38 +115,26 @@ model SlotOverride {
 // TICKET TYPES
 model TicketType {
   id      String @id @default(uuid())
-  name    String @unique // Adult, Child, Foreign
+  name    String
+  center  String @default("Jaipur")
   price   Float
+  isAvailable Boolean @default(true) @map("is_available")
   placeId String @map("place_id")
+  createdById String? @map("created_by_id")
 
   maxPerBooking Int @default(6) @map("max_per_booking")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  place   Place    @relation(fields: [placeId], references: [id])
-  tickets Ticket[]
+  place     Place    @relation(fields: [placeId], references: [id])
+  createdBy User?    @relation("TicketTypeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  tickets   Ticket[]
 
-  @@unique([name, placeId])
+  @@unique([center, name, placeId])
   @@index([placeId])
+  @@index([createdById])
   @@map("ticket_types")
-}
-
-model Addon {
-  id String @id @default(uuid())
-
-  name  String // GUIDE, CAMERA, SAFARI
-  price Float
-
-  isActive Boolean @default(true) @map("is_active") // visible or not in booking 
-
-  placeId String @map("place_id")
-  place   Place  @relation(fields: [placeId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@unique([name, placeId])
-  @@map("addons")
 }
 
 model Booking {
@@ -155,7 +142,6 @@ model Booking {
 
   userId       String?  @map("user_id")
   placeId      String   @map("place_id")
-  locationId   String?  @map("location_id")
   slotDateTime DateTime @map("slot_date_time")
 
   bookingType BookingType @default(TICKET) @map("booking_type")
@@ -176,8 +162,6 @@ model Booking {
   ticketPayload Json?         @map("ticket_payload")
   paymentMethod PaymentMethod @map("payment_method")
 
-  addonIds Json? @map("addon_ids")
-
   ticketPdfUrl String? @map("ticket_pdf_url")
   ticketPdfKey String? @map("ticket_pdf_key")
 
@@ -186,13 +170,13 @@ model Booking {
   tickets Ticket[]
   user    User?    @relation(fields: [userId], references: [id])
   place   Place    @relation(fields: [placeId], references: [id])
-  location Location? @relation(fields: [locationId], references: [id])
 
   @@map("bookings")
 }
 
 model Location {
   id          String  @id @default(cuid())
+  createdById String? @map("created_by_id")
   name        String  @unique
   description String? @db.Text
   address     String?
@@ -203,9 +187,10 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
 
-  users User[]
-  bookings Booking[]
+  users     User[]
+  createdBy User?   @relation("LocationCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
+  @@index([createdById])
   @@index([status])
   @@index([city])
   @@map("locations")
@@ -289,6 +274,7 @@ model Setting {
 
 model Role {
   id          String  @id @default(uuid())
+  createdById String? @map("created_by_id")
   roleName    String  @unique @map("role_name")
   roleCode    String  @unique @map("role_code")
   description String? @db.LongText
@@ -297,9 +283,11 @@ model Role {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   users User[]
+  createdBy User? @relation("RoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   assignedPermissions AssignedPermission[]
 
+  @@index([createdById])
   @@map("roles")
 }
 
