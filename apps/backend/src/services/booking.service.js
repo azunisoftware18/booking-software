@@ -21,6 +21,7 @@ class BookingService {
   static async createBooking(payload, user) {
     const {
       placeId,
+      locationId,
       slotDateTime,
       tickets,
       addons,
@@ -37,6 +38,10 @@ class BookingService {
 
     if (!placeId) {
       throw ApiError.badRequest("Place ID is required");
+    }
+
+    if (!locationId) {
+      throw ApiError.badRequest("Please select a location before booking");
     }
 
     if (!slotDateTime) {
@@ -74,6 +79,20 @@ class BookingService {
 
     const booking = await prisma.$transaction(
       async (tx) => {
+        const selectedLocation = await tx.location.findFirst({
+          where: {
+            id: locationId,
+            status: "ACTIVE",
+          },
+          select: { id: true },
+        });
+
+        if (!selectedLocation) {
+          throw ApiError.badRequest(
+            "Selected location is invalid or no longer available",
+          );
+        }
+
         // --------------------------------------------------------
         // TICKET TYPES
         // --------------------------------------------------------
@@ -267,6 +286,7 @@ class BookingService {
           data: {
             userId: user?.id || null,
             placeId,
+            locationId: selectedLocation.id,
             slotDateTime: slotDate,
             bookingType,
             name,

@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
+import { useBookingLocations } from "@/hooks/useBookingLocations";
 import DateSelector from "./bookingParts/DateSelector";
 import TicketCounter from "./bookingParts/TicketCounter";
 import GuideSelector from "./bookingParts/GuideSelector";
@@ -14,15 +15,28 @@ import FullPageLoader from "@/components/ui/FullPageLoader";
 
 export default function BookingFlowRight() {
   const [step, setStep] = useState(0);
+  const [selectedLocationId, setSelectedLocationId] = useState("");
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
 
   const reduxData = useSelector((state) => state.booking);
   const currentUser = useSelector((state) => state.auth?.user);
   const isLoggedIn = Boolean(currentUser);
 
   const { placeId, isPlaceLoaded } = usePlace();
+  const {
+    data: bookingLocations = [],
+    isLoading: isLoadingLocations,
+    isError: hasLocationError,
+    refetch: refetchLocations,
+  } = useBookingLocations();
 
   const { mutateAsync: createBooking, isPending: isSubmitting } =
     useBookingMutation();
+
+  useEffect(() => {
+    setSelectedLocationId("");
+    setLocationConfirmed(false);
+  }, [placeId]);
 
   // ============================================================
   // SCROLL CONTROL
@@ -89,6 +103,10 @@ export default function BookingFlowRight() {
         throw new Error("Place information is not available");
       }
 
+      if (!locationConfirmed || !selectedLocationId) {
+        throw new Error("Please select a location before booking");
+      }
+
       if (!reduxData?.date || !reduxData?.slot?.time) {
         throw new Error("Please select a valid date and slot");
       }
@@ -120,6 +138,7 @@ export default function BookingFlowRight() {
 
       const payload = {
         placeId,
+        locationId: selectedLocationId,
         slotDateTime,
         name: visitorInfo?.name,
         email: visitorInfo?.email,
@@ -289,6 +308,87 @@ export default function BookingFlowRight() {
           )}
         </AnimatePresence>
       </div>
+
+      {!locationConfirmed && (
+        <div
+          className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="booking-location-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#994113]">
+              Booking location
+            </p>
+            <h2
+              id="booking-location-title"
+              className="mt-2 text-2xl font-bold text-slate-900"
+            >
+              Select your location
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Choose a location to continue with this booking.
+            </p>
+
+            {isLoadingLocations ? (
+              <p className="mt-6 text-sm text-slate-500">
+                Loading available locations...
+              </p>
+            ) : hasLocationError ? (
+              <div className="mt-6">
+                <p className="text-sm text-red-600">
+                  Locations could not be loaded. Please try again.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => refetchLocations()}
+                  className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : bookingLocations.length === 0 ? (
+              <p className="mt-6 text-sm text-red-600">
+                No active locations are available for booking. Please contact
+                support.
+              </p>
+            ) : (
+              <label
+                htmlFor="booking-location"
+                className="mt-6 block text-sm font-semibold text-slate-700"
+              >
+                Location <span className="text-red-600">*</span>
+                <select
+                  id="booking-location"
+                  value={selectedLocationId}
+                  onChange={(event) =>
+                    setSelectedLocationId(event.target.value)
+                  }
+                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 font-normal outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
+                >
+                  <option value="">Choose a location</option>
+                  {bookingLocations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {[location.name, location.city, location.state]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <button
+              type="button"
+              disabled={!selectedLocationId || isLoadingLocations}
+              onClick={() => setLocationConfirmed(true)}
+              className="mt-6 w-full rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {isSubmitting && <FullPageLoader message="Generating Secure Ledger..." />}
     </div>
