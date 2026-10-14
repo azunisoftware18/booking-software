@@ -6,7 +6,11 @@ class PlaceService {
   // =========================================================
   // CREATE PLACE
   // =========================================================
-  static async createPlace(payload, file) {
+  static async createPlace(payload, file, currentUser) {
+    if (!currentUser?.id) {
+      throw ApiError.unauthorized("Authentication required");
+    }
+
     const {
       name,
       location,
@@ -52,6 +56,7 @@ class PlaceService {
 
     return await prisma.place.create({
       data: {
+        createdById: currentUser.id,
         name,
         location,
         latitude: Number(latitude),
@@ -99,22 +104,35 @@ class PlaceService {
       });
     }
 
+    const isAdmin = ["ADMIN", "LOCATION_ADMIN"].includes(
+      user.role?.roleCode,
+    );
+
     if (user.locationId) {
       const location = await prisma.location.findUnique({
         where: { id: user.locationId },
         select: { name: true },
       });
 
-      if (!location) {
+      if (!location?.name && !isAdmin) {
         return [];
       }
 
-      if (!location.name) {
-        return [];
+      let where = { createdById: user.id };
+
+      if (location?.name) {
+        where = isAdmin
+          ? {
+              OR: [
+                { location: location.name },
+                { createdById: user.id },
+              ],
+            }
+          : { location: location.name };
       }
 
       return prisma.place.findMany({
-        where: { location: location.name },
+        where,
         orderBy: { createdAt: "desc" },
       });
     }
@@ -132,8 +150,11 @@ class PlaceService {
       });
     }
 
-    if (["ADMIN", "LOCATION_ADMIN"].includes(user.role?.roleCode)) {
-      return [];
+    if (isAdmin) {
+      return prisma.place.findMany({
+        where: { createdById: user.id },
+        orderBy: { createdAt: "desc" },
+      });
     }
 
     // Level 2 and 3: Only assigned place

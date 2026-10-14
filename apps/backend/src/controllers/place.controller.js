@@ -6,7 +6,7 @@ class PlaceController {
     console.log("=== CREATE PLACE ===");
     console.log("BODY:", req.body);
     console.log("FILE:", req.file);
-    const data = await PlaceService.createPlace(req.body, req.file);
+    const data = await PlaceService.createPlace(req.body, req.file, req.user);
     return res.success(data, "Place created", 201);
   };
 

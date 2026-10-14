@@ -30,6 +30,7 @@ model User {
 
   role  Role   @relation(fields: [roleId], references: [id])
   place Place? @relation(fields: [placeId], references: [id])
+  createdPlaces Place[] @relation("PlaceCreator")
 
   // Prisma relations; no child ID column is created
   parent   User?  @relation("UserHierarchy", fields: [parentId], references: [id])
@@ -51,6 +52,7 @@ model User {
 
 model Place {
   id               String  @id @default(uuid())
+  createdById      String? @map("created_by_id")
   name             String
   location         String?
   latitude         Float?
@@ -70,7 +72,9 @@ model Place {
   bookings      Booking[]
   addons        Addon[]
   users         User[]
+  createdBy     User?   @relation("PlaceCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
+  @@index([createdById])
   @@unique([name, location])
   @@map("places")
 }
