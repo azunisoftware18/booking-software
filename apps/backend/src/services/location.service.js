@@ -21,7 +21,7 @@ const locationSelect = {
 
 export const locationService = {
   async getActiveBookingOptions() {
-    return prisma.location.findMany({
+    const locations = await prisma.location.findMany({
       where: { status: "ACTIVE" },
       select: {
         id: true,
@@ -30,6 +30,67 @@ export const locationService = {
         state: true,
       },
       orderBy: [{ city: "asc" }, { name: "asc" }],
+    });
+
+    if (!locations.length) return [];
+
+    const places = await prisma.place.findMany({
+      where: {
+        OR: locations.flatMap(({ name }) => [
+          { name },
+          { location: name },
+          { location: { startsWith: `${name} (` } },
+          { location: { startsWith: `${name},` } },
+        ]),
+      },
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        imageUrl: true,
+        shortDescription: true,
+        ticketTypes: {
+          where: { isAvailable: true },
+          select: {
+            id: true,
+            name: true,
+            center: true,
+            price: true,
+            maxPerBooking: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+    });
+
+    return locations.map((location) => {
+      const normalizedName = location.name.trim().toLowerCase();
+      const venues = places.filter((place) => {
+        const placeName = place.name.trim().toLowerCase();
+        const placeLocation = place.location?.trim().toLowerCase() || "";
+
+        return (
+          placeName === normalizedName ||
+          placeLocation === normalizedName ||
+          placeLocation.startsWith(`${normalizedName} (`) ||
+          placeLocation.startsWith(`${normalizedName},`)
+        );
+      });
+
+      return {
+        ...location,
+        venues,
+        entryFees: venues.flatMap((venue) =>
+          venue.ticketTypes.map((ticketType) => ({
+            ...ticketType,
+            venueId: venue.id,
+            venueName: venue.name,
+          })),
+        ),
+      };
     });
   },
 

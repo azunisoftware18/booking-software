@@ -2,6 +2,17 @@ import prisma from "../db/db.js";
 import { ApiError } from "../utils/ApiError.js";
 import { upload, deleteByKey } from "../utils/s3Service.js";
 
+const publicPlaceSelect = {
+  id: true,
+  name: true,
+  location: true,
+  latitude: true,
+  longitude: true,
+  imageUrl: true,
+  shortDescription: true,
+  description: true,
+};
+
 class PlaceService {
   // =========================================================
   // CREATE PLACE
@@ -76,7 +87,10 @@ class PlaceService {
 
   static async getAllPlaces(currentUser) {
     if (!currentUser?.id) {
-      throw ApiError.unauthorized("Authentication required");
+      return prisma.place.findMany({
+        select: publicPlaceSelect,
+        orderBy: { createdAt: "desc" },
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -184,7 +198,16 @@ class PlaceService {
 
   static async getPlaceById(id, currentUser) {
     if (!currentUser?.id) {
-      throw ApiError.unauthorized("Authentication required");
+      const place = await prisma.place.findUnique({
+        where: { id },
+        select: publicPlaceSelect,
+      });
+
+      if (!place) {
+        throw ApiError.notFound("Place not found");
+      }
+
+      return place;
     }
 
     const user = await prisma.user.findUnique({
