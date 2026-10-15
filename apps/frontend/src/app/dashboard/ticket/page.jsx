@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 
 import { useHandleTicketType } from "@/lib/mutations/useTicketType";
 import { useTicketTypes } from "@/lib/queries/useTicketType";
+import { usePlaces } from "@/lib/queries/usePlace";
 import { useSelector } from "react-redux";
 import StatCard from "@/components/common/StatCard";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
@@ -28,20 +29,36 @@ export default function TicketTypePage() {
 
   const { mutateAsync: handleTicketType } = useHandleTicketType();
   const { data: me } = useGetMe();
+  const { data: accessiblePlaces = [] } = usePlaces();
   const currentPlace = useSelector((state) => state.place.currentPlace);
 
-  const placeId = me?.placeId || currentPlace?.id || currentPlace?._id;
+  const hasAssignedLocation = Boolean(me?.locationId || me?.location?.id);
+  const placeId =
+    editData?.placeId ||
+    me?.placeId ||
+    (hasAssignedLocation
+      ? accessiblePlaces[0]?.id
+      : currentPlace?.id || currentPlace?._id);
   const { data: ticketTypes, isLoading } = useTicketTypes(placeId);
+  const assignedLocation = me?.location;
+  const assignedCenter = assignedLocation?.city || assignedLocation?.name;
+  const visibleTicketTypes = assignedCenter
+    ? (ticketTypes || []).filter(
+        (ticket) =>
+          ticket.center?.trim().toLowerCase() ===
+          assignedCenter.trim().toLowerCase(),
+      )
+    : ticketTypes || [];
 
-  const totalTicketTypes = ticketTypes?.length || 0;
+  const totalTicketTypes = visibleTicketTypes.length;
 
   const totalPrice =
-    ticketTypes?.reduce((sum, ticket) => {
+    visibleTicketTypes.reduce((sum, ticket) => {
       return sum + Number(ticket.price || 0);
     }, 0) || 0;
 
   const totalBookingLimit =
-    ticketTypes?.reduce((sum, ticket) => {
+    visibleTicketTypes.reduce((sum, ticket) => {
       return sum + Number(ticket.maxPerBooking || 0);
     }, 0) || 0;
 
@@ -76,9 +93,7 @@ export default function TicketTypePage() {
   };
   // 🔥 SUBMIT
   const handleFormSubmit = async (formData) => {
-
     try {
-
       const payload = {
         action: editData ? "update" : "create",
 
@@ -87,7 +102,7 @@ export default function TicketTypePage() {
 
           name: formData.name,
 
-          center: formData.center,
+          center: assignedCenter || formData.center,
 
           price: Number(formData.price),
 
@@ -104,9 +119,7 @@ export default function TicketTypePage() {
       setDialogConfig({
         open: true,
 
-        title: editData
-          ? "Updated Successfully"
-          : "Created Successfully",
+        title: editData ? "Updated Successfully" : "Created Successfully",
 
         description: editData
           ? "Ticket type updated successfully."
@@ -117,9 +130,7 @@ export default function TicketTypePage() {
 
       setIsModalOpen(false);
       setEditData(null);
-
     } catch (err) {
-
       console.error(err);
 
       setDialogConfig({
@@ -150,12 +161,14 @@ export default function TicketTypePage() {
     me?.data?.data?.permissions ??
     [];
 
-  const canCreateTicketType = !isSuperAdmin && permissions.some(
-    (permission) =>
-      permission.resource === "TICKET_TYPE" &&
-      permission.action === "CREATE" &&
-      permission.isActive
-  );
+  const canCreateTicketType =
+    !isSuperAdmin &&
+    permissions.some(
+      (permission) =>
+        permission.resource === "TICKET_TYPE" &&
+        permission.action === "CREATE" &&
+        permission.isActive,
+    );
 
   return (
     <div className=" bg-slate-50 ">
@@ -171,7 +184,6 @@ export default function TicketTypePage() {
           </p>
         </div>
 
-
         {canCreateTicketType && (
           <Button
             icon={Plus}
@@ -183,7 +195,6 @@ export default function TicketTypePage() {
             text="Create Entry Fee"
           />
         )}
-
       </div>
       {/* ===================== */}
       {/* STAT CARDS */}
@@ -223,7 +234,7 @@ export default function TicketTypePage() {
           {/* 🔥 TABLE */}
 
           <TicketTypeTable
-            data={ticketTypes || []}
+            data={visibleTicketTypes}
             loading={isLoading}
             onEdit={handleEdit}
             onDelete={(ticket) => setDeleteItem(ticket)}
@@ -240,6 +251,7 @@ export default function TicketTypePage() {
         }}
         onSubmit={handleFormSubmit}
         defaultValues={editData}
+        currentUser={me}
       />
       <ConfirmationDialog
         open={!!deleteItem}

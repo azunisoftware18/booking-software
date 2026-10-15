@@ -2,8 +2,7 @@
 
 import { useForm, useWatch } from "react-hook-form";
 
-import { MapPin, IndianRupee, Hash } from "lucide-react";
-import InputField from "../ui/InputField";
+import { MapPin, IndianRupee } from "lucide-react";
 import Button from "../ui/Button";
 
 const centerRates = {
@@ -33,7 +32,19 @@ const centerRates = {
   ],
 };
 
-export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
+export default function TicketTypeForm({
+  onSubmit,
+  defaultValues = {},
+  currentUser,
+}) {
+  const assignedLocation = currentUser?.location;
+  const assignedCenter = assignedLocation?.city || assignedLocation?.name;
+  const assignedLocationLabel =
+    assignedLocation?.name || assignedLocation?.city;
+  const assignedRates = assignedCenter
+    ? centerRates[assignedCenter] || []
+    : [];
+
   const {
     register,
     handleSubmit,
@@ -43,32 +54,39 @@ export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
     reset,
   } = useForm({
     defaultValues: {
-      center: "Jhalana Patan",
+      center: assignedCenter || "Jhalana Patan",
       name: "",
       price: 0,
       isAvailable: true,
       maxPerBooking: 6,
       ...defaultValues,
+      ...(assignedCenter ? { center: assignedCenter } : {}),
     },
   });
 
   const selectedCenter = useWatch({ control, name: "center" });
   const selectedName = useWatch({ control, name: "name" });
-  const selectedRate = centerRates[selectedCenter]?.find(
-    (rate) => rate.name === selectedName
+  const ratesForSelectedCenter = assignedCenter
+    ? assignedRates
+    : centerRates[selectedCenter] || [];
+  const selectedRate = ratesForSelectedCenter.find(
+    (rate) => rate.name === selectedName,
   );
-  const rates = [...(centerRates[selectedCenter] || [])];
+  const rates = [...ratesForSelectedCenter];
 
   if (selectedName && !selectedRate) {
     rates.push({
       name: selectedName,
       price: Number(defaultValues.price || 0),
       unavailable: defaultValues.isAvailable === false,
-      free: Number(defaultValues.price) === 0 && defaultValues.isAvailable !== false,
+      free:
+        Number(defaultValues.price) === 0 &&
+        defaultValues.isAvailable !== false,
     });
   }
 
-  const selectedFee = selectedRate || rates.find((rate) => rate.name === selectedName);
+  const selectedFee =
+    selectedRate || rates.find((rate) => rate.name === selectedName);
 
   const submitHandler = async (data) => {
     const formattedData = {
@@ -100,64 +118,112 @@ export default function TicketTypeForm({ onSubmit, defaultValues = {} }) {
 
       <form onSubmit={handleSubmit(submitHandler)} className="space-y-5">
         <div className="w-full">
-          <label htmlFor="ticket-center" className="mb-1 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="ticket-center"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
             Location
           </label>
           <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 focus-within:border-black">
             <MapPin size={18} className="mr-2 shrink-0 text-gray-400" />
-            <select
-              id="ticket-center"
-              className="w-full bg-transparent text-sm outline-none"
-              {...register("center", {
-                required: "Location is required",
-                onChange: () => {
-                  setValue("name", "");
-                  setValue("price", 0);
-                  setValue("isAvailable", true);
-                },
-              })}
-            >
-              {Object.keys(centerRates).map((center) => (
-                <option key={center} value={center}>{center}</option>
-              ))}
-              {selectedCenter && !centerRates[selectedCenter] && (
-                <option value={selectedCenter}>{selectedCenter}</option>
-              )}
-            </select>
+            {assignedLocation ? (
+              <>
+                <span className="w-full text-sm text-gray-700">
+                  {assignedLocationLabel}
+                </span>
+                <input
+                  id="ticket-center"
+                  type="hidden"
+                  {...register("center", { required: "Location is required" })}
+                />
+              </>
+            ) : (
+              <select
+                id="ticket-center"
+                className="w-full bg-transparent text-sm outline-none"
+                {...register("center", {
+                  required: "Location is required",
+                  onChange: () => {
+                    setValue("name", "");
+                    setValue("price", 0);
+                    setValue("isAvailable", true);
+                  },
+                })}
+              >
+                {Object.keys(centerRates).map((center) => (
+                  <option key={center} value={center}>
+                    {center}
+                  </option>
+                ))}
+                {selectedCenter && !centerRates[selectedCenter] && (
+                  <option value={selectedCenter}>{selectedCenter}</option>
+                )}
+              </select>
+            )}
           </div>
-          {errors.center?.message && <p className="mt-1 text-xs text-red-500">{errors.center.message}</p>}
+          {errors.center?.message && (
+            <p className="mt-1 text-xs text-red-500">{errors.center.message}</p>
+          )}
         </div>
 
         <div className="w-full">
-          <label htmlFor="ticket-category" className="mb-1 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="ticket-category"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
             Ticket Category
           </label>
-          <div className={`flex items-center rounded-lg border px-3 py-2 focus-within:border-black ${errors.name ? "border-red-500" : "border-gray-300"}`}>
+          <div
+            className={`flex items-center rounded-lg border px-3 py-2 focus-within:border-black ${errors.name ? "border-red-500" : "border-gray-300"}`}
+          >
             <select
               id="ticket-category"
               className="w-full bg-transparent text-sm outline-none"
               {...register("name", { required: "Ticket category is required" })}
               onChange={(event) => {
-                const rate = centerRates[selectedCenter]?.find((item) => item.name === event.target.value);
-                const isLegacyRate = !rate && event.target.value === defaultValues.name;
+                const rate = ratesForSelectedCenter.find(
+                  (item) => item.name === event.target.value,
+                );
+                const isLegacyRate =
+                  !rate && event.target.value === defaultValues.name;
                 setValue("name", event.target.value, { shouldValidate: true });
-                setValue("price", rate ? rate.price ?? 0 : isLegacyRate ? Number(defaultValues.price || 0) : 0);
-                setValue("isAvailable", rate ? !rate.unavailable : isLegacyRate ? defaultValues.isAvailable !== false : true);
+                setValue(
+                  "price",
+                  rate
+                    ? (rate.price ?? 0)
+                    : isLegacyRate
+                      ? Number(defaultValues.price || 0)
+                      : 0,
+                );
+                setValue(
+                  "isAvailable",
+                  rate
+                    ? !rate.unavailable
+                    : isLegacyRate
+                      ? defaultValues.isAvailable !== false
+                      : true,
+                );
               }}
             >
               <option value="">Select a category</option>
               {rates.map((rate) => (
-                <option key={rate.name} value={rate.name}>{rate.name}</option>
+                <option key={rate.name} value={rate.name}>
+                  {rate.name}
+                </option>
               ))}
             </select>
           </div>
-          {errors.name?.message && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+          {errors.name?.message && (
+            <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
+          )}
         </div>
 
         <input type="hidden" {...register("price", { valueAsNumber: true })} />
         <input type="hidden" {...register("isAvailable")} />
         <div className="w-full">
-          <label className="mb-1 block text-sm font-medium text-gray-700">Entry Fees (in Rs.)</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Entry Fees (in Rs.)
+          </label>
           <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
             <IndianRupee size={18} className="mr-2 text-gray-400" />
             {selectedFee?.unavailable

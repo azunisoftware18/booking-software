@@ -56,7 +56,7 @@ export default function TicketTypeTable({
   const columns = [
     "Location",
     "Ticket Category",
-    "Place",
+    // "Place",
     "Entry Fees",
     ...(isSuperAdmin ? ["Created By"] : []),
     "Book Now",
@@ -152,9 +152,9 @@ export default function TicketTypeTable({
                 {ticket.name}
               </td>
 
-              <td className="px-6 py-4 text-slate-600">
+              {/* <td className="px-6 py-4 text-slate-600">
                 {ticket.place?.name || "N/A"}
-              </td>
+              </td> */}
 
               <td className="px-6 py-4 font-medium text-slate-800">
                 {ticket.isAvailable === false

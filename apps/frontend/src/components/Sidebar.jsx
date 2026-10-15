@@ -29,10 +29,10 @@ import { hasPermission } from "@/lib/dashboardPermissions";
 const menuItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", permission: "DASHBOARD.READ" },
   { icon: User, label: "Location", href: "/dashboard/location", permission: "LOCATION.READ" },
+  { icon: TicketIcon, label: "Entry Fees", href: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
   { icon: Map, label: "Tourist Venues", href: "/dashboard/place", permission: "PLACE.READ" },
   // { icon: User, label: "Entry Fee", href: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
   { icon: Calendar, label: "Slots", href: "/dashboard/slots", permission: "SLOT.READ" },
-  { icon: TicketIcon, label: "Entry Fees", href: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
   { icon: BookCheck, label: "Booking", href: "/dashboard/booking", permission: "BOOKING.READ" },
   { icon: Scan, label: "Ticket Scanner", href: "/dashboard/ticket-scanner", permission: "TICKET.SCAN" },
   { icon: Users, label: "Employee Management", href: "/dashboard/users-management", permission: "USER.READ" },

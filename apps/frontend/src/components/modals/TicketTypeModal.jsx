@@ -8,6 +8,7 @@ export default function TicketTypeModal({
   onClose,
   onSubmit,
   defaultValues,
+  currentUser,
 }) {
   if (!open) return null;
 
@@ -55,6 +56,7 @@ export default function TicketTypeModal({
                 <TicketTypeForm
                   onSubmit={onSubmit}
                   defaultValues={defaultValues}
+                  currentUser={currentUser}
                   onCancel={onClose} // Optional: Agar cancel button form mein chahiye
                 />
         </div>
