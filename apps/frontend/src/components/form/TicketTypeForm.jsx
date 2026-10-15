@@ -56,8 +56,12 @@ export default function TicketTypeForm({
     defaultValues: {
       center: assignedCenter || "Jhalana Patan",
       name: "",
+<<<<<<< HEAD
       price: 0,
       taxPercent: 0,
+=======
+      price: "",
+>>>>>>> b6fef76687ede14c7deb53f5d74c0ffd56580a96
       isAvailable: true,
       ...defaultValues,
       ...(assignedCenter ? { center: assignedCenter } : {}),
@@ -88,9 +92,6 @@ export default function TicketTypeForm({
         defaultValues.isAvailable !== false,
     });
   }
-
-  const selectedFee =
-    selectedRate || rates.find((rate) => rate.name === selectedName);
 
   const submitHandler = async (data) => {
     const formattedData = {
@@ -149,7 +150,7 @@ export default function TicketTypeForm({
                   required: "Location is required",
                   onChange: () => {
                     setValue("name", "");
-                    setValue("price", 0);
+                    setValue("price", "");
                     setValue("isAvailable", true);
                   },
                 })}
@@ -192,14 +193,6 @@ export default function TicketTypeForm({
                   !rate && event.target.value === defaultValues.name;
                 setValue("name", event.target.value, { shouldValidate: true });
                 setValue(
-                  "price",
-                  rate
-                    ? (rate.price ?? 0)
-                    : isLegacyRate
-                      ? Number(defaultValues.price || 0)
-                      : 0,
-                );
-                setValue(
                   "isAvailable",
                   rate
                     ? !rate.unavailable
@@ -227,14 +220,19 @@ export default function TicketTypeForm({
           )}
         </div>
 
-        <input type="hidden" {...register("price", { valueAsNumber: true })} />
         <input type="hidden" {...register("isAvailable")} />
         <div className="w-full">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="ticket-price"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
             Entry Fees (in Rs.)
           </label>
-          <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
+          <div
+            className={`flex items-center rounded-lg border px-3 py-2 focus-within:border-black ${errors.price ? "border-red-500" : "border-gray-300"}`}
+          >
             <IndianRupee size={18} className="mr-2 text-gray-400" />
+<<<<<<< HEAD
             {selectedFee?.unavailable
               ? "N.A."
               : selectedFee?.free
@@ -252,6 +250,27 @@ export default function TicketTypeForm({
                 ) / 100
               ).toFixed(2)}
             </p>
+=======
+            <input
+              id="ticket-price"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="Enter entry fee"
+              className="w-full bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
+              {...register("price", {
+                required: "Entry fee is required",
+                valueAsNumber: true,
+                validate: (value) =>
+                  (Number.isFinite(value) && value >= 0) ||
+                  "Enter a valid entry fee",
+              })}
+            />
+          </div>
+          {errors.price?.message && (
+            <p className="mt-1 text-xs text-red-500">{errors.price.message}</p>
+>>>>>>> b6fef76687ede14c7deb53f5d74c0ffd56580a96
           )}
         </div>
 

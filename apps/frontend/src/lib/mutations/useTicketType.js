@@ -12,10 +12,13 @@ export const useHandleTicketType = () => {
       return res?.data?.data;
     },
 
-    onSuccess: (_, variables) => {
+    onSuccess: (ticketType, variables) => {
+      const placeId = variables?.data?.placeId || ticketType?.placeId;
+
       queryClient.invalidateQueries({
-        queryKey: ["ticketTypes", variables?.data?.placeId],
+        queryKey: ["ticketTypes", placeId],
       });
+      queryClient.invalidateQueries({ queryKey: ["places"] });
     },
   });
 };

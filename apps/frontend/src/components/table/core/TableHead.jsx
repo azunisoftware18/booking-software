@@ -9,9 +9,9 @@ export default function TableHead({ columns = [] }) {
           return (
             <th
               key={index}
-              className={`px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 ${
+              className={`whitespace-nowrap px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 ${
                 isActionCol
-                  ? "text-right w-[100px]"
+                  ? "text-right w-25"
                   : "text-left w-auto"
               }`}
             >

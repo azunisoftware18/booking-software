@@ -22,14 +22,25 @@ class TicketTypeController {
     }
 
     if (payload.action === "create") {
-      const accessiblePlaces = await PlaceService.getAllPlaces(req.user);
+      let accessiblePlaces = await PlaceService.getAllPlaces(req.user);
+
+      if (
+        !accessiblePlaces.length &&
+        req.user.role?.roleCode === "LOCATION_ADMIN" &&
+        req.user.locationId
+      ) {
+        await PlaceService.ensureLocationPlace(req.user);
+        accessiblePlaces = await PlaceService.getAllPlaces(req.user);
+      }
+
       const requestedPlace = accessiblePlaces.find(
         (place) => place.id === payload.data?.placeId
       );
       const placeId =
         req.user.placeId ||
         requestedPlace?.id ||
-        (accessiblePlaces.length === 1 ? accessiblePlaces[0].id : null);
+        accessiblePlaces[0]?.id ||
+        null;
 
       if (!placeId) {
         throw ApiError.badRequest(

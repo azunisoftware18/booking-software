@@ -80,6 +80,40 @@ class PlaceService {
     });
   }
 
+  static async ensureLocationPlace(currentUser) {
+    if (!currentUser?.locationId) {
+      throw ApiError.badRequest("A location must be assigned to this account");
+    }
+
+    const location = await prisma.location.findUnique({
+      where: { id: currentUser.locationId },
+      select: { name: true, city: true, state: true },
+    });
+
+    if (!location) {
+      throw ApiError.notFound("Assigned location not found");
+    }
+
+    const name = location.name.trim();
+    const placeLocation =
+      [location.city, location.state].filter(Boolean).join(", ") || name;
+
+    return prisma.place.upsert({
+      where: {
+        name_location: {
+          name,
+          location: placeLocation,
+        },
+      },
+      update: {},
+      create: {
+        name,
+        location: placeLocation,
+        createdById: currentUser.id,
+      },
+    });
+  }
+
 
   // =========================================================
   // GET ALL PLACES BY USER LEVEL
@@ -128,19 +162,23 @@ class PlaceService {
         select: { name: true, city: true },
       });
 
-      if (!location?.name && !isAdmin) {
+      if (!location?.name && !location?.city && !isAdmin) {
         return [];
       }
 
-      const locationFilters = [
-        { location: location?.name },
-        { location: { startsWith: `${location?.name} (` } },
-        { location: { startsWith: `${location?.name},` } },
-      ].filter((filter) => filter.location);
+      const locationTerms = [...new Set([location?.name, location?.city])].filter(
+        Boolean,
+      );
+      const locationFilters = locationTerms.flatMap((term) => [
+        { name: term },
+        { location: term },
+        { location: { startsWith: `${term} (` } },
+        { location: { startsWith: `${term},` } },
+      ]);
 
       let where = { createdById: user.id };
 
-      if (location?.name) {
+      if (locationFilters.length) {
         where = isAdmin
           ? {
               OR: [
