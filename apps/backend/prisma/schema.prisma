@@ -40,7 +40,7 @@ model User {
   children User[] @relation("UserHierarchy")
 
   tickets  Ticket[]
-  bookings Booking[]
+  bookings Booking[] 
 
   assignedPermissions AssignedPermission[]
   location            Location?            @relation(fields: [locationId], references: [id])
