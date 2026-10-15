@@ -41,9 +41,7 @@ export default function TicketTypeForm({
   const assignedCenter = assignedLocation?.city || assignedLocation?.name;
   const assignedLocationLabel =
     assignedLocation?.name || assignedLocation?.city;
-  const assignedRates = assignedCenter
-    ? centerRates[assignedCenter] || []
-    : [];
+  const assignedRates = assignedCenter ? centerRates[assignedCenter] || [] : [];
 
   const {
     register,
@@ -56,12 +54,8 @@ export default function TicketTypeForm({
     defaultValues: {
       center: assignedCenter || "Jhalana Patan",
       name: "",
-<<<<<<< HEAD
-      price: 0,
       taxPercent: 0,
-=======
       price: "",
->>>>>>> b6fef76687ede14c7deb53f5d74c0ffd56580a96
       isAvailable: true,
       ...defaultValues,
       ...(assignedCenter ? { center: assignedCenter } : {}),
@@ -232,25 +226,6 @@ export default function TicketTypeForm({
             className={`flex items-center rounded-lg border px-3 py-2 focus-within:border-black ${errors.price ? "border-red-500" : "border-gray-300"}`}
           >
             <IndianRupee size={18} className="mr-2 text-gray-400" />
-<<<<<<< HEAD
-            {selectedFee?.unavailable
-              ? "N.A."
-              : selectedFee?.free
-                ? "Free"
-                : selectedFee
-                  ? `${selectedFee.price}/- base`
-                  : "Select a category"}
-          </div>
-          {selectedFee && !selectedFee.unavailable && (
-            <p className="mt-1 text-xs text-gray-500">
-              Total with {selectedTaxPercent}% tax: ₹
-              {(
-                Math.round(
-                  selectedPrice * (1 + selectedTaxPercent / 100) * 100,
-                ) / 100
-              ).toFixed(2)}
-            </p>
-=======
             <input
               id="ticket-price"
               type="number"
@@ -270,7 +245,6 @@ export default function TicketTypeForm({
           </div>
           {errors.price?.message && (
             <p className="mt-1 text-xs text-red-500">{errors.price.message}</p>
->>>>>>> b6fef76687ede14c7deb53f5d74c0ffd56580a96
           )}
         </div>
 
