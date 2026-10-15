@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
 import { useBookingLocations } from "@/hooks/useBookingLocations";
+import { setCurrentPlace } from "@/store/slices/placeSlice";
+import { resetBooking, setTickets } from "@/store/slices/bookingSlice";
 import DateSelector from "./bookingParts/DateSelector";
 import TicketCounter from "./bookingParts/TicketCounter";
 import VisitorForm from "./bookingParts/VisitorForm";
@@ -13,10 +16,13 @@ import { ArrowRight, Lock } from "lucide-react";
 import FullPageLoader from "@/components/ui/FullPageLoader";
 
 export default function BookingFlowRight() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [selectedLocationId, setSelectedLocationId] = useState("");
+  const [locationSelectionStep, setLocationSelectionStep] = useState(1);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
 
+  const dispatch = useDispatch();
   const reduxData = useSelector((state) => state.booking);
   const currentUser = useSelector((state) => state.auth?.user);
   const isLoggedIn = Boolean(currentUser);
@@ -32,10 +38,29 @@ export default function BookingFlowRight() {
   const { mutateAsync: createBooking, isPending: isSubmitting } =
     useBookingMutation();
 
-  useEffect(() => {
-    setSelectedLocationId("");
-    setLocationConfirmed(false);
-  }, [placeId]);
+  const selectedLocation = bookingLocations.find(
+    (location) => location.id === selectedLocationId,
+  );
+  const visibleEntryFees = selectedLocation?.entryFees || [];
+
+  const startBookingForEntryFee = (entryFee) => {
+    const venue = selectedLocation?.venues?.find(
+      (item) => item.id === entryFee.venueId,
+    );
+
+    if (!venue) return;
+
+    dispatch(resetBooking());
+    dispatch(setCurrentPlace(venue));
+    dispatch(setTickets({ [entryFee.id]: 1 }));
+    setLocationConfirmed(true);
+  };
+
+  const startBookingForVenue = (venue) => {
+    dispatch(resetBooking());
+    dispatch(setCurrentPlace(venue));
+    setLocationConfirmed(true);
+  };
 
   // ============================================================
   // SCROLL CONTROL
@@ -157,7 +182,7 @@ export default function BookingFlowRight() {
         if (!bookingId) {
           throw new Error("Booking ID not received");
         }
-        window.location.href = `/payment-success?bookingId=${bookingId}`;
+        router.push(`/payment-success?bookingId=${bookingId}`);
         return;
       }
 
@@ -165,7 +190,7 @@ export default function BookingFlowRight() {
         if (!bookingId) {
           throw new Error("Booking ID not received");
         }
-        window.location.href = `/payment-success?bookingId=${bookingId}`;
+        router.push(`/payment-success?bookingId=${bookingId}`);
         return;
       }
 
@@ -302,81 +327,191 @@ export default function BookingFlowRight() {
 
       {!locationConfirmed && (
         <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="booking-location-title"
         >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#994113]">
-              Booking location
-            </p>
-            <h2
-              id="booking-location-title"
-              className="mt-2 text-2xl font-bold text-slate-900"
-            >
-              Select your location
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Choose a location to continue with this booking.
-            </p>
-
-            {isLoadingLocations ? (
-              <p className="mt-6 text-sm text-slate-500">
-                Loading available locations...
-              </p>
-            ) : hasLocationError ? (
-              <div className="mt-6">
-                <p className="text-sm text-red-600">
-                  Locations could not be loaded. Please try again.
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+            {locationSelectionStep === 1 ? (
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#994113]">
+                  Booking location
                 </p>
+                <h2
+                  id="booking-location-title"
+                  className="mt-2 text-2xl font-bold text-slate-900"
+                >
+                  Select your location
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Choose a location to continue with this booking.
+                </p>
+
+                {isLoadingLocations ? (
+                  <p className="mt-6 text-sm text-slate-500">
+                    Loading available locations...
+                  </p>
+                ) : hasLocationError ? (
+                  <div className="mt-6">
+                    <p className="text-sm text-red-600">
+                      Locations could not be loaded. Please try again.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => refetchLocations()}
+                      className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : bookingLocations.length === 0 ? (
+                  <p className="mt-6 text-sm text-red-600">
+                    No active locations are available for booking. Please contact
+                    support.
+                  </p>
+                ) : (
+                  <label
+                    htmlFor="booking-location"
+                    className="mt-6 block text-sm font-semibold text-slate-700"
+                  >
+                    Location <span className="text-red-600">*</span>
+                    <select
+                      id="booking-location"
+                      value={selectedLocationId}
+                      onChange={(event) => {
+                        setSelectedLocationId(event.target.value);
+                      }}
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 font-normal outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
+                    >
+                      <option value="">Choose a location</option>
+                      {bookingLocations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {[location.name, location.city, location.state]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => refetchLocations()}
-                  className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  disabled={!selectedLocationId || isLoadingLocations}
+                  onClick={() => setLocationSelectionStep(2)}
+                  className="mt-6 w-full rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Retry
+                  Next
                 </button>
-              </div>
-            ) : bookingLocations.length === 0 ? (
-              <p className="mt-6 text-sm text-red-600">
-                No active locations are available for booking. Please contact
-                support.
-              </p>
+              </>
             ) : (
-              <label
-                htmlFor="booking-location"
-                className="mt-6 block text-sm font-semibold text-slate-700"
-              >
-                Location <span className="text-red-600">*</span>
-                <select
-                  id="booking-location"
-                  value={selectedLocationId}
-                  onChange={(event) =>
-                    setSelectedLocationId(event.target.value)
-                  }
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 font-normal outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#994113]">
+                  {selectedLocation?.name || "Booking location"}
+                </p>
+                <h2
+                  id="booking-location-title"
+                  className="mt-2 text-2xl font-bold text-slate-900"
                 >
-                  <option value="">Choose a location</option>
-                  {bookingLocations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {[location.name, location.city, location.state]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+                  Choose what to book
+                </h2>
 
-            <button
-              type="button"
-              disabled={!selectedLocationId || isLoadingLocations}
-              onClick={() => setLocationConfirmed(true)}
-              className="mt-6 w-full rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
+                <div className="mt-5 grid gap-5 md:grid-cols-2">
+                  <section className="min-w-0">
+                    <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                      Entry fees
+                    </h3>
+                    {visibleEntryFees.length ? (
+                      <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+                        {visibleEntryFees.map((entryFee) => (
+                          <button
+                            key={entryFee.id}
+                            type="button"
+                            onClick={() => startBookingForEntryFee(entryFee)}
+                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-left text-slate-700 transition-colors hover:border-[#994113] hover:bg-[#994113]/5"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-semibold">
+                                {entryFee.center
+                                  ? `${entryFee.center} · ${entryFee.name}`
+                                  : entryFee.name}
+                              </span>
+                              <span className="mt-0.5 block truncate text-xs text-slate-500">
+                                {entryFee.venueName}
+                              </span>
+                              <span className="mt-2 block text-xs font-bold text-[#994113]">
+                                Book this entry fee
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-sm font-semibold">
+                              {Number(entryFee.price) === 0
+                                ? "Free"
+                                : `₹${entryFee.price}/-`}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                        No entry fees are configured for this location yet.
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="min-w-0">
+                    <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                      Venues
+                    </h3>
+                    {selectedLocation?.venues?.length ? (
+                      <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+                        {selectedLocation.venues.map((venue) => (
+                          <button
+                            key={venue.id}
+                            type="button"
+                            onClick={() => startBookingForVenue(venue)}
+                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-left text-slate-700 transition-colors hover:border-[#994113] hover:bg-[#994113]/5"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-semibold">
+                                {venue.name}
+                              </span>
+                              {venue.location && (
+                                <span className="mt-0.5 block truncate text-xs text-slate-500">
+                                  {venue.location}
+                                </span>
+                              )}
+                              <span className="mt-2 block text-xs font-bold text-[#994113]">
+                                Browse venue tickets
+                              </span>
+                            </span>
+                            <ArrowRight
+                              size={16}
+                              aria-hidden="true"
+                              className="shrink-0 text-[#994113]"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                        No venues are configured for this location yet.
+                      </p>
+                    )}
+                  </section>
+                </div>
+
+                <div className="mt-6 flex justify-start">
+                  <button
+                    type="button"
+                    onClick={() => setLocationSelectionStep(1)}
+                    className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Back to locations
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

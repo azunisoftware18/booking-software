@@ -49,14 +49,12 @@ router.delete(
  // GET ALL PLACES — no PLACE.READ permission required
 router.get(
   "/",
-  AuthMiddleware.isAuthenticated,
   asyncHandler(PlaceController.getAll)
 );
 
 // GET PLACE BY ID — no PLACE.READ permission required
 router.get(
   "/:id",
-  AuthMiddleware.isAuthenticated,
   asyncHandler(PlaceController.getById)
 );
 
