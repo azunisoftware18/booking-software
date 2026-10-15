@@ -22,6 +22,7 @@ import { useGetMe } from "@/lib/queries/useGetMe";
 
 export default function PlacePage() {
   const { data: places, isLoading } = usePlaces();
+  const { data: me } = useGetMe();
   const { mutateAsync: createPlace } = useCreatePlace();
   const { mutateAsync: deletePlace } = useDeletePlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
@@ -50,6 +51,7 @@ export default function PlacePage() {
         shortDescription: formData.shortDescription || "",
         description: formData.description || "",
         image: formData.image || null,
+        slotTemplates: editData ? [] : formData.slotTemplates || [],
       };
 
       // Duplicate check
@@ -143,8 +145,6 @@ export default function PlacePage() {
   };
 
 
-  const { data: me } = useGetMe();
-
   // Axios response ya React Query ke unwrapped response ko handle karega
   const permissions =
     me?.data?.permissions ??
@@ -157,6 +157,12 @@ export default function PlacePage() {
     (permission) =>
       permission.resource === "PLACE" &&
       permission.action === "CREATE"
+  );
+  const canCreateSlots = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "CREATE" &&
+      permission.isActive,
   );
 
 
@@ -222,6 +228,7 @@ export default function PlacePage() {
         onSubmit={handleFormSubmit}
         defaultValues={editData}
         existingPlaces={places}
+        canCreateSlots={canCreateSlots}
       />
     </div>
   );

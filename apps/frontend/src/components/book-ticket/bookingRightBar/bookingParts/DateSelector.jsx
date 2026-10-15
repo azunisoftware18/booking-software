@@ -7,10 +7,11 @@ import { setDate, setSlot } from "@/store/slices/bookingSlice";
 import SlotCard from "./SlotCard";
 import FullPageLoader from "@/components/ui/FullPageLoader";
 import { useSlots } from "@/hooks/useSlot";
+import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 
 export default function DateSelector({ onNext }) {
   const dispatch = useDispatch();
-  const { placeId } = usePlace();
+  const { currentPlace, placeId } = usePlace();
   const today = new Date().toISOString().split("T")[0];
   const selectedDate = useSelector((state) => state.booking.date);
   const selectedSlot = useSelector((state) => state.booking.slot);
@@ -59,6 +60,9 @@ export default function DateSelector({ onNext }) {
   };
 
   const validatedSlots = processSlotsWithTimeCheck();
+  const annexureOption = ANNEXURE_OPTIONS[currentPlace?.annexure]?.find(
+    (option) => option.value === currentPlace?.annexureOption,
+  );
 
   if (!placeId) {
     return (
@@ -85,6 +89,15 @@ export default function DateSelector({ onNext }) {
             <h2 className="text-xl sm:text-2xl font-serif font-bold text-royal-blue leading-tight">
               Plan Your Visit
             </h2>
+            {currentPlace?.annexure && (
+              <p className="text-xs font-medium text-jaipur-dark/70">
+                Annexure {currentPlace.annexure}
+                {currentPlace.annexureOption
+                  ? ` · ${annexureOption?.label || currentPlace.annexureOption}`
+                  : ""}
+                {" · Slots for this selection"}
+              </p>
+            )}
             <div className="h-[1px] w-12 bg-gold/40" />
           </div>
 

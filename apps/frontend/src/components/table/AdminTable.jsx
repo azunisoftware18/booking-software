@@ -13,7 +13,7 @@ import ActionMenu from "../common/ActionMenu";
 import StatusBadge from "../common/StatusBadge";
 
 import { useState, useMemo } from "react";
-import { Eye, Pencil, Trash2, MapPin, UserPlus } from "lucide-react";
+import { Eye, Pencil, Trash2, MapPin, User } from "lucide-react";
 
 export default function AdminTable({
   data = [],
@@ -23,6 +23,8 @@ export default function AdminTable({
   onView,
   onEdit,
   onDelete,
+  onAssignPermission,
+  canAssignPermission = false,
   paginationProps,
 }) {
   // =========================================================
@@ -125,6 +127,15 @@ export default function AdminTable({
                           icon: Eye,
                           onClick: () => onView?.(admin),
                         },
+                        ...(canAssignPermission
+                          ? [
+                              {
+                                label: "Assign Permission",
+                                icon: User,
+                                onClick: () => onAssignPermission?.(admin),
+                              },
+                            ]
+                          : []),
                         {
                           label: "Edit Admin",
                           icon: Pencil,

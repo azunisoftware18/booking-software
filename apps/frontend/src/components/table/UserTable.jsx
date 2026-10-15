@@ -14,6 +14,9 @@ import { Pencil, Trash, Mail, ShieldCheck, User2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useGetMe } from "@/lib/queries/useGetMe";
 
+const isAdminUser = (user) =>
+  ["SUPER_ADMIN", "LOCATION_ADMIN", "ADMIN"].includes(user.role?.roleCode);
+
 export default function UserTable({
   data = [],
   loading = false,
@@ -50,9 +53,7 @@ export default function UserTable({
   // ✅ Search filter
   const filteredUsers = useMemo(() => {
     const value = search.toLowerCase().trim();
-    const visibleUsers = (data || []).filter(
-      (user) => user.role?.roleCode !== "SUPER_ADMIN",
-    );
+    const visibleUsers = (data || []).filter((user) => !isAdminUser(user));
     if (!value) return visibleUsers;
     return visibleUsers.filter((user) =>
       [user?.fullName, user?.email, user?.role?.roleName]
@@ -122,7 +123,7 @@ export default function UserTable({
 
                         ...(canAssignPermission &&
                         user.id !== me?.id &&
-                        user.role?.roleCode !== "SUPER_ADMIN"
+                        !isAdminUser(user)
                           ? [
                               {
                                 label: "Assign Permission",

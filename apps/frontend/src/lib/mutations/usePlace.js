@@ -73,6 +73,10 @@ export const useCreatePlace = () => {
         payload.description || ""
       );
 
+      if (payload.slotTemplates?.length) {
+        formData.append("slotTemplates", JSON.stringify(payload.slotTemplates));
+      }
+
       // New image
       if (payload.image instanceof File) {
         formData.append("image", payload.image);

@@ -11,6 +11,27 @@ import { PermissionsRegistry } from "../lib/PermissionsRegistry.js";
 
 const router = Router();
 
+const requireSlotCreatePermissionWhenAddingTemplates = (req, res, next) => {
+  const templates = req.body?.slotTemplates;
+  let parsedTemplates = templates;
+
+  if (typeof templates === "string") {
+    try {
+      parsedTemplates = JSON.parse(templates);
+    } catch {
+      return next();
+    }
+  }
+
+  if (!Array.isArray(parsedTemplates) || parsedTemplates.length === 0) {
+    return next();
+  }
+
+  return PermissionMiddleware.hasPermission(
+    PermissionsRegistry.SLOT.CREATE,
+  )(req, res, next);
+};
+
 // CREATE PLACE
 router.post(
   "/",
@@ -19,6 +40,7 @@ router.post(
     PermissionsRegistry.PLACE.CREATE
   ),
   settingUpload.single("image"),
+  requireSlotCreatePermissionWhenAddingTemplates,
   ValidateRequest.validate(PlaceValidation.create),
   asyncHandler(PlaceController.create)
 );
@@ -49,12 +71,14 @@ router.delete(
  // GET ALL PLACES — no PLACE.READ permission required
 router.get(
   "/",
+  AuthMiddleware.optionalAuthentication,
   asyncHandler(PlaceController.getAll)
 );
 
 // GET PLACE BY ID — no PLACE.READ permission required
 router.get(
   "/:id",
+  AuthMiddleware.optionalAuthentication,
   asyncHandler(PlaceController.getById)
 );
 

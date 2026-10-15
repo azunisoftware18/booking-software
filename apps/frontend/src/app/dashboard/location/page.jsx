@@ -11,6 +11,7 @@ import LocationTable from "@/components/table/LocationTable";
 import AdminTable from "@/components/table/AdminTable";
 import LocationModal from "@/components/modals/LocationModal";
 import AdminModal from "@/components/modals/AdminModal";
+import AssignPermissionModal from "@/components/modals/AssignPermissionModal";
 import { useLocations } from "@/lib/queries/useLocation";
 import { useHandleLocation } from "@/lib/mutations/useLocation";
 import { useGetMe } from "@/lib/queries/useGetMe";
@@ -46,6 +47,8 @@ export default function LocationManagementPage() {
   const [adminToEdit, setAdminToEdit] = useState(null);
   const [adminToDelete, setAdminToDelete] = useState(null);
   const [adminToView, setAdminToView] = useState(null);
+  const [isPermissionOpen, setIsPermissionOpen] = useState(false);
+  const [permissionAdmin, setPermissionAdmin] = useState(null);
 
   const [dialogConfig, setDialogConfig] = useState({
     open: false,
@@ -236,6 +239,19 @@ export default function LocationManagementPage() {
       permission.action === "DELETE" &&
       permission.isActive,
   );
+  const canAssignPermission =
+    isSuperAdmin ||
+    permissions.some(
+      (permission) =>
+        permission.resource === "PERMISSION" &&
+        permission.action === "ASSIGN" &&
+        permission.isActive,
+    );
+
+  const handleAssignPermission = (admin) => {
+    setPermissionAdmin(admin);
+    setIsPermissionOpen(true);
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen p-7">
@@ -379,6 +395,8 @@ export default function LocationManagementPage() {
               setIsAdminModalOpen(true);
             }}
             onDelete={setAdminToDelete}
+            canAssignPermission={canAssignPermission}
+            onAssignPermission={handleAssignPermission}
           />
         )}
       </div>
@@ -405,6 +423,23 @@ export default function LocationManagementPage() {
         }}
         onSubmit={handleCreateAdmin}
         locations={locations.filter((location) => location.status === "ACTIVE")}
+      />
+
+      <AssignPermissionModal
+        open={isPermissionOpen}
+        user={permissionAdmin}
+        onClose={() => {
+          setIsPermissionOpen(false);
+          setPermissionAdmin(null);
+        }}
+        onSaved={() => {
+          setDialogConfig({
+            open: true,
+            title: "Permissions Updated",
+            description: `Permissions assigned to ${permissionAdmin?.name} successfully.`,
+            variant: "success",
+          });
+        }}
       />
 
       <ConfirmationDialog

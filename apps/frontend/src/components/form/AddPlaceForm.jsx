@@ -22,16 +22,25 @@ const MapPicker = dynamic(() => import("@/components/common/MapPicker"), {
   ssr: false,
 });
 
+const getAnnexureOptionLabel = (annexure, optionValue) =>
+  ANNEXURE_OPTIONS[annexure]?.find((option) => option.value === optionValue)
+    ?.label || "";
+
 export default function AddPlaceForm({
   submitText = "Save Venue",
   defaultValues = {},
   onSubmit,
   onCancel,
   existingPlaces = [],
+  canCreateSlots = false,
 }) {
   const [preview, setPreview] = useState(null);
   const [imageError, setImageError] = useState("");
   const [annexureError, setAnnexureError] = useState("");
+  const [slotTemplates, setSlotTemplates] = useState([
+    { startTime: "", endTime: "", capacity: "" },
+  ]);
+  const [slotError, setSlotError] = useState("");
 
   const [selectedAnnexure, setSelectedAnnexure] = useState(
     defaultValues?.annexure || "",
@@ -104,7 +113,10 @@ export default function AddPlaceForm({
     reset({
       annexure,
       annexureOption: option,
-      name: defaultValues?.name || "",
+      name:
+        getAnnexureOptionLabel(annexure, option) ||
+        defaultValues?.name ||
+        "",
       location: defaultValues?.location || "",
       latitude: defaultValues?.latitude ?? "",
       longitude: defaultValues?.longitude ?? "",
@@ -120,6 +132,8 @@ export default function AddPlaceForm({
     setShowAnnexurePopup(false);
     setImageError("");
     setAnnexureError("");
+    setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
+    setSlotError("");
   }, [defaultValues, reset]);
 
   // =========================================================
@@ -136,6 +150,7 @@ export default function AddPlaceForm({
 
       setValue("annexure", "", { shouldDirty: true });
       setValue("annexureOption", "", { shouldDirty: true });
+      setValue("name", "", { shouldDirty: true, shouldValidate: true });
 
       return;
     }
@@ -170,7 +185,9 @@ export default function AddPlaceForm({
     );
 
     if (optionAlreadyUsed) {
-      setAnnexureError("This field already exists. Please select another option.");
+      setAnnexureError(
+        "This field already exists. Please select another option.",
+      );
       return;
     }
 
@@ -187,6 +204,12 @@ export default function AddPlaceForm({
       shouldDirty: true,
       shouldValidate: true,
     });
+
+    setValue(
+      "name",
+      getAnnexureOptionLabel(pendingAnnexure, pendingOption),
+      { shouldDirty: true, shouldValidate: true },
+    );
 
     setPendingAnnexure("");
     setPendingOption("");
@@ -263,11 +286,54 @@ export default function AddPlaceForm({
         return;
       }
 
+      const configuredSlots = canCreateSlots
+        ? slotTemplates.map((slot) => ({
+            ...slot,
+            capacity: Number(slot.capacity),
+          }))
+        : [];
+
+      if (canCreateSlots) {
+        if (
+          configuredSlots.some(
+            (slot) =>
+              !slot.startTime ||
+              !slot.endTime ||
+              !Number.isInteger(slot.capacity) ||
+              slot.capacity < 1,
+          )
+        ) {
+          setSlotError("Enter a start time, end time and capacity for every slot.");
+          return;
+        }
+
+        if (
+          configuredSlots.some((slot) => slot.startTime >= slot.endTime)
+        ) {
+          setSlotError("Each slot's end time must be later than its start time.");
+          return;
+        }
+
+        if (
+          new Set(configuredSlots.map((slot) => slot.startTime)).size !==
+          configuredSlots.length
+        ) {
+          setSlotError("Each slot must have a different start time.");
+          return;
+        }
+      }
+
+      setSlotError("");
+
       const payload = {
         ...data,
         annexure: selectedAnnexure,
         annexureOption: selectedAnnexureOption,
-        name: data.name.trim(),
+        slotTemplates: configuredSlots,
+        name: getAnnexureOptionLabel(
+          selectedAnnexure,
+          selectedAnnexureOption,
+        ),
         location: data.location.trim(),
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
@@ -296,6 +362,8 @@ export default function AddPlaceForm({
       setPreview(null);
       setImageError("");
       setAnnexureError("");
+      setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
+      setSlotError("");
 
       const input = document.getElementById("place-image");
       if (input) input.value = "";
@@ -322,6 +390,8 @@ export default function AddPlaceForm({
     setPreview(null);
     setImageError("");
     setAnnexureError("");
+    setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
+    setSlotError("");
   };
 
   // Currently selected option object
@@ -358,6 +428,8 @@ export default function AddPlaceForm({
               <option value="">Choose an annexure</option>
               <option value="A">Annexure A</option>
               <option value="B">Annexure B</option>
+              <option value="C">Annexure C</option>
+              <option value="D">Annexure D</option>
             </select>
 
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -379,25 +451,45 @@ export default function AddPlaceForm({
               </p>
 
               {/* SELECTED RATES */}
-              {selectedOptionObj &&
-                (selectedOptionObj.rate4Hours ||
-                  selectedOptionObj.rate8Hours) && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedOptionObj.rate4Hours && (
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                        4 घंटे: ₹
-                        {selectedOptionObj.rate4Hours.toLocaleString("en-IN")}
-                      </span>
-                    )}
+              {selectedOptionObj && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedOptionObj.rate4Hours != null && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                      4 Hours: ₹
+                      {Number(selectedOptionObj.rate4Hours).toLocaleString(
+                        "en-IN",
+                      )}
+                    </span>
+                  )}
 
-                    {selectedOptionObj.rate8Hours && (
-                      <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-                        8 घंटे: ₹
-                        {selectedOptionObj.rate8Hours.toLocaleString("en-IN")}
-                      </span>
-                    )}
-                  </div>
-                )}
+                  {selectedOptionObj.rate8Hours != null && (
+                    <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                      8 Hours: ₹
+                      {Number(selectedOptionObj.rate8Hours).toLocaleString(
+                        "en-IN",
+                      )}
+                    </span>
+                  )}
+
+                  {selectedOptionObj.ratePerPerson != null && (
+                    <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                      Per Person: ₹
+                      {Number(selectedOptionObj.ratePerPerson).toLocaleString(
+                        "en-IN",
+                      )}
+                    </span>
+                  )}
+
+                  {selectedOptionObj.ratePerStudent != null && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                      Per Student: ₹
+                      {Number(selectedOptionObj.ratePerStudent).toLocaleString(
+                        "en-IN",
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <button
                 type="button"
@@ -475,28 +567,44 @@ export default function AddPlaceForm({
                       className="mt-1 h-4 w-4 accent-blue-600"
                     />
 
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-700">
-                        {option.label}
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="break-words text-sm font-medium text-slate-700">
+                        {option.label || option.name || option.value}
                       </p>
 
-                      {(option.rate4Hours || option.rate8Hours) && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {option.rate4Hours && (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                              4 Hours: ₹
-                              {option.rate4Hours.toLocaleString("en-IN")}
-                            </span>
-                          )}
+                      <div className="flex flex-wrap gap-2">
+                        {option.rate4Hours != null && (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                            4 Hours: ₹
+                            {Number(option.rate4Hours).toLocaleString("en-IN")}
+                          </span>
+                        )}
 
-                          {option.rate8Hours && (
-                            <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-                              8 Hours: ₹
-                              {option.rate8Hours.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                        {option.rate8Hours != null && (
+                          <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                            8 Hours: ₹
+                            {Number(option.rate8Hours).toLocaleString("en-IN")}
+                          </span>
+                        )}
+
+                        {option.ratePerPerson != null && (
+                          <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                            Per Person: ₹
+                            {Number(option.ratePerPerson).toLocaleString(
+                              "en-IN",
+                            )}
+                          </span>
+                        )}
+
+                        {option.ratePerStudent != null && (
+                          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                            Per Student: ₹
+                            {Number(option.ratePerStudent).toLocaleString(
+                              "en-IN",
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </label>
                 ))}
@@ -530,6 +638,127 @@ export default function AddPlaceForm({
           </div>
         )}
 
+        {!defaultValues?.id && (
+          <section className="space-y-3 rounded-xl border border-slate-200 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">
+                Booking Slots
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Slots added here will be linked to Annexure {selectedAnnexure || "option"}{" "}
+                {selectedAnnexureOption ? `(${selectedAnnexureOption})` : ""} and
+                shown for this place during booking.
+              </p>
+            </div>
+
+            {!canCreateSlots ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                You need slot creation permission to add booking slots.
+              </p>
+            ) : (
+              <>
+                {slotTemplates.map((slot, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 items-end gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                  >
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      Start Time
+                      <input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(event) => {
+                          setSlotTemplates((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, startTime: event.target.value }
+                                : item,
+                            ),
+                          );
+                          setSlotError("");
+                        }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      End Time
+                      <input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(event) => {
+                          setSlotTemplates((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, endTime: event.target.value }
+                                : item,
+                            ),
+                          );
+                          setSlotError("");
+                        }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      Capacity
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={slot.capacity}
+                        onChange={(event) => {
+                          setSlotTemplates((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, capacity: event.target.value }
+                                : item,
+                            ),
+                          );
+                          setSlotError("");
+                        }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={slotTemplates.length === 1}
+                      onClick={() => {
+                        setSlotTemplates((current) =>
+                          current.filter((_, itemIndex) => itemIndex !== index),
+                        );
+                        setSlotError("");
+                      }}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label={`Remove slot ${index + 1}`}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                {slotError && (
+                  <p className="text-sm text-red-600" role="alert">
+                    {slotError}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSlotTemplates((current) => [
+                      ...current,
+                      { startTime: "", endTime: "", capacity: "" },
+                    ]);
+                    setSlotError("");
+                  }}
+                  className="text-sm font-semibold text-blue-600 hover:underline"
+                >
+                  + Add another slot
+                </button>
+              </>
+            )}
+          </section>
+        )}
+
         {/* =====================================================
             VENUE NAME + LOCATION
         ===================================================== */}
@@ -537,6 +766,7 @@ export default function AddPlaceForm({
           <InputField
             label="Venue / Place Name"
             icon={MapPin}
+            readOnly
             error={errors.name?.message}
             {...register("name", {
               required: "Venue name is required",
@@ -691,12 +921,12 @@ export default function AddPlaceForm({
         {/* =====================================================
             SHORT DESCRIPTION
         ===================================================== */}
-        <TextareaField
-          label="Short Description"
+        {/* <TextareaField
+          label="Description"
           placeholder="Enter short description..."
           error={errors.shortDescription?.message}
           {...register("shortDescription")}
-        />
+        /> */}
 
         {/* =====================================================
             FULL DESCRIPTION

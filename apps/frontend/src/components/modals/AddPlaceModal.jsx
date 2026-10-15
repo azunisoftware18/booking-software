@@ -11,6 +11,7 @@ export default function AddPlaceModal({
   defaultValues,
   annexures = [],
   existingPlaces = [],
+  canCreateSlots = false,
 }) {
   if (!open) return null;
 
@@ -80,6 +81,7 @@ flex flex-col
             onSubmit={onSubmit}
             onCancel={onClose}
             existingPlaces={existingPlaces}
+            canCreateSlots={canCreateSlots}
           />
         </div>
       </div>

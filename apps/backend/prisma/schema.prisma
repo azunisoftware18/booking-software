@@ -56,6 +56,8 @@ model User {
 model Place {
   id               String  @id @default(uuid())
   createdById      String? @map("created_by_id")
+  annexure         String?
+  annexureOption   String? @map("annexure_option")
   name             String
   location         String?
   latitude         Float?
@@ -78,6 +80,7 @@ model Place {
 
   @@index([createdById])
   @@unique([name, location])
+  @@unique([annexure, annexureOption])
   @@map("places")
 }
 
