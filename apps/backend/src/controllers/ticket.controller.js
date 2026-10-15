@@ -1,4 +1,5 @@
 import TicketService from "../services/ticket.service.js";
+import BookingService from "../services/booking.service.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
 class TicketController {
@@ -23,6 +24,18 @@ class TicketController {
       `attachment; filename=ticket-${bookingId}.pdf`
     );
 
+    res.send(pdfBuffer);
+  }
+  static async downloadPublic(req, res) {
+    const { bookingId } = req.params;
+    await BookingService.getPublicReceipt(bookingId, req.query.receiptToken);
+
+    const pdfBuffer = await TicketService.generatePDF(bookingId);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=ticket-${bookingId}.pdf`,
+    );
     res.send(pdfBuffer);
   }
   static async scanTicket(req, res) {

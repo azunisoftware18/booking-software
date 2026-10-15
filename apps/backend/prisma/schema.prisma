@@ -118,11 +118,11 @@ model TicketType {
   name    String
   center  String @default("Jaipur")
   price   Float
+  taxPercent Float @default(0) @map("tax_percent")
   isAvailable Boolean @default(true) @map("is_available")
   placeId String @map("place_id")
   createdById String? @map("created_by_id")
 
-  maxPerBooking Int @default(6) @map("max_per_booking")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

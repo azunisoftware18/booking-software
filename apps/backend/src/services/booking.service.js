@@ -64,13 +64,6 @@ class BookingService {
       throw ApiError.unauthorized("Guest users can only use Online payment");
     }
 
-    // Logged-in user CASH/UPI use kar sakta hai
-    if (user?.id && !["CASH", "UPI"].includes(paymentMethod)) {
-      throw ApiError.badRequest(
-        "Logged-in users can only use Cash or UPI payment"
-      );
-    }
-
     const txnId = "TXN_" + Date.now();
 
     // 🔥 Ab expiry ki zaroorat nahi — booking turant complete hogi
@@ -88,7 +81,7 @@ class BookingService {
 
         if (!selectedLocation) {
           throw ApiError.badRequest(
-            "Selected location is invalid or no longer available",
+            "Selected location is invalid or no longer available"
           );
         }
 
@@ -130,7 +123,9 @@ class BookingService {
           }
 
           if (!type.isAvailable) {
-            throw ApiError.badRequest(`${type.name} is not available at this center`);
+            throw ApiError.badRequest(
+              `${type.name} is not available at this center`
+            );
           }
 
           const quantity = Number(ticket.quantity);
@@ -139,13 +134,10 @@ class BookingService {
             throw ApiError.badRequest("Invalid ticket quantity");
           }
 
-          if (quantity > type.maxPerBooking) {
-            throw ApiError.badRequest(
-              `${type.name} allows maximum ${type.maxPerBooking} tickets per booking`
-            );
-          }
-
-          totalAmount += type.price * quantity;
+          const unitAmount =
+            Math.round(type.price * (1 + (type.taxPercent || 0) / 100) * 100) /
+            100;
+          totalAmount += unitAmount * quantity;
           totalSeats += quantity;
         });
 
@@ -259,23 +251,159 @@ class BookingService {
     if (paymentMethod === "ONLINE") {
       const AtomPaymentService = (await import("./atom-payment.service.js"))
         .default;
-      const payment = await AtomPaymentService.initiatePayment({
-        bookingId: createdBooking.id,
-        // Unique merchant transaction reference
-        txnId: createdBooking.txnId,
-        // Amount calculated from database ticket prices
-        amount: Number(createdBooking.totalAmount).toFixed(2),
-        name: createdBooking.name,
-        email: createdBooking.email,
-        hone: createdBooking.phone,
-      });
+      try {
+        const payment = await AtomPaymentService.initiatePayment({
+          bookingId: booking.id,
+          txnId: booking.txnId,
+          amount: Number(booking.totalAmount).toFixed(2),
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+        });
+        return {
+          booking,
+          isCashBooking: false,
+          isOnlinePayment: true,
+          payment,
+        };
+      } catch (error) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { status: "FAILED" },
+        });
+        throw error;
+      }
+    }
+  }
+
+  static async processAtomResponse(formData) {
+    const AtomPaymentService = (await import("./atom-payment.service.js"))
+      .default;
+    let response;
+
+    try {
+      response = AtomPaymentService.decodeCallback(formData.encData);
+    } catch {
+      throw ApiError.badRequest("Unable to verify ATOM payment response");
+    }
+
+    if (!AtomPaymentService.verifyCallbackSignature(response)) {
+      throw ApiError.badRequest("Invalid ATOM payment signature");
+    }
+
+    const instrument = response.payInstrument;
+    const { merchDetails, payDetails, responseDetails } = instrument;
+    if (String(merchDetails.merchId) !== String(envConfig.ATOM_MERCHANT_ID)) {
+      throw ApiError.badRequest("ATOM merchant ID does not match");
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { txnId: String(merchDetails.merchTxnId) },
+    });
+    if (!booking || booking.paymentMethod !== "ONLINE") {
+      throw ApiError.notFound("Online booking not found");
+    }
+
+    if (
+      Number(payDetails.totalAmount).toFixed(2) !==
+      Number(booking.totalAmount).toFixed(2)
+    ) {
+      throw ApiError.badRequest("ATOM payment amount does not match booking");
+    }
+
+    if (responseDetails.statusCode === "OTS0000") {
       return {
-        booking: createdBooking,
-        isCashBooking: false,
-        isOnlinePayment: true,
-        payment,
+        booking: await this.completeBooking(
+          booking.id,
+          String(payDetails.atomTxnId)
+        ),
+        isSuccessful: true,
       };
     }
+
+    if (booking.status === "PENDING") {
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: "FAILED" },
+      });
+    }
+
+    return { booking, isSuccessful: false };
+  }
+
+  static createReceiptToken(bookingId) {
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const payload = `${bookingId}.${expiresAt}`;
+    const signature = crypto
+      .createHmac("sha256", envConfig.QR_SECRET)
+      .update(payload)
+      .digest("hex");
+
+    return `${Buffer.from(payload).toString("base64url")}.${signature}`;
+  }
+
+  static isValidReceiptToken(bookingId, token) {
+    if (!envConfig.QR_SECRET || typeof token !== "string") return false;
+
+    const [encodedPayload, receivedSignature] = token.split(".");
+    if (!encodedPayload || !receivedSignature) return false;
+
+    let payload;
+    try {
+      payload = Buffer.from(encodedPayload, "base64url").toString("utf8");
+    } catch {
+      return false;
+    }
+
+    const [tokenBookingId, expiresAt] = payload.split(".");
+    if (
+      tokenBookingId !== bookingId ||
+      !Number.isFinite(Number(expiresAt)) ||
+      Number(expiresAt) <= Date.now()
+    ) {
+      return false;
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", envConfig.QR_SECRET)
+      .update(payload)
+      .digest();
+    const receivedSignatureBuffer = Buffer.from(receivedSignature, "hex");
+
+    return (
+      receivedSignatureBuffer.length === expectedSignature.length &&
+      crypto.timingSafeEqual(receivedSignatureBuffer, expectedSignature)
+    );
+  }
+
+  static async getPublicReceipt(bookingId, receiptToken) {
+    if (!this.isValidReceiptToken(bookingId, receiptToken)) {
+      throw ApiError.unauthorized("Invalid or expired payment receipt link");
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        status: true,
+        totalAmount: true,
+        totalSeats: true,
+        slotDateTime: true,
+        ticketPdfUrl: true,
+        place: {
+          select: {
+            name: true,
+            location: true,
+          },
+        },
+      },
+    });
+
+    if (!booking || booking.status !== "PAID") {
+      throw ApiError.notFound("Paid booking not found");
+    }
+
+    return booking;
   }
 
   static async completeBooking(bookingId, paymentId = null) {
@@ -464,49 +592,6 @@ We can't wait to welcome you! 🎉`;
   }
 
   // ============================================================
-  // EASEBUZZ SUCCESS (Commented — ab use nahi ho raha)
-  // ============================================================
-  //
-  // static async paymentSuccess(data) {
-  //   const booking = await prisma.booking.findUnique({
-  //     where: { txnId: data.txnid },
-  //   });
-  //
-  //   if (!booking) throw ApiError.notFound("Booking not found");
-  //
-  //   if (!this.verifyHash(data)) {
-  //     throw ApiError.badRequest("Invalid payment");
-  //   }
-  //
-  //   if (!data.status || data.status.toLowerCase() !== "success") {
-  //     throw ApiError.badRequest("Payment failed");
-  //   }
-  //
-  //   return await this.completeBooking(booking.id, data.easepayid || null);
-  // }
-
-  // ============================================================
-  // PAYMENT FAILURE (Commented — ab use nahi ho raha)
-  // ============================================================
-  //
-  // static async paymentFailure(data) {
-  //   const booking = await prisma.booking.findUnique({
-  //     where: { txnId: data.txnid },
-  //   });
-  //
-  //   if (!booking) throw ApiError.notFound("Booking not found");
-  //
-  //   if (booking.status !== "PENDING") return booking;
-  //
-  //   await prisma.booking.update({
-  //     where: { txnId: data.txnid },
-  //     data: { status: "FAILED" },
-  //   });
-  //
-  //   return true;
-  // }
-
-  // ============================================================
   // EXPIRE BOOKINGS
   // ============================================================
 
@@ -579,21 +664,6 @@ We can't wait to welcome you! 🎉`;
 
     return template.capacity;
   }
-
-  // ============================================================
-  // VERIFY EASEBUZZ HASH (Commented — ab use nahi ho raha)
-  // ============================================================
-  //
-  // static verifyHash(data) {
-  //   const salt = envConfig.EASEBUZZ_SALT;
-  //   const key = envConfig.EASEBUZZ_KEY;
-  //
-  //   const str = `${salt}|${data.status}|||||||||||${data.email}|${data.firstname}|${data.productinfo}|${data.amount}|${data.txnid}|${key}`;
-  //
-  //   const hash = crypto.createHash("sha512").update(str).digest("hex");
-  //
-  //   return hash === data.hash;
-  // }
 
   // ============================================================
   // GENERATE TICKET QR

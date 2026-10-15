@@ -11,12 +11,16 @@ function SuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const bookingId = searchParams.get("bookingId")?.trim();
+    const receiptToken = searchParams.get("receiptToken");
 
-    const { data: booking, isLoading } = useBookingById(bookingId);
+    const { data: booking, isLoading } = useBookingById(bookingId, receiptToken);
 
     const handleDownload = () => {
         const baseUrl = api.defaults.baseURL || "http://localhost:8000/api";
-        window.open(`${baseUrl}/ticket/download/${bookingId}`, "_blank");
+        const downloadUrl = receiptToken
+            ? `${baseUrl}/ticket/receipt/${bookingId}/download?receiptToken=${encodeURIComponent(receiptToken)}`
+            : `${baseUrl}/ticket/download/${bookingId}`;
+        window.open(downloadUrl, "_blank");
     };
 
     if (isLoading) {
@@ -80,9 +84,9 @@ function SuccessContent() {
                         <div className="space-y-0.5">
                             <span className="text-[9px] tracking-[4px] text-jaipur-dark uppercase font-bold font-sans block">Official Bookinig Ticket</span>
                             <h3 className="font-serif text-xl sm:text-2xl lg:text-3xl text-royal-blue font-bold tracking-wide truncate px-4">
-                                {booking?.placeId?.name || ""}
+                                {booking?.place?.name || booking?.placeId?.name || ""}
                             </h3>
-                            <p className="text-[11px] sm:text-xs font-sans text-gray-400 font-semibold tracking-wide">{booking?.placeId?.location || "Jaipur, Rajasthan"}</p>
+                            <p className="text-[11px] sm:text-xs font-sans text-gray-400 font-semibold tracking-wide">{booking?.place?.location || "Jaipur, Rajasthan"}</p>
                         </div>
 
                         <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-gold/30 to-transparent mx-auto" />

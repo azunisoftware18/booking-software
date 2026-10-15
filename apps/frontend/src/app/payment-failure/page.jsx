@@ -63,7 +63,7 @@ function FailureContent() {
                 </motion.div>
 
                 <div className="text-center font-serif italic text-[10px] text-royal-blue/30 select-none tracking-wide">
-                    If funds were deducted, ledger credits will reverse automatically via Easebuzz within 24 hours.
+                    If funds were deducted, ATOM will process any reversal automatically.
                 </div>
             </div>
         </div>

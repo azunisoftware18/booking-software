@@ -8,21 +8,31 @@ import { usePlace } from "@/hooks/useCurrentPlace";
 import { useTicketTypes } from "@/hooks/useTicketType";
 import FullPageLoader from "@/components/ui/FullPageLoader"; 
 
-export default function TicketCounter({ tickets, onNext, onBack }) {
+export default function TicketCounter({
+    tickets,
+    onNext,
+    onBack,
+    ticketTypeIds,
+}) {
     const dispatch = useDispatch();
     const { placeId } = usePlace();
     const { data: ticketTypes = [], isLoading } = useTicketTypes(placeId);
-    const availableTicketTypes = ticketTypes.filter((ticketType) => ticketType.isAvailable !== false);
+    const selectedTypeIds = ticketTypeIds ? new Set(ticketTypeIds) : null;
+    const availableTicketTypes = ticketTypes.filter((ticketType) => {
+        const ticketTypeId = ticketType._id || ticketType.id;
+        return ticketType.isAvailable !== false &&
+            (!selectedTypeIds || selectedTypeIds.has(ticketTypeId));
+    });
     const [counts, setCounts] = useState(tickets || {});
     const selectedCounts = Object.keys(counts).length
         ? counts
         : Object.fromEntries(availableTicketTypes.map((ticketType) => [ticketType._id || ticketType.id, 0]));
 
-    const updateCount = (id, value, max) => {
+    const updateCount = (id, value) => {
         setCounts((prev) => {
             const currentCount = prev[id] || 0;
             const newCount = currentCount + value;
-            if (newCount >= 0 && newCount <= max) {
+            if (newCount >= 0) {
                 return { ...prev, [id]: newCount };
             }
             return prev;
@@ -32,7 +42,10 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
     const total = useMemo(() => {
         return availableTicketTypes.reduce((acc, t) => {
             const key = t._id || t.id;
-            return acc + ((selectedCounts[key] || 0) * t.price);
+            const priceWithTax = Math.round(
+                Number(t.price) * (1 + Number(t.taxPercent || 0) / 100) * 100
+            ) / 100;
+            return acc + ((selectedCounts[key] || 0) * priceWithTax);
         }, 0);
     }, [availableTicketTypes, selectedCounts]);
 
@@ -79,15 +92,23 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                                     <p className={`font-serif font-bold text-base tracking-wide ${isSelected ? "text-gold" : "text-royal-blue"}`}>
                                         {t.center ? `${t.center} · ${t.name}` : t.name}
                                     </p>
-                                    <p className={`text-[10px] font-bold tracking-wider uppercase font-sans ${isSelected ? "text-white/60" : "text-jaipur-dark/70"}`}>
-                                        Max limit: {t.maxPerBooking} Visitors
-                                    </p>
                                 </div>
 
                                 <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-6 shrink-0">
                                     <p className={`font-serif text-xl font-bold tracking-wide ${isSelected ? "text-gold drop-shadow-sm" : "text-royal-blue"}`}>
-                                        {Number(t.price) === 0 ? "Free" : `₹${t.price}`}
+                                        {Number(t.price) === 0 ? "Free" : `₹${(
+                                            Math.round(
+                                                Number(t.price) *
+                                                (1 + Number(t.taxPercent || 0) / 100) *
+                                                100
+                                            ) / 100
+                                        ).toFixed(2)}`}
                                     </p>
+                                    {Number(t.taxPercent) > 0 && (
+                                        <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-slate-500"}`}>
+                                            incl. {t.taxPercent}% GST
+                                        </p>
+                                    )}
 
                                     <div className={`flex items-center gap-3 px-2 py-1.5 rounded-lg border transition-colors duration-300
                                         ${isSelected
@@ -97,7 +118,7 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                                     >
                                         <CounterBtn
                                             text="-"
-                                            onClick={() => updateCount(uniqueKey, -1, t.maxPerBooking)}
+                                            onClick={() => updateCount(uniqueKey, -1)}
                                             disabled={(selectedCounts[uniqueKey] || 0) <= 0}
                                         />
                                         <div className={`w-8 text-center font-bold font-serif text-xl ${isSelected ? "text-white" : "text-royal-blue"}`}>
@@ -105,8 +126,7 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                                         </div>
                                         <CounterBtn
                                             text="+"
-                                            onClick={() => updateCount(uniqueKey, 1, t.maxPerBooking)}
-                                            disabled={(selectedCounts[uniqueKey] || 0) >= t.maxPerBooking}
+                                            onClick={() => updateCount(uniqueKey, 1)}
                                         />
                                     </div>
                                 </div>
@@ -120,7 +140,7 @@ export default function TicketCounter({ tickets, onNext, onBack }) {
                     <div className="relative z-10 flex justify-between items-center">
                         <div className="space-y-0.5">
                             <p className="text-[9px] tracking-[3px] text-gold font-bold uppercase font-sans">Total Payable Amount</p>
-                            <motion.h3 key={total} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-2xl sm:text-3xl font-serif font-semibold text-white tracking-wide">₹{total}</motion.h3>
+                            <motion.h3 key={total} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-2xl sm:text-3xl font-serif font-semibold text-white tracking-wide">₹{total.toFixed(2)}</motion.h3>
                         </div>
                         <div className="text-2xl filter drop-shadow-md select-none">🎟️</div>
                     </div>

@@ -34,6 +34,15 @@ export const locationService = {
 
     if (!locations.length) return [];
 
+    const locationNames = [
+      ...new Set(
+        locations
+          .flatMap(({ name, city }) => [name, city])
+          .filter(Boolean)
+          .map((name) => name.trim()),
+      ),
+    ];
+
     const places = await prisma.place.findMany({
       where: {
         OR: locations.flatMap(({ name }) => [
@@ -51,45 +60,75 @@ export const locationService = {
         longitude: true,
         imageUrl: true,
         shortDescription: true,
-        ticketTypes: {
-          where: { isAvailable: true },
-          select: {
-            id: true,
-            name: true,
-            center: true,
-            price: true,
-            maxPerBooking: true,
-          },
-          orderBy: { createdAt: "asc" },
-        },
       },
       orderBy: [{ name: "asc" }, { createdAt: "asc" }],
     });
 
-    return locations.map((location) => {
-      const normalizedName = location.name.trim().toLowerCase();
-      const venues = places.filter((place) => {
-        const placeName = place.name.trim().toLowerCase();
-        const placeLocation = place.location?.trim().toLowerCase() || "";
+    const ticketTypes = await prisma.ticketType.findMany({
+      where: {
+        isAvailable: true,
+        center: { in: locationNames },
+      },
+      select: {
+        id: true,
+        name: true,
+        center: true,
+        price: true,
+        taxPercent: true,
+        placeId: true,
+        place: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            latitude: true,
+            longitude: true,
+            imageUrl: true,
+            shortDescription: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
 
-        return (
-          placeName === normalizedName ||
-          placeLocation === normalizedName ||
-          placeLocation.startsWith(`${normalizedName} (`) ||
-          placeLocation.startsWith(`${normalizedName},`)
+    return locations.map((location) => {
+      const locationNames = [location.name, location.city]
+        .filter(Boolean)
+        .map((name) => name.trim().toLowerCase());
+      const matchesLocation = (value = "") => {
+        const normalizedValue = value.trim().toLowerCase();
+        return locationNames.some(
+          (name) =>
+            normalizedValue === name ||
+            normalizedValue.startsWith(`${name} (`) ||
+            normalizedValue.startsWith(`${name},`),
         );
-      });
+      };
+      const locationTicketTypes = ticketTypes.filter((ticketType) =>
+        matchesLocation(ticketType.center),
+      );
+      const venueMap = new Map();
+
+      for (const place of places) {
+        if (matchesLocation(place.name) || matchesLocation(place.location)) {
+          venueMap.set(place.id, place);
+        }
+      }
+
+      for (const ticketType of locationTicketTypes) {
+        venueMap.set(ticketType.place.id, ticketType.place);
+      }
+
+      const venues = [...venueMap.values()];
 
       return {
         ...location,
         venues,
-        entryFees: venues.flatMap((venue) =>
-          venue.ticketTypes.map((ticketType) => ({
-            ...ticketType,
-            venueId: venue.id,
-            venueName: venue.name,
-          })),
-        ),
+        entryFees: locationTicketTypes.map((ticketType) => ({
+          ...ticketType,
+          venueId: ticketType.placeId,
+          venueName: ticketType.place.name,
+        })),
       };
     });
   },
