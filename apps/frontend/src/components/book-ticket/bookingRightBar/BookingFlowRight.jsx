@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
@@ -12,15 +12,75 @@ import { resetBooking, setTickets } from "@/store/slices/bookingSlice";
 import DateSelector from "./bookingParts/DateSelector";
 import TicketCounter from "./bookingParts/TicketCounter";
 import VisitorForm from "./bookingParts/VisitorForm";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Landmark, Lock, MapPin, Ticket } from "lucide-react";
 import FullPageLoader from "@/components/ui/FullPageLoader";
+
+let atomCheckoutScriptPromise;
+
+function loadAtomCheckoutScript(scriptUrl) {
+  if (window.AtomPaynetz) return Promise.resolve();
+  if (atomCheckoutScriptPromise) return atomCheckoutScriptPromise;
+
+  atomCheckoutScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+
+    const handleLoad = () => {
+      if (window.AtomPaynetz) {
+        resolve();
+      } else {
+        reject(new Error("ATOM checkout did not load correctly"));
+      }
+    };
+
+    script.addEventListener("load", handleLoad, { once: true });
+    script.addEventListener(
+      "error",
+      () => reject(new Error("Unable to load ATOM checkout")),
+      { once: true },
+    );
+
+    script.src = scriptUrl;
+    script.async = true;
+    script.dataset.atomCheckout = "true";
+    document.head.appendChild(script);
+  });
+
+  atomCheckoutScriptPromise = atomCheckoutScriptPromise.catch((error) => {
+    atomCheckoutScriptPromise = null;
+    throw error;
+  });
+
+  return atomCheckoutScriptPromise;
+}
 
 export default function BookingFlowRight() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const entryFeeIds = searchParams.getAll("entryFeeId");
+  const entryFeeId = entryFeeIds[0] || null;
+  const requestedQuantities = searchParams.getAll("quantity");
+  const initialEntryFeeQuantities = Object.fromEntries(
+    entryFeeIds.map((id, index) => {
+      const requestedQuantity = Number(requestedQuantities[index]);
+      return [
+        id,
+        Number.isSafeInteger(requestedQuantity) && requestedQuantity > 0
+          ? requestedQuantity
+          : 1,
+      ];
+    }),
+  );
   const [step, setStep] = useState(0);
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [locationSelectionStep, setLocationSelectionStep] = useState(1);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [entryFeeVenueId, setEntryFeeVenueId] = useState(null);
+  const [selectedEntryFeeGroup, setSelectedEntryFeeGroup] = useState(null);
+  const [isDirectEntryFeeModalDismissed, setIsDirectEntryFeeModalDismissed] =
+    useState(false);
+  const [selectedEntryFeeQuantities, setSelectedEntryFeeQuantities] =
+    useState(() => initialEntryFeeQuantities);
+  const [bookingError, setBookingError] = useState("");
 
   const dispatch = useDispatch();
   const reduxData = useSelector((state) => state.booking);
@@ -38,27 +98,90 @@ export default function BookingFlowRight() {
   const { mutateAsync: createBooking, isPending: isSubmitting } =
     useBookingMutation();
 
-  const selectedLocation = bookingLocations.find(
-    (location) => location.id === selectedLocationId,
-  );
+  const directEntryFeeLocation = entryFeeIds.length
+    ? bookingLocations.find((location) =>
+        entryFeeIds.every((id) =>
+          location.entryFees?.some((entryFee) => entryFee.id === id),
+        ),
+      )
+    : null;
+  const directEntryFees =
+    directEntryFeeLocation?.entryFees?.filter((entryFee) =>
+      entryFeeIds.includes(entryFee.id),
+    ) || [];
+  const selectedLocation =
+    bookingLocations.find((location) => location.id === selectedLocationId) ||
+    directEntryFeeLocation;
+  const isDirectEntryFeeUnavailable =
+    entryFeeIds.length > 0 &&
+    !isLoadingLocations &&
+    !hasLocationError &&
+    directEntryFees.length !== entryFeeIds.length;
+  const visibleLocationSelectionStep =
+    entryFeeIds.length &&
+    (directEntryFeeLocation || isDirectEntryFeeUnavailable)
+      ? 2
+      : locationSelectionStep;
+  const directEntryFeeGroup =
+    directEntryFees.length && !isDirectEntryFeeModalDismissed
+      ? {
+          venueId: directEntryFees[0].venueId || directEntryFees[0].placeId,
+          venueName: directEntryFees[0].venueName,
+          entryFees: directEntryFees,
+        }
+      : null;
+  const activeEntryFeeGroup = selectedEntryFeeGroup || directEntryFeeGroup;
   const visibleEntryFees = selectedLocation?.entryFees || [];
+  const entryFeeGroups = visibleEntryFees.reduce((groups, entryFee) => {
+    if (entryFeeIds.length && !entryFeeIds.includes(entryFee.id)) return groups;
+    const venueId = entryFee.venueId || entryFee.placeId;
+    const group = groups.find((item) => item.venueId === venueId);
 
-  const startBookingForEntryFee = (entryFee) => {
+    if (group) {
+      group.entryFees.push(entryFee);
+    } else {
+      groups.push({
+        venueId,
+        venueName: entryFee.venueName,
+        entryFees: [entryFee],
+      });
+    }
+
+    return groups;
+  }, []);
+
+  const startBookingForEntryFee = (selectedEntryFees) => {
+    const firstEntryFee = selectedEntryFees[0];
     const venue = selectedLocation?.venues?.find(
-      (item) => item.id === entryFee.venueId,
+      (item) => item.id === (firstEntryFee.venueId || firstEntryFee.placeId),
     );
 
-    if (!venue) return;
+    if (!venue) {
+      setBookingError("The venue for this entry fee could not be found.");
+      return;
+    }
 
+    setBookingError("");
     dispatch(resetBooking());
     dispatch(setCurrentPlace(venue));
-    dispatch(setTickets({ [entryFee.id]: 1 }));
+    dispatch(
+      setTickets(
+        Object.fromEntries(
+          selectedEntryFees.map(({ id, quantity }) => [id, quantity]),
+        ),
+      ),
+    );
+    setEntryFeeVenueId(venue.id);
+    setSelectedEntryFeeGroup(null);
+    setIsDirectEntryFeeModalDismissed(true);
     setLocationConfirmed(true);
   };
 
   const startBookingForVenue = (venue) => {
+    setBookingError("");
     dispatch(resetBooking());
     dispatch(setCurrentPlace(venue));
+    setEntryFeeVenueId(null);
     setLocationConfirmed(true);
   };
 
@@ -109,6 +232,7 @@ export default function BookingFlowRight() {
   // ============================================================
   const handleFinalBooking = async (visitorInfo) => {
     try {
+      setBookingError("");
       const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
 
       if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
@@ -117,10 +241,6 @@ export default function BookingFlowRight() {
 
       if (!isLoggedIn && paymentMethod !== "ONLINE") {
         throw new Error("Guest users can only use online payment");
-      }
-
-      if (isLoggedIn && !["CASH", "UPI"].includes(paymentMethod)) {
-        throw new Error("Please select Cash or UPI payment");
       }
 
       if (!placeId) {
@@ -167,8 +287,6 @@ export default function BookingFlowRight() {
         tickets,
       };
 
-      console.log("BOOKING PAYLOAD:", payload);
-
       const res = await createBooking(payload);
 
       if (!res?.success) {
@@ -197,35 +315,43 @@ export default function BookingFlowRight() {
       if (paymentMethod === "ONLINE") {
         const paymentData = res?.data?.payment;
 
-        if (!paymentData) {
-          throw new Error("Easebuzz payment details not received");
+        if (
+          !paymentData?.atomTokenId ||
+          !paymentData?.merchId ||
+          !paymentData?.checkoutJsUrl ||
+          !paymentData?.returnUrl
+        ) {
+          throw new Error("ATOM checkout details were not received");
+        }
+        if (typeof window.AtomPaynetz !== "function") {
+          await loadAtomCheckoutScript(paymentData.checkoutJsUrl);
         }
 
-        if (!paymentData?.url) {
-          throw new Error("Easebuzz payment URL not received");
+        if (!window.AtomPaynetz) {
+          throw new Error("ATOM checkout is unavailable");
         }
 
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = paymentData.url;
-
-        Object.entries(paymentData).forEach(([key, value]) => {
-          if (key === "url") return;
-
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = key;
-          input.value = value ?? "";
-          form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
+        new window.AtomPaynetz(
+          {
+            atomTokenId: paymentData.atomTokenId,
+            merchId: paymentData.merchId,
+            custEmail: paymentData.custEmail,
+            custMobile: paymentData.custMobile,
+            returnUrl: paymentData.returnUrl,
+          },
+          paymentData.environment === "PROD" ? "prod" : "uat",
+        );
         return;
       }
     } catch (error) {
       console.error("Booking Error:", error);
-      alert(error?.message || "Booking failed. Please try again.");
+      const errorMessage =
+        error?.response?.data?.message || error?.message || "";
+      setBookingError(
+        /ATOM|payment gateway/i.test(errorMessage)
+          ? "Payment gateway is not integrated/configured yet. Please contact the administrator."
+          : errorMessage || "Booking failed. Please try again.",
+      );
     }
   };
 
@@ -319,7 +445,16 @@ export default function BookingFlowRight() {
                 reduxData,
                 isSubmitting,
                 isLoggedIn,
+                entryFeeVenueId,
               })}
+              {bookingError && (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+                >
+                  {bookingError}
+                </p>
+              )}
             </div>
           )}
         </AnimatePresence>
@@ -333,7 +468,7 @@ export default function BookingFlowRight() {
           aria-labelledby="booking-location-title"
         >
           <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-            {locationSelectionStep === 1 ? (
+            {visibleLocationSelectionStep === 1 ? (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#994113]">
                   Booking location
@@ -367,8 +502,8 @@ export default function BookingFlowRight() {
                   </div>
                 ) : bookingLocations.length === 0 ? (
                   <p className="mt-6 text-sm text-red-600">
-                    No active locations are available for booking. Please contact
-                    support.
+                    No active locations are available for booking. Please
+                    contact support.
                   </p>
                 ) : (
                   <label
@@ -416,102 +551,319 @@ export default function BookingFlowRight() {
                 >
                   Choose what to book
                 </h2>
+                {bookingError && (
+                  <p
+                    role="alert"
+                    className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+                  >
+                    {bookingError}
+                  </p>
+                )}
+                {isDirectEntryFeeUnavailable && (
+                  <p
+                    role="alert"
+                    className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+                  >
+                    This entry fee is unavailable for booking.
+                  </p>
+                )}
 
-                <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div
+                  className={`mt-5 grid gap-5 ${
+                    entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
+                  }`}
+                >
+                  {!entryFeeId && (
+                    <section className="min-w-0">
+                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <Landmark size={16} className="text-[#994113]" />
+                        Venues
+                      </h3>
+                      {selectedLocation?.venues?.length ? (
+                        <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+                          {selectedLocation.venues.map((venue) => (
+                            <button
+                              key={venue.id}
+                              type="button"
+                              onClick={() => startBookingForVenue(venue)}
+                              className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                            >
+                              <span className="flex items-start justify-between gap-3">
+                                <span className="flex min-w-0 items-start gap-3">
+                                  <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
+                                    <Landmark size={18} />
+                                  </span>
+                                  <span className="min-w-0">
+                                    <span className="block truncate font-bold text-slate-800">
+                                      {venue.name}
+                                    </span>
+                                    {venue.location && (
+                                      <span className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500">
+                                        <MapPin size={12} />
+                                        {venue.location}
+                                      </span>
+                                    )}
+                                  </span>
+                                </span>
+                                <ArrowRight
+                                  size={16}
+                                  className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
+                                />
+                              </span>
+                              <span className="mt-4 block text-xs font-bold text-[#994113]">
+                                Browse venue tickets
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+                          No venues are configured for this location yet.
+                        </p>
+                      )}
+                    </section>
+                  )}
+
                   <section className="min-w-0">
-                    <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Ticket size={16} className="text-[#994113]" />
                       Entry fees
                     </h3>
-                    {visibleEntryFees.length ? (
-                      <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
-                        {visibleEntryFees.map((entryFee) => (
+                    {entryFeeGroups.length ? (
+                      <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+                        {entryFeeGroups.map((group) => (
                           <button
-                            key={entryFee.id}
+                            key={group.venueId}
                             type="button"
-                            onClick={() => startBookingForEntryFee(entryFee)}
-                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-left text-slate-700 transition-colors hover:border-[#994113] hover:bg-[#994113]/5"
+                            onClick={() => {
+                              setSelectedEntryFeeGroup(group);
+                              setSelectedEntryFeeQuantities(
+                                Object.fromEntries(
+                                  group.entryFees.map(({ id }) => [id, 0]),
+                                ),
+                              );
+                            }}
+                            className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
                           >
-                            <span className="min-w-0">
-                              <span className="block truncate font-semibold">
-                                {entryFee.center
-                                  ? `${entryFee.center} · ${entryFee.name}`
-                                  : entryFee.name}
+                            <span className="flex items-start justify-between gap-3">
+                              <span className="flex min-w-0 items-start gap-3">
+                                <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
+                                  <Landmark size={18} />
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block truncate font-bold text-slate-800">
+                                    {group.entryFees
+                                      .map((entryFee) => entryFee.name)
+                                      .join(", ")}
+                                  </span>
+                                  <span className="mt-1 block truncate text-xs text-slate-500">
+                                    Entry fee:{" "}
+                                    {group.entryFees
+                                      .map((entryFee) =>
+                                        Number(entryFee.price) === 0
+                                          ? "Free"
+                                          : `₹${entryFee.price}`,
+                                      )
+                                      .join(" · ")}
+                                  </span>
+                                </span>
                               </span>
-                              <span className="mt-0.5 block truncate text-xs text-slate-500">
-                                {entryFee.venueName}
-                              </span>
-                              <span className="mt-2 block text-xs font-bold text-[#994113]">
-                                Book this entry fee
-                              </span>
+                              <ArrowRight
+                                size={16}
+                                className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
+                              />
                             </span>
-                            <span className="shrink-0 text-sm font-semibold">
-                              {Number(entryFee.price) === 0
-                                ? "Free"
-                                : `₹${entryFee.price}/-`}
+                            <span className="mt-4 flex items-center justify-between text-xs font-bold text-[#994113]">
+                              Choose ticket type
                             </span>
                           </button>
                         ))}
                       </div>
                     ) : (
-                      <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                      <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
                         No entry fees are configured for this location yet.
                       </p>
                     )}
                   </section>
-
-                  <section className="min-w-0">
-                    <h3 className="mb-2 text-sm font-semibold text-slate-700">
-                      Venues
-                    </h3>
-                    {selectedLocation?.venues?.length ? (
-                      <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
-                        {selectedLocation.venues.map((venue) => (
-                          <button
-                            key={venue.id}
-                            type="button"
-                            onClick={() => startBookingForVenue(venue)}
-                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-left text-slate-700 transition-colors hover:border-[#994113] hover:bg-[#994113]/5"
-                          >
-                            <span className="min-w-0">
-                              <span className="block truncate font-semibold">
-                                {venue.name}
-                              </span>
-                              {venue.location && (
-                                <span className="mt-0.5 block truncate text-xs text-slate-500">
-                                  {venue.location}
-                                </span>
-                              )}
-                              <span className="mt-2 block text-xs font-bold text-[#994113]">
-                                Browse venue tickets
-                              </span>
-                            </span>
-                            <ArrowRight
-                              size={16}
-                              aria-hidden="true"
-                              className="shrink-0 text-[#994113]"
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                        No venues are configured for this location yet.
-                      </p>
-                    )}
-                  </section>
                 </div>
 
-                <div className="mt-6 flex justify-start">
-                  <button
-                    type="button"
-                    onClick={() => setLocationSelectionStep(1)}
-                    className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    Back to locations
-                  </button>
-                </div>
+                {!entryFeeId && (
+                  <div className="mt-6 flex justify-start">
+                    <button
+                      type="button"
+                      onClick={() => setLocationSelectionStep(1)}
+                      className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Back to locations
+                    </button>
+                  </div>
+                )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {activeEntryFeeGroup && (
+        <div
+          className="fixed inset-0 z-[2100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="entry-fee-type-title"
+        >
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#994113]">
+              Entry fee
+            </p>
+            <h2
+              id="entry-fee-type-title"
+              className="mt-2 text-xl font-bold text-slate-900"
+            >
+              Select ticket types and quantities
+            </h2>
+            <div className="mt-5 grid gap-3">
+              {activeEntryFeeGroup.entryFees.map((entryFee) => {
+                const quantity = Number(
+                  selectedEntryFeeQuantities[entryFee.id] || 0,
+                );
+                const taxPercent = Number(entryFee.taxPercent || 0);
+                const priceWithTax =
+                  Math.round(
+                    Number(entryFee.price) * (1 + taxPercent / 100) * 100,
+                  ) / 100;
+
+                return (
+                  <div
+                    key={entryFee.id}
+                    className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors sm:p-5 ${
+                      quantity > 0
+                        ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
+                        : "border-slate-200"
+                    }`}
+                  >
+                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={quantity > 0}
+                        onChange={(event) =>
+                          setSelectedEntryFeeQuantities((current) => ({
+                            ...current,
+                            [entryFee.id]: event.target.checked ? 1 : 0,
+                          }))
+                        }
+                        className="h-5 w-5 shrink-0 accent-[#994113]"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-base font-semibold text-slate-800 sm:text-lg">
+                          {entryFee.name}
+                        </span>
+                        <span className="mt-1 block text-sm font-bold text-[#994113]">
+                          {priceWithTax === 0
+                            ? "Free"
+                            : `₹${priceWithTax.toFixed(2)}`}
+                          {taxPercent > 0 && (
+                            <span className="ml-1 text-xs font-medium text-slate-500">
+                              incl. {taxPercent}% GST
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </label>
+                    <label className="shrink-0 text-xs font-medium text-slate-600">
+                      Qty
+                      <input
+                        type="number"
+                        min="0"
+                        value={quantity}
+                        onChange={(event) => {
+                          const requestedQuantity = Number(event.target.value);
+
+                          const nextQuantity = Number.isFinite(
+                            requestedQuantity,
+                          )
+                            ? Math.max(0, Math.floor(requestedQuantity))
+                            : 0;
+
+                          setSelectedEntryFeeQuantities((current) => ({
+                            ...current,
+                            [entryFee.id]: nextQuantity,
+                          }));
+                        }}
+                        className="ml-2 w-20 rounded-lg border border-slate-300 px-2 py-2 text-center text-base font-semibold text-slate-800 outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
+                      />
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+              <span>
+                Selected tickets
+                <span className="ml-2 text-slate-500">
+                  (
+                  {activeEntryFeeGroup.entryFees.reduce(
+                    (total, entryFee) =>
+                      total +
+                      Number(selectedEntryFeeQuantities[entryFee.id] || 0),
+                    0,
+                  )}
+                  )
+                </span>
+              </span>
+              <span className="text-[#994113]">
+                ₹
+                {activeEntryFeeGroup.entryFees
+                  .reduce((total, entryFee) => {
+                    const taxPercent = Number(entryFee.taxPercent || 0);
+                    const unitPrice =
+                      Math.round(
+                        Number(entryFee.price) * (1 + taxPercent / 100) * 100,
+                      ) / 100;
+                    return (
+                      total +
+                      unitPrice *
+                        Number(selectedEntryFeeQuantities[entryFee.id] || 0)
+                    );
+                  }, 0)
+                  .toFixed(2)}
+              </span>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedEntryFeeGroup(null);
+                  setIsDirectEntryFeeModalDismissed(true);
+                }}
+                className="rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={
+                  !Object.values(selectedEntryFeeQuantities).some(
+                    (quantity) => Number(quantity) > 0,
+                  )
+                }
+                onClick={() => {
+                  const selectedEntryFees = activeEntryFeeGroup.entryFees
+                    .filter(
+                      (item) => Number(selectedEntryFeeQuantities[item.id]) > 0,
+                    )
+                    .map((item) => ({
+                      ...item,
+                      quantity: Number(selectedEntryFeeQuantities[item.id]),
+                    }));
+                  if (selectedEntryFees.length) {
+                    startBookingForEntryFee(selectedEntryFees);
+                  }
+                }}
+                className="rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Continue booking
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -525,8 +877,14 @@ export default function BookingFlowRight() {
 // STEP RENDERER
 // ============================================================
 function renderStep(step, props) {
-  const { setStep, handleFinalBooking, reduxData, isSubmitting, isLoggedIn } =
-    props;
+  const {
+    setStep,
+    handleFinalBooking,
+    reduxData,
+    isSubmitting,
+    isLoggedIn,
+    entryFeeVenueId,
+  } = props;
 
   switch (step) {
     case 0:
@@ -541,6 +899,9 @@ function renderStep(step, props) {
           onNext={() => setStep(3)}
           onBack={() => setStep(1)}
           tickets={reduxData?.tickets || {}}
+          ticketTypeIds={
+            entryFeeVenueId ? Object.keys(reduxData?.tickets || {}) : null
+          }
         />
       );
 
@@ -744,7 +1105,6 @@ const StartStep = ({ onNext }) => (
         </a>
       </div>
     </div> */}
-
   </motion.div>
 );
 
@@ -798,8 +1158,6 @@ const StepIndicator = ({ currentStep }) => {
     </div>
   );
 };
-
-
 
 const LoadingOverlay = () => (
   <motion.div

@@ -12,8 +12,7 @@ const router = Router();
 
 /**
  * Create Booking
- * Guest: UPI allowed, CASH rejected by BookingService
- * Logged-in: UPI and CASH allowed
+ * Guests can use Online payment; signed-in users may choose any method.
  */
 router.post(
   "/",
@@ -23,23 +22,19 @@ router.post(
 );
 
 /**
- * Easebuzz payment success callback
+ * ATOM encrypted payment response
  * No authentication required
  */
 router.post(
-  "/success",
-  ValidateRequest.validate(BookingValidation.paymentSuccess),
-  asyncHandler(BookingController.success)
+  "/atom-response",
+  ValidateRequest.validate(BookingValidation.atomResponse),
+  asyncHandler(BookingController.atomResponse),
 );
 
-/**
- * Easebuzz payment failure callback
- * No authentication required
- */
-router.post(
-  "/failure",
-  ValidateRequest.validate(BookingValidation.paymentFailure),
-  asyncHandler(BookingController.failure)
+router.get(
+  "/receipt/:id",
+  ValidateRequest.validate(BookingValidation.publicReceipt),
+  asyncHandler(BookingController.getPublicReceipt),
 );
 
 /**

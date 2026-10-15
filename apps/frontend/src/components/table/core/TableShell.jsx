@@ -39,7 +39,7 @@ export default function TableShell({
 
       {/* Table Content */}
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed text-sm text-left border-collapse">
+        <table className="w-full min-w-[720px] table-auto text-sm text-left border-collapse">
           {children}
         </table>
       </div>

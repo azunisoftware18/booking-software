@@ -280,7 +280,7 @@ export default function VisitorForm({
   onSubmit,
   onBack,
   loading,
-  showCashOption = false, // Agar true hai → logged in user (Cash + UPI dono options)
+  showCashOption = false,
 }) {
   const dispatch = useDispatch();
 
@@ -359,12 +359,6 @@ export default function VisitorForm({
       ...formData,
       paymentMethod: showCashOption ? formData.paymentMethod : "ONLINE",
     };
-
-    // Temporary: Online payment gateway not integrated
-    if (finalData.paymentMethod === "ONLINE") {
-      alert("Online payment is currently unavailable. Please connect admin.");
-      return;
-    }
 
     dispatch(setVisitorInfo(finalData));
     onSubmit(finalData);
@@ -519,6 +513,8 @@ export default function VisitorForm({
                   <option value="CASH">Cash</option>
 
                   <option value="UPI">UPI</option>
+
+                  <option value="ONLINE">Online payment</option>
                 </select>
 
                 {/* Dropdown Arrow */}
@@ -532,6 +528,15 @@ export default function VisitorForm({
                 </p>
               )}
             </div>
+          )}
+          {formData.paymentMethod === "ONLINE" && (
+            <p
+              role="alert"
+              className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-900"
+            >
+              Online payment gateway is not integrated/configured yet. Please
+              contact the administrator before continuing.
+            </p>
           )}
         </div>
 

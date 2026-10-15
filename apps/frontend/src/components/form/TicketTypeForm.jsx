@@ -41,9 +41,7 @@ export default function TicketTypeForm({
   const assignedCenter = assignedLocation?.city || assignedLocation?.name;
   const assignedLocationLabel =
     assignedLocation?.name || assignedLocation?.city;
-  const assignedRates = assignedCenter
-    ? centerRates[assignedCenter] || []
-    : [];
+  const assignedRates = assignedCenter ? centerRates[assignedCenter] || [] : [];
 
   const {
     register,
@@ -56,9 +54,9 @@ export default function TicketTypeForm({
     defaultValues: {
       center: assignedCenter || "Jhalana Patan",
       name: "",
-      price: 0,
+      taxPercent: 0,
+      price: "",
       isAvailable: true,
-      maxPerBooking: 6,
       ...defaultValues,
       ...(assignedCenter ? { center: assignedCenter } : {}),
     },
@@ -66,6 +64,10 @@ export default function TicketTypeForm({
 
   const selectedCenter = useWatch({ control, name: "center" });
   const selectedName = useWatch({ control, name: "name" });
+  const selectedPrice = Number(useWatch({ control, name: "price" }) || 0);
+  const selectedTaxPercent = Number(
+    useWatch({ control, name: "taxPercent" }) || 0,
+  );
   const ratesForSelectedCenter = assignedCenter
     ? assignedRates
     : centerRates[selectedCenter] || [];
@@ -85,15 +87,12 @@ export default function TicketTypeForm({
     });
   }
 
-  const selectedFee =
-    selectedRate || rates.find((rate) => rate.name === selectedName);
-
   const submitHandler = async (data) => {
     const formattedData = {
       ...data,
       price: Number(data.price),
+      taxPercent: Number(data.taxPercent || 0),
       isAvailable: data.isAvailable !== false && data.isAvailable !== "false",
-      maxPerBooking: Number(data.maxPerBooking),
     };
 
     await onSubmit?.(formattedData);
@@ -145,7 +144,7 @@ export default function TicketTypeForm({
                   required: "Location is required",
                   onChange: () => {
                     setValue("name", "");
-                    setValue("price", 0);
+                    setValue("price", "");
                     setValue("isAvailable", true);
                   },
                 })}
@@ -188,20 +187,17 @@ export default function TicketTypeForm({
                   !rate && event.target.value === defaultValues.name;
                 setValue("name", event.target.value, { shouldValidate: true });
                 setValue(
-                  "price",
-                  rate
-                    ? (rate.price ?? 0)
-                    : isLegacyRate
-                      ? Number(defaultValues.price || 0)
-                      : 0,
-                );
-                setValue(
                   "isAvailable",
                   rate
                     ? !rate.unavailable
                     : isLegacyRate
                       ? defaultValues.isAvailable !== false
                       : true,
+                );
+                setValue(
+                  "taxPercent",
+                  rate?.taxPercent ??
+                    (isLegacyRate ? Number(defaultValues.taxPercent || 0) : 0),
                 );
               }}
             >
@@ -218,40 +214,72 @@ export default function TicketTypeForm({
           )}
         </div>
 
-        <input type="hidden" {...register("price", { valueAsNumber: true })} />
         <input type="hidden" {...register("isAvailable")} />
         <div className="w-full">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="ticket-price"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
             Entry Fees (in Rs.)
           </label>
-          <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
+          <div
+            className={`flex items-center rounded-lg border px-3 py-2 focus-within:border-black ${errors.price ? "border-red-500" : "border-gray-300"}`}
+          >
             <IndianRupee size={18} className="mr-2 text-gray-400" />
-            {selectedFee?.unavailable
-              ? "N.A."
-              : selectedFee?.free
-                ? "Free"
-                : selectedFee
-                  ? `${selectedFee.price}/-`
-                  : "Select a category"}
+            <input
+              id="ticket-price"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="Enter entry fee"
+              className="w-full bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
+              {...register("price", {
+                required: "Entry fee is required",
+                valueAsNumber: true,
+                validate: (value) =>
+                  (Number.isFinite(value) && value >= 0) ||
+                  "Enter a valid entry fee",
+              })}
+            />
           </div>
+          {errors.price?.message && (
+            <p className="mt-1 text-xs text-red-500">{errors.price.message}</p>
+          )}
         </div>
 
-        {/* Max Per Booking */}
-        {/* <InputField
-          label="Max Per Booking"
-          type="number"
-          placeholder="e.g. 6"
-          icon={Hash}
-          error={errors.maxPerBooking?.message}
-          {...register("maxPerBooking", {
-            required: "Max booking limit required",
-            valueAsNumber: true,
-            min: {
-              value: 1,
-              message: "Minimum 1 ticket required",
-            },
-          })}
-        /> */}
+        <div className="w-full">
+          <label
+            htmlFor="ticket-tax-percent"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
+            GST / Tax (%)
+          </label>
+          <div className="flex items-center rounded-lg border border-gray-300 px-3 py-2 focus-within:border-black">
+            <input
+              id="ticket-tax-percent"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              className="w-full bg-transparent text-sm outline-none"
+              {...register("taxPercent", {
+                valueAsNumber: true,
+                min: { value: 0, message: "Tax cannot be below 0%" },
+                max: { value: 100, message: "Tax cannot exceed 100%" },
+              })}
+            />
+            <span className="text-sm font-semibold text-gray-500">%</span>
+          </div>
+          {errors.taxPercent?.message && (
+            <p className="mt-1 text-xs text-red-500">
+              {errors.taxPercent.message}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            Applied to the entry fee and included in the amount charged.
+          </p>
+        </div>
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">

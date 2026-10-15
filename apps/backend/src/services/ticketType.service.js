@@ -2,23 +2,38 @@ import prisma from "../db/db.js";
 import { ApiError } from "../utils/ApiError.js";
 
 class TicketTypeService {
+  static validateTaxPercent(data) {
+    if (data.taxPercent === undefined) return data;
+
+    const taxPercent = Number(data.taxPercent);
+    if (!Number.isFinite(taxPercent) || taxPercent < 0 || taxPercent > 100) {
+      throw ApiError.badRequest("Tax percentage must be between 0 and 100");
+    }
+
+    return { ...data, taxPercent };
+  }
+
   static async handle(payload) {
     const { action, data } = payload;
 
     try {
       switch (action) {
-        case "create":
+        case "create": {
+          const createData = this.validateTaxPercent(data);
           return await prisma.ticketType.create({
-            data,
+            data: createData,
           });
+        }
 
-        case "update":
+        case "update": {
           if (!data.id) throw ApiError.badRequest("ID required");
 
+          const updateData = this.validateTaxPercent(data);
           return await prisma.ticketType.update({
             where: { id: data.id },
-            data,
+            data: updateData,
           });
+        }
 
         // case "delete":
         //   if (!data.id) throw ApiError.badRequest("ID required");
@@ -96,8 +111,9 @@ class TicketTypeService {
             placeId,
             price,
             isAvailable = true,
-            maxPerBooking,
+            taxPercent = 0,
           } = data;
+          const validatedTax = this.validateTaxPercent({ taxPercent });
 
           return await prisma.ticketType.upsert({
             where: {
@@ -106,7 +122,7 @@ class TicketTypeService {
             update: {
               price,
               isAvailable,
-              maxPerBooking,
+              ...validatedTax,
             },
             create: {
               name,
@@ -114,7 +130,7 @@ class TicketTypeService {
               placeId,
               price,
               isAvailable,
-              maxPerBooking,
+              ...validatedTax,
             },
           });
 

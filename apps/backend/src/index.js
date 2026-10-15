@@ -1,9 +1,7 @@
+import "dotenv/config";
 import app from "./app.js";
 import { envConfig } from "./config/env.config.js";
 import prisma from "./db/db.js";
-import dotenv from "dotenv";
-
-dotenv.config({ path: "./.env" });
 
 (async function main() {
   try {

@@ -12,6 +12,7 @@ class BookingValidation {
       name: z.string().min(2),
       email: z.string().email(),
       phone: z.string().min(10),
+      paymentMethod: z.enum(["CASH", "UPI", "ONLINE"]).optional(),
 
       tickets: z.array(
         z.object({
@@ -22,19 +23,24 @@ class BookingValidation {
     });
   }
 
-  static get paymentSuccess() {
+  static get atomResponse() {
     return z.object({
-      txnid: z.string(),
-      easepayid: z.string(),
-      status: z.string(),
-      hash: z.string(),
+      encData: z.string().min(1),
     });
   }
 
-  static get paymentFailure() {
-    return z.object({
-      txnid: z.string().min(5),
-    });
+  static get publicReceipt() {
+    return {
+      params: z.object({ id: z.string().uuid() }),
+      query: z.object({ receiptToken: z.string().min(1) }),
+    };
+  }
+
+  static get publicReceiptDownload() {
+    return {
+      params: z.object({ bookingId: z.string().uuid() }),
+      query: z.object({ receiptToken: z.string().min(1) }),
+    };
   }
 }
 

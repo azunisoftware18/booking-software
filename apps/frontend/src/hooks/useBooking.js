@@ -14,11 +14,15 @@ export const useBookings = () => {
   });
 };
 
-export const useBookingById = (id) => {
+export const useBookingById = (id, receiptToken) => {
   return useQuery({
-    queryKey: ["booking", id],
+    queryKey: ["booking", id, receiptToken],
     queryFn: async () => {
-      const res = await api.get(`/booking/${id}`);
+      const res = receiptToken
+        ? await api.get(`/booking/receipt/${id}`, {
+            params: { receiptToken },
+          })
+        : await api.get(`/booking/${id}`);
 
       return res?.data?.data;
     },

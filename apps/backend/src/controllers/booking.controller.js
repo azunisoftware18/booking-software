@@ -1,5 +1,6 @@
 import BookingService from "../services/booking.service.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { envConfig } from "../config/env.config.js";
 
 class BookingController {
   // ============================================================
@@ -38,24 +39,21 @@ class BookingController {
     );
   };
 
-  // ============================================================
-  // PAYMENT SUCCESS
-  // ============================================================
-  static success = async (req, res) => {
-    const data = await BookingService.paymentSuccess(req.body);
+  static atomResponse = async (req, res) => {
+    const result = await BookingService.processAtomResponse(req.body);
+    const frontendUrl = envConfig.FRONTEND_URL;
+    if (!frontendUrl) {
+      throw new Error("FRONTEND_URL must be configured for ATOM payment callbacks");
+    }
 
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/payment-success?bookingId=${data.id}`
-    );
-  };
+    if (result.isSuccessful) {
+      const receiptToken = BookingService.createReceiptToken(result.booking.id);
+      return res.redirect(
+        `${frontendUrl.replace(/\/+$/, "")}/payment-success?bookingId=${result.booking.id}&receiptToken=${receiptToken}`,
+      );
+    }
 
-  // ============================================================
-  // PAYMENT FAILURE
-  // ============================================================
-  static failure = async (req, res) => {
-    await BookingService.paymentFailure(req.body);
-
-    return res.redirect(`${process.env.FRONTEND_URL}/payment-failure`);
+    return res.redirect(`${frontendUrl.replace(/\/+$/, "")}/payment-failure`);
   };
 
   // ============================================================
@@ -76,6 +74,15 @@ class BookingController {
     const data = await BookingService.getBookingById(id);
 
     return res.json(ApiResponse.success(data, "Booking fetched"));
+  };
+
+  static getPublicReceipt = async (req, res) => {
+    const data = await BookingService.getPublicReceipt(
+      req.params.id,
+      req.query.receiptToken,
+    );
+
+    return res.json(ApiResponse.success(data, "Payment receipt fetched"));
   };
 
   // ============================================================
