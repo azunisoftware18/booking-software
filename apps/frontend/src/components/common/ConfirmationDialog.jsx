@@ -61,7 +61,7 @@ export default function ConfirmationDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
       {/* Ultra-smooth Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/40 backdrop-blur-[6px] animate-in fade-in duration-500"
