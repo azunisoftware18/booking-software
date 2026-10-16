@@ -281,13 +281,13 @@ export default function VisitorForm({
 
         {/* ─── BUTTONS ─── */}
         <div className="flex justify-between items-center pt-2 gap-4">
-          <button
+          {/* <button
             type="button"
             onClick={onBack}
             className="flex-1 py-3.5 font-bold font-serif text-xs text-jaipur-dark hover:text-royal-blue transition-colors uppercase tracking-[2px]"
           >
             ← Edit ticket
-          </button>
+          </button> */}
 
           <button
             type="submit"
