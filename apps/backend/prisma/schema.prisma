@@ -153,13 +153,8 @@ model Booking {
 
   userId       String?  @map("user_id")
   placeId      String   @map("place_id")
-<<<<<<< HEAD
   locationId String @map("location_id")
   slotDateTime DateTime? @map("slot_date_time")
-=======
-  locationId   String?  @map("location_id")
-  slotDateTime DateTime @map("slot_date_time")
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
   bookingType BookingType @default(TICKET) @map("booking_type")
 
@@ -188,11 +183,7 @@ model Booking {
   annexureItems BookingAnnexureItem[]
   user    User?    @relation(fields: [userId], references: [id])
   place   Place    @relation(fields: [placeId], references: [id])
-<<<<<<< HEAD
   location Location @relation(fields: [locationId], references: [id])
-=======
-  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
   @@index([locationId])
   @@map("bookings")
@@ -233,7 +224,6 @@ model Location {
 
   users     User[]
   places    Place[] @relation("PlaceBookingLocation")
-  bookings  Booking[]
   createdBy User?   @relation("LocationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   bookings Booking[]
 
@@ -387,11 +377,7 @@ enum GateType {
 enum BookingType {
   TICKET
   PASS
-<<<<<<< HEAD
   ENTRY_FEE
-=======
-  ANNEXURE
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 }
 
 enum PaymentMethod {
