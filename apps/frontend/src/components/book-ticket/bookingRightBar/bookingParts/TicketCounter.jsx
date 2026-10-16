@@ -15,8 +15,13 @@ export default function TicketCounter({
     ticketTypeIds,
 }) {
     const dispatch = useDispatch();
-    const { placeId } = usePlace();
-    const { data: ticketTypes = [], isLoading } = useTicketTypes(placeId);
+    const { currentPlace, placeId } = usePlace();
+    const {
+        data: ticketTypes = [],
+        isLoading,
+        isError,
+        refetch,
+    } = useTicketTypes(placeId);
     const selectedTypeIds = ticketTypeIds ? new Set(ticketTypeIds) : null;
     const availableTicketTypes = ticketTypes.filter((ticketType) => {
         const ticketTypeId = ticketType._id || ticketType.id;
@@ -72,11 +77,31 @@ export default function TicketCounter({
             >
                 <div className="relative">
                     <h2 className="text-2xl font-semibold sm:text-3xl font-serif font-normal text-royal-blue leading-tight">Select the number of visitors</h2>
+                    {currentPlace?.name && (
+                        <p className="mt-2 text-sm font-medium text-royal-blue/70">
+                            Tickets for {currentPlace.name}
+                        </p>
+                    )}
                     <div className="h-[1px] w-12 bg-gold/40 mt-2" />
                 </div>
 
                 <div className="w-full space-y-2.5 rounded-xl border border-dashed border-gold/15 p-2 bg-sandstone/10">
-                    {!isLoading && availableTicketTypes.map((t, index) => {
+                    {isError ? (
+                        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+                            <p>Tickets for this venue could not be loaded.</p>
+                            <button
+                                type="button"
+                                onClick={() => refetch()}
+                                className="mt-2 font-semibold underline"
+                            >
+                                Try again
+                            </button>
+                        </div>
+                    ) : !isLoading && availableTicketTypes.length === 0 ? (
+                        <p className="rounded-lg bg-white p-4 text-sm text-slate-600">
+                            No available tickets are configured for this venue.
+                        </p>
+                    ) : !isLoading && availableTicketTypes.map((t, index) => {
                         const uniqueKey = t._id || t.id || index;
                         const isSelected = (selectedCounts[uniqueKey] || 0) > 0;
                         return (

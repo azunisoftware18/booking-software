@@ -5,12 +5,30 @@ import { upload, deleteByKey } from "../utils/s3Service.js";
 const publicPlaceSelect = {
   id: true,
   name: true,
+  annexure: true,
+  annexureOption: true,
   location: true,
   latitude: true,
   longitude: true,
   imageUrl: true,
   shortDescription: true,
   description: true,
+  createdAt: true,
+  slotTemplates: {
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      capacity: true,
+    },
+    orderBy: { startTime: "asc" },
+  },
+};
+
+const placeListInclude = {
+  slotTemplates: {
+    orderBy: { startTime: "asc" },
+  },
 };
 
 class PlaceService {
@@ -23,12 +41,15 @@ class PlaceService {
     }
 
     const {
+      annexure,
+      annexureOption,
       name,
       location,
       shortDescription,
       description,
       latitude,
       longitude,
+      slotTemplates = [],
     } = payload;
 
     // Check duplicate
@@ -65,18 +86,35 @@ class PlaceService {
       imageKey = uploaded?.key || null;
     }
 
-    return await prisma.place.create({
-      data: {
-        createdById: currentUser.id,
-        name,
-        location,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        shortDescription: shortDescription || null,
-        description: description || null,
-        imageUrl,
-        imageKey,
-      },
+    return await prisma.$transaction(async (tx) => {
+      const place = await tx.place.create({
+        data: {
+          createdById: currentUser.id,
+          annexure,
+          annexureOption,
+          name,
+          location,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          shortDescription: shortDescription || null,
+          description: description || null,
+          imageUrl,
+          imageKey,
+        },
+      });
+
+      if (slotTemplates.length) {
+        await tx.slotTemplate.createMany({
+          data: slotTemplates.map(({ startTime, endTime, capacity }) => ({
+            placeId: place.id,
+            startTime,
+            endTime,
+            capacity,
+          })),
+        });
+      }
+
+      return place;
     });
   }
 
@@ -146,6 +184,7 @@ class PlaceService {
 
     if (user.role?.roleCode === "SUPER_ADMIN") {
       return prisma.place.findMany({
+        include: placeListInclude,
         orderBy: {
           createdAt: "desc",
         },
@@ -191,6 +230,7 @@ class PlaceService {
 
       return prisma.place.findMany({
         where,
+        include: placeListInclude,
         orderBy: { createdAt: "desc" },
       });
     }
@@ -202,6 +242,7 @@ class PlaceService {
       user.role?.roleCode !== "LOCATION_ADMIN"
     ) {
       return prisma.place.findMany({
+        include: placeListInclude,
         orderBy: {
           createdAt: "desc",
         },
@@ -211,6 +252,7 @@ class PlaceService {
     if (isAdmin) {
       return prisma.place.findMany({
         where: { createdById: user.id },
+        include: placeListInclude,
         orderBy: { createdAt: "desc" },
       });
     }
@@ -224,6 +266,7 @@ class PlaceService {
       where: {
         id: user.placeId,
       },
+      include: placeListInclude,
       orderBy: {
         createdAt: "desc",
       },

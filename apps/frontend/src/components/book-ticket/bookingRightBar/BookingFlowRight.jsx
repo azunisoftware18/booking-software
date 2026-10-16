@@ -14,6 +14,7 @@ import TicketCounter from "./bookingParts/TicketCounter";
 import VisitorForm from "./bookingParts/VisitorForm";
 import { ArrowRight, Landmark, Lock, MapPin, Ticket } from "lucide-react";
 import FullPageLoader from "@/components/ui/FullPageLoader";
+import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 
 let atomCheckoutScriptPromise;
 
@@ -112,6 +113,7 @@ export default function BookingFlowRight() {
   const selectedLocation =
     bookingLocations.find((location) => location.id === selectedLocationId) ||
     directEntryFeeLocation;
+  const bookingLocationId = selectedLocationId || directEntryFeeLocation?.id;
   const isDirectEntryFeeUnavailable =
     entryFeeIds.length > 0 &&
     !isLoadingLocations &&
@@ -247,7 +249,7 @@ export default function BookingFlowRight() {
         throw new Error("Place information is not available");
       }
 
-      if (!locationConfirmed || !selectedLocationId) {
+      if (!locationConfirmed || !bookingLocationId) {
         throw new Error("Please select a location before booking");
       }
 
@@ -275,7 +277,7 @@ export default function BookingFlowRight() {
 
       const payload = {
         placeId,
-        locationId: selectedLocationId,
+        locationId: bookingLocationId,
         slotDateTime,
         name: visitorInfo?.name,
         email: visitorInfo?.email,
@@ -581,40 +583,91 @@ export default function BookingFlowRight() {
                       </h3>
                       {selectedLocation?.venues?.length ? (
                         <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
-                          {selectedLocation.venues.map((venue) => (
-                            <button
-                              key={venue.id}
-                              type="button"
-                              onClick={() => startBookingForVenue(venue)}
-                              className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
-                            >
-                              <span className="flex items-start justify-between gap-3">
-                                <span className="flex min-w-0 items-start gap-3">
-                                  <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
-                                    <Landmark size={18} />
-                                  </span>
-                                  <span className="min-w-0">
-                                    <span className="block truncate font-bold text-slate-800">
-                                      {venue.name}
+                          {selectedLocation.venues.map((venue) => {
+                            const annexureOption =
+                              ANNEXURE_OPTIONS[venue.annexure]?.find(
+                                (option) =>
+                                  option.value === venue.annexureOption,
+                              );
+
+                            return (
+                              <button
+                                key={venue.id}
+                                type="button"
+                                onClick={() => startBookingForVenue(venue)}
+                                className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                              >
+                                <span className="flex items-start justify-between gap-3">
+                                  <span className="flex min-w-0 items-start gap-3">
+                                    <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
+                                      <Landmark size={18} />
                                     </span>
-                                    {venue.location && (
-                                      <span className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500">
-                                        <MapPin size={12} />
-                                        {venue.location}
+                                    <span className="min-w-0">
+                                      <span className="block truncate font-bold text-slate-800">
+                                        {venue.name}
                                       </span>
-                                    )}
+                                      {venue.location && (
+                                        <span className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500">
+                                          <MapPin size={12} />
+                                          {venue.location}
+                                        </span>
+                                      )}
+                                    </span>
                                   </span>
+                                  <ArrowRight
+                                    size={16}
+                                    className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
+                                  />
                                 </span>
-                                <ArrowRight
-                                  size={16}
-                                  className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
-                                />
-                              </span>
-                              <span className="mt-4 block text-xs font-bold text-[#994113]">
-                                Browse venue tickets
-                              </span>
-                            </button>
-                          ))}
+
+                                {annexureOption && (
+                                  <span className="mt-3 block border-t border-slate-200 pt-3">
+                                    <span className="block text-xs font-medium text-slate-600">
+                                      Annexure {venue.annexure} ·{" "}
+                                      {annexureOption.label}
+                                    </span>
+                                    <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-emerald-700">
+                                      {annexureOption.rate4Hours != null && (
+                                        <span>
+                                          4 hours: ₹
+                                          {Number(
+                                            annexureOption.rate4Hours,
+                                          ).toLocaleString("en-IN")}
+                                        </span>
+                                      )}
+                                      {annexureOption.rate8Hours != null && (
+                                        <span>
+                                          8 hours: ₹
+                                          {Number(
+                                            annexureOption.rate8Hours,
+                                          ).toLocaleString("en-IN")}
+                                        </span>
+                                      )}
+                                      {annexureOption.ratePerPerson != null && (
+                                        <span>
+                                          Per person: ₹
+                                          {Number(
+                                            annexureOption.ratePerPerson,
+                                          ).toLocaleString("en-IN")}
+                                        </span>
+                                      )}
+                                      {annexureOption.ratePerStudent != null && (
+                                        <span>
+                                          Per student: ₹
+                                          {Number(
+                                            annexureOption.ratePerStudent,
+                                          ).toLocaleString("en-IN")}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </span>
+                                )}
+                                <span className="mt-4 block text-xs font-bold text-[#994113]">
+                                  Browse venue tickets
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       ) : (
                         <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
