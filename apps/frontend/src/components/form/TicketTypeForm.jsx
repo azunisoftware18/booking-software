@@ -41,6 +41,20 @@ const centerRates = {
     { name: "Planetarium", price: 10 },
     { name: "Planetarium (in Group)", price: 5 },
   ],
+  Kota: [
+    { name: "General Public", price: 20 },
+    { name: "Student", price: 15 },
+    { name: "Group of Student**", price: 0, free: true },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
+  ],
+  Bikaner: [
+    { name: "General Public", price: 20 },
+    { name: "Student", price: 15 },
+    { name: "Group of Student**", price: 0, free: true },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
+  ],
 };
 
 export default function TicketTypeForm({
