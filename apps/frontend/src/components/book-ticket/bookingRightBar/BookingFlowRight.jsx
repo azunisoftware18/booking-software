@@ -313,16 +313,11 @@ export default function BookingFlowRight() {
   const handleFinalBooking = async (visitorInfo) => {
     try {
       setBookingError("");
-<<<<<<< HEAD
       const paymentMethod = entryFeeVenueId
         ? "ONLINE"
         : isLoggedIn
           ? visitorInfo?.paymentMethod
           : "ONLINE";
-=======
-      const isAnnexureBooking = Boolean(annexureBookingItems?.length);
-      const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
       if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
         throw new Error("Please select a valid payment method");
@@ -336,7 +331,6 @@ export default function BookingFlowRight() {
         throw new Error("Place information is not available");
       }
 
-<<<<<<< HEAD
       // if (!locationConfirmed || !selectedLocationId) {
       //   throw new Error("Please select a location before booking");
       // }
@@ -354,18 +348,6 @@ export default function BookingFlowRight() {
         }
       }
 
-=======
-      if (!locationConfirmed || !bookingLocationId) {
-        throw new Error("Please select a location before booking");
-      }
-
-      if (
-        !isAnnexureBooking &&
-        (!reduxData?.date || !reduxData?.slot?.time)
-      ) {
-        throw new Error("Please select a valid date and slot");
-      }
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
       const tickets = Object.entries(reduxData?.tickets || {})
         .filter(([, quantity]) => Number(quantity) > 0)
@@ -374,7 +356,6 @@ export default function BookingFlowRight() {
           quantity: Number(quantity),
         }));
 
-<<<<<<< HEAD
       if (
         tickets.length === 0 ||
         tickets.some(
@@ -393,15 +374,6 @@ export default function BookingFlowRight() {
 
       const slotDateTime = isEntryFeeBooking
         ? null
-=======
-      if (!isAnnexureBooking && !tickets.length) {
-        throw new Error("Please select at least one ticket");
-      }
-
-      const firstAnnexureItem = annexureBookingItems?.[0];
-      const slotDateTime = isAnnexureBooking
-        ? firstAnnexureItem.slotDateTime
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         : `${reduxData.date}T${reduxData.slot.time}:00.000Z`;
 
       const totalSeats = tickets.reduce(
@@ -427,24 +399,14 @@ export default function BookingFlowRight() {
 
       const payload = {
         placeId,
-<<<<<<< HEAD
         locationId: selectedLocationId,
         slotDateTime: isEntryFeeBooking ? null : slotDateTime,
-=======
-        locationId: bookingLocationId,
-        slotDateTime,
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         name: visitorInfo?.name,
         email: visitorInfo?.email,
         phone: visitorInfo?.phone,
         paymentMethod,
-<<<<<<< HEAD
         bookingType: isEntryFeeBooking ? "ENTRY_FEE" : "TICKET",
         totalAmount: Number(reduxData?.totalAmount || 0),
-=======
-        bookingType: isAnnexureBooking ? "ANNEXURE" : "TICKET",
-        totalAmount: parseFloat(reduxData?.totalAmount || 0),
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         totalSeats,
         tickets: isAnnexureBooking ? [] : tickets,
         ...(isAnnexureBooking ? { annexureItems: annexureBookingItems } : {}),
@@ -750,16 +712,8 @@ export default function BookingFlowRight() {
                             <button
                               key={group.annexure}
                               type="button"
-<<<<<<< HEAD
                               onClick={() => startBookingForVenue(venue)}
                               className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
-=======
-                              onClick={() => {
-                                setSelectedAnnexure(group);
-                                setAnnexureDraftItems({});
-                              }}
-                              className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
                             >
                               <span className="flex items-start justify-between gap-3">
                                 <span className="flex min-w-0 items-start gap-3">
@@ -1431,20 +1385,11 @@ function renderStep(step, props) {
       return (
         <VisitorForm
           onSubmit={handleFinalBooking}
-<<<<<<< HEAD
           onBack={() =>
             entryFeeVenueId ? setStep(2) : setStep(2)
           }
           showCashOption={entryFeeVenueId ? false : isLoggedIn}
           isSubmitting={isSubmitting}
-=======
-          onBack={
-            annexureBookingItems?.length
-              ? onAnnexureBack
-              : () => setStep(2)
-          }
-          showCashOption={isLoggedIn}
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         />
       );
 

@@ -7,11 +7,7 @@ static get createBooking() {
     placeId: z.string().uuid(),
     locationId: z.string().min(1),
 
-<<<<<<< HEAD
     slotDateTime: z.string().nullable().optional(),
-=======
-      bookingType: z.enum(["TICKET", "PASS", "ANNEXURE"]).optional(),
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
     bookingType: z.enum(["TICKET", "PASS", "ENTRY_FEE"]).optional(),
 
@@ -41,34 +37,6 @@ static get createBooking() {
   });
 }
 
-<<<<<<< HEAD
-=======
-      tickets: z.array(
-        z.object({
-          typeId: z.string().uuid(),
-          quantity: z.number().min(1),
-        })
-      ).optional().default([]),
-      annexureItems: z.array(
-        z.object({
-          placeId: z.string().uuid(),
-          slotDateTime: z.string().min(1),
-          durationHours: z.union([z.literal(4), z.literal(8)]).nullable().optional(),
-          persons: z.number().int().min(0).optional().default(0),
-          students: z.number().int().min(0).optional().default(0),
-        }),
-      ).optional(),
-    }).superRefine((data, context) => {
-      if (data.bookingType === "ANNEXURE" && !data.annexureItems?.length) {
-        context.addIssue({
-          code: "custom",
-          path: ["annexureItems"],
-          message: "Select at least one Annexure option",
-        });
-      }
-    });
-  }
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
   static get atomResponse() {
     return z.object({

@@ -44,7 +44,6 @@ class BookingService {
       throw ApiError.badRequest("Please select a location before booking");
     }
 
-<<<<<<< HEAD
     const isEntryFeeBooking = bookingType === "ENTRY_FEE";
 
     if (!isEntryFeeBooking && !slotDateTime) {
@@ -57,10 +56,6 @@ class BookingService {
       !["TICKET", "ENTRY_FEE"].includes(bookingType)
     ) {
       throw ApiError.badRequest("Invalid booking type");
-=======
-    if (!slotDateTime && bookingType !== "ANNEXURE") {
-      throw ApiError.badRequest("Slot date and time are required");
->>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
     }
 
     if (
