@@ -37,6 +37,7 @@ export default function TicketTypePage() {
   const { data: me } = useGetMe();
   const { data: accessiblePlaces = [] } = usePlaces();
   const currentPlace = useSelector((state) => state.place.currentPlace);
+  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
   const hasAssignedLocation = Boolean(me?.locationId || me?.location?.id);
   const placeId =
@@ -45,10 +46,13 @@ export default function TicketTypePage() {
     (hasAssignedLocation
       ? accessiblePlaces[0]?.id
       : currentPlace?.id || currentPlace?._id);
-  const { data: ticketTypes, isLoading } = useTicketTypes(placeId);
+  const { data: ticketTypes, isLoading } = useTicketTypes(
+    placeId,
+    isSuperAdmin,
+  );
   const assignedLocation = me?.location;
   const assignedCenter = assignedLocation?.city || assignedLocation?.name;
-  const visibleTicketTypes = assignedCenter
+  const visibleTicketTypes = !isSuperAdmin && assignedCenter
     ? (ticketTypes || []).filter(
         (ticket) =>
           ticket.center?.trim().toLowerCase() ===
@@ -197,8 +201,6 @@ export default function TicketTypePage() {
     setEditData(ticket);
     setIsModalOpen(true);
   };
-
-  const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
 
   const permissions =
     me?.data?.permissions ??

@@ -17,6 +17,7 @@ class TicketTypeController {
     if (payload.action === "getAll") {
       payload.data = {
         ...payload.data,
+        allPlaces: req.user?.role?.roleCode === "SUPER_ADMIN",
         includeCreator: req.user?.role?.roleCode === "SUPER_ADMIN",
       };
     }
