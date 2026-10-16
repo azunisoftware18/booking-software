@@ -236,6 +236,9 @@ export const getAllAdmins = async (req, res) => {
         location: {
           select: { id: true, name: true, city: true },
         },
+        parent: {
+          select: { id: true, fullName: true, email: true },
+        },
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
