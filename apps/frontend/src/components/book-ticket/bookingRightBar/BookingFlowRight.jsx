@@ -100,10 +100,10 @@ export default function BookingFlowRight() {
 
   const directEntryFeeLocation = entryFeeIds.length
     ? bookingLocations.find((location) =>
-        entryFeeIds.every((id) =>
-          location.entryFees?.some((entryFee) => entryFee.id === id),
-        ),
-      )
+      entryFeeIds.every((id) =>
+        location.entryFees?.some((entryFee) => entryFee.id === id),
+      ),
+    )
     : null;
   const directEntryFees =
     directEntryFeeLocation?.entryFees?.filter((entryFee) =>
@@ -119,16 +119,16 @@ export default function BookingFlowRight() {
     directEntryFees.length !== entryFeeIds.length;
   const visibleLocationSelectionStep =
     entryFeeIds.length &&
-    (directEntryFeeLocation || isDirectEntryFeeUnavailable)
+      (directEntryFeeLocation || isDirectEntryFeeUnavailable)
       ? 2
       : locationSelectionStep;
   const directEntryFeeGroup =
     directEntryFees.length && !isDirectEntryFeeModalDismissed
       ? {
-          venueId: directEntryFees[0].venueId || directEntryFees[0].placeId,
-          venueName: directEntryFees[0].venueName,
-          entryFees: directEntryFees,
-        }
+        venueId: directEntryFees[0].venueId || directEntryFees[0].placeId,
+        venueName: directEntryFees[0].venueName,
+        entryFees: directEntryFees,
+      }
       : null;
   const activeEntryFeeGroup = selectedEntryFeeGroup || directEntryFeeGroup;
   const visibleEntryFees = selectedLocation?.entryFees || [];
@@ -174,7 +174,11 @@ export default function BookingFlowRight() {
     setEntryFeeVenueId(venue.id);
     setSelectedEntryFeeGroup(null);
     setIsDirectEntryFeeModalDismissed(true);
+    setSelectedLocationId(selectedLocation.id);
     setLocationConfirmed(true);
+
+    // Entry fee ke baad direct Visitor Details form
+    setStep(3);
   };
 
   const startBookingForVenue = (venue) => {
@@ -233,7 +237,11 @@ export default function BookingFlowRight() {
   const handleFinalBooking = async (visitorInfo) => {
     try {
       setBookingError("");
-      const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
+      const paymentMethod = entryFeeVenueId
+        ? "ONLINE"
+        : isLoggedIn
+          ? visitorInfo?.paymentMethod
+          : "ONLINE";
 
       if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
         throw new Error("Please select a valid payment method");
@@ -247,13 +255,23 @@ export default function BookingFlowRight() {
         throw new Error("Place information is not available");
       }
 
-      if (!locationConfirmed || !selectedLocationId) {
-        throw new Error("Please select a location before booking");
+      // if (!locationConfirmed || !selectedLocationId) {
+      //   throw new Error("Please select a location before booking");
+      // }
+
+      const isEntryFeeBooking = Boolean(entryFeeVenueId);
+
+      console.log("Entry Fee Venue ID:", entryFeeVenueId);
+      console.log("Is Entry Fee Booking:", isEntryFeeBooking);
+      console.log("Redux Date:", reduxData?.date);
+      console.log("Redux Slot:", reduxData?.slot);
+
+      if (!isEntryFeeBooking) {
+        if (!reduxData?.date || !reduxData?.slot?.time) {
+          throw new Error("Please select a valid date and slot");
+        }
       }
 
-      if (!reduxData?.date || !reduxData?.slot?.time) {
-        throw new Error("Please select a valid date and slot");
-      }
 
       const tickets = Object.entries(reduxData?.tickets || {})
         .filter(([, quantity]) => Number(quantity) > 0)
@@ -262,30 +280,61 @@ export default function BookingFlowRight() {
           quantity: Number(quantity),
         }));
 
+      if (
+        tickets.length === 0 ||
+        tickets.some(
+          (ticket) =>
+            !Number.isSafeInteger(ticket.quantity) ||
+            ticket.quantity <= 0
+        )
+      ) {
+        throw new Error("Please select valid ticket quantities");
+      }
+
+
       if (!tickets.length) {
         throw new Error("Please select at least one ticket");
       }
 
-      const slotDateTime = `${reduxData.date}T${reduxData.slot.time}:00.000Z`;
+      const slotDateTime = isEntryFeeBooking
+        ? null
+        : `${reduxData.date}T${reduxData.slot.time}:00.000Z`;
 
       const totalSeats = tickets.reduce(
         (total, ticket) => total + Number(ticket.quantity),
         0,
       );
 
+      const selectedLocationDetails =
+        bookingLocations.find(
+          (location) =>
+            String(location._id ?? location.id) ===
+            String(selectedLocationId)
+        ) ||
+        (String(directEntryFeeLocation?._id ?? directEntryFeeLocation?.id) ===
+          String(selectedLocationId)
+          ? directEntryFeeLocation
+          : null);
+
+      if (!selectedLocationDetails) {
+        throw new Error("Selected location details not found");
+      }
+
+
       const payload = {
         placeId,
         locationId: selectedLocationId,
-        slotDateTime,
+        slotDateTime: isEntryFeeBooking ? null : slotDateTime,
         name: visitorInfo?.name,
         email: visitorInfo?.email,
         phone: visitorInfo?.phone,
         paymentMethod,
-        bookingType: "TICKET",
-        totalAmount: parseFloat(reduxData?.totalAmount || 0),
+        bookingType: isEntryFeeBooking ? "ENTRY_FEE" : "TICKET",
+        totalAmount: Number(reduxData?.totalAmount || 0),
         totalSeats,
         tickets,
       };
+
 
       const res = await createBooking(payload);
 
@@ -402,7 +451,7 @@ export default function BookingFlowRight() {
               className="
                 flex
                 flex-1
-                min-h-[300px]
+                min-h-75
                 items-center
                 justify-center
                 font-serif
@@ -462,7 +511,7 @@ export default function BookingFlowRight() {
 
       {!locationConfirmed && (
         <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-2000 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="booking-location-title"
@@ -535,7 +584,7 @@ export default function BookingFlowRight() {
                   type="button"
                   disabled={!selectedLocationId || isLoadingLocations}
                   onClick={() => setLocationSelectionStep(2)}
-                  className="mt-6 w-full rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-6 w-full rounded-xl bg-linear-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -569,9 +618,8 @@ export default function BookingFlowRight() {
                 )}
 
                 <div
-                  className={`mt-5 grid gap-5 ${
-                    entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
-                  }`}
+                  className={`mt-5 grid gap-5 ${entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
+                    }`}
                 >
                   {!entryFeeId && (
                     <section className="min-w-0">
@@ -586,7 +634,7 @@ export default function BookingFlowRight() {
                               key={venue.id}
                               type="button"
                               onClick={() => startBookingForVenue(venue)}
-                              className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
                             >
                               <span className="flex items-start justify-between gap-3">
                                 <span className="flex min-w-0 items-start gap-3">
@@ -643,7 +691,7 @@ export default function BookingFlowRight() {
                                 ),
                               );
                             }}
-                            className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                            className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
                           >
                             <span className="flex items-start justify-between gap-3">
                               <span className="flex min-w-0 items-start gap-3">
@@ -706,7 +754,7 @@ export default function BookingFlowRight() {
 
       {activeEntryFeeGroup && (
         <div
-          className="fixed inset-0 z-[2100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-2100 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="entry-fee-type-title"
@@ -735,11 +783,10 @@ export default function BookingFlowRight() {
                 return (
                   <div
                     key={entryFee.id}
-                    className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors sm:p-5 ${
-                      quantity > 0
-                        ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
-                        : "border-slate-200"
-                    }`}
+                    className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors sm:p-5 ${quantity > 0
+                      ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
+                      : "border-slate-200"
+                      }`}
                   >
                     <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                       <input
@@ -822,7 +869,7 @@ export default function BookingFlowRight() {
                     return (
                       total +
                       unitPrice *
-                        Number(selectedEntryFeeQuantities[entryFee.id] || 0)
+                      Number(selectedEntryFeeQuantities[entryFee.id] || 0)
                     );
                   }, 0)
                   .toFixed(2)}
@@ -859,7 +906,7 @@ export default function BookingFlowRight() {
                     startBookingForEntryFee(selectedEntryFees);
                   }
                 }}
-                className="rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-linear-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Continue booking
               </button>
@@ -909,8 +956,11 @@ function renderStep(step, props) {
       return (
         <VisitorForm
           onSubmit={handleFinalBooking}
-          onBack={() => setStep(2)}
-          showCashOption={isLoggedIn}
+          onBack={() =>
+            entryFeeVenueId ? setStep(2) : setStep(2)
+          }
+          showCashOption={entryFeeVenueId ? false : isLoggedIn}
+          isSubmitting={isSubmitting}
         />
       );
 
@@ -938,9 +988,9 @@ const StartStep = ({ onNext }) => (
       max-w-md
       mx-auto
       flex-1
-      min-h-[500px]
-      sm:min-h-[550px]
-      lg:min-h-[600px]
+      min-h-125
+      sm:min-h-137.5
+      lg:min-h-150
       select-none
       py-8
     "
@@ -989,7 +1039,7 @@ const StartStep = ({ onNext }) => (
       className="
         w-full
         max-w-xs
-        bg-gradient-to-r
+        bg-linear-to-r
         from-jaipur-dark
         to-[#994113]
         text-white

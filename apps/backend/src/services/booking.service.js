@@ -43,8 +43,18 @@ class BookingService {
       throw ApiError.badRequest("Please select a location before booking");
     }
 
-    if (!slotDateTime) {
-      throw ApiError.badRequest("Slot date and time are required");
+    const isEntryFeeBooking = bookingType === "ENTRY_FEE";
+
+    if (!isEntryFeeBooking && !slotDateTime) {
+      throw ApiError.badRequest(
+        "Slot date and time are required for ticket bookings"
+      );
+    }
+
+    if (
+      !["TICKET", "ENTRY_FEE"].includes(bookingType)
+    ) {
+      throw ApiError.badRequest("Invalid booking type");
     }
 
     if (!Array.isArray(tickets) || tickets.length === 0) {
@@ -141,54 +151,50 @@ class BookingService {
           totalSeats += quantity;
         });
 
-        // --------------------------------------------------------
-        // SLOT CAPACITY
-        // --------------------------------------------------------
+        let slotDate = null;
 
-        const slotDate = new Date(slotDateTime);
+        if (!isEntryFeeBooking) {
+          slotDate = new Date(slotDateTime);
 
-        if (Number.isNaN(slotDate.getTime())) {
-          throw ApiError.badRequest("Invalid slot date/time");
-        }
+          if (Number.isNaN(slotDate.getTime())) {
+            throw ApiError.badRequest("Invalid slot date/time");
+          }
 
-        const capacity = await this.getSlotCapacity(tx, placeId, slotDateTime);
-
-        // --------------------------------------------------------
-        // EXISTING BOOKINGS
-        // --------------------------------------------------------
-
-        const activeBookings = await tx.booking.findMany({
-          where: {
+          const capacity = await this.getSlotCapacity(
+            tx,
             placeId,
-            slotDateTime: slotDate,
-            OR: [
-              {
-                status: "PAID",
-              },
-              {
-                status: "PENDING",
-                expiresAt: {
-                  gt: new Date(),
-                },
-              },
-            ],
-          },
-        });
-
-        const usedSeats = activeBookings.reduce(
-          (sum, booking) => sum + booking.totalSeats,
-          0
-        );
-
-        const availableSeats = capacity - usedSeats;
-
-        if (totalSeats > availableSeats) {
-          throw ApiError.badRequest(
-            `Not enough seats available. Only ${Math.max(
-              availableSeats,
-              0
-            )} seats remaining`
+            slotDateTime
           );
+
+          const activeBookings = await tx.booking.findMany({
+            where: {
+              placeId,
+              slotDateTime: slotDate,
+              OR: [
+                { status: "PAID" },
+                {
+                  status: "PENDING",
+                  expiresAt: { gt: new Date() },
+                },
+              ],
+            },
+          });
+
+          const usedSeats = activeBookings.reduce(
+            (sum, booking) => sum + booking.totalSeats,
+            0
+          );
+
+          const availableSeats = capacity - usedSeats;
+
+          if (totalSeats > availableSeats) {
+            throw ApiError.badRequest(
+              `Not enough seats available. Only ${Math.max(
+                availableSeats,
+                0
+              )} seats remaining`
+            );
+          }
         }
 
         // --------------------------------------------------------
@@ -249,8 +255,10 @@ class BookingService {
     // ============================================================
 
     if (paymentMethod === "ONLINE") {
-      const AtomPaymentService = (await import("./atom-payment.service.js"))
-        .default;
+      const AtomPaymentService = (
+        await import("./atom-payment.service.js")
+      ).default;
+
       try {
         const payment = await AtomPaymentService.initiatePayment({
           bookingId: booking.id,
@@ -259,7 +267,9 @@ class BookingService {
           name: booking.name,
           email: booking.email,
           phone: booking.phone,
+          userId: booking.userId || "",
         });
+
         return {
           booking,
           isCashBooking: false,
@@ -271,6 +281,7 @@ class BookingService {
           where: { id: booking.id },
           data: { status: "FAILED" },
         });
+
         throw error;
       }
     }
