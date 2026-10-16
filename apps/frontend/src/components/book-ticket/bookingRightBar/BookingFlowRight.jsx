@@ -7,12 +7,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
 import { useBookingLocations } from "@/hooks/useBookingLocations";
+import { useSlots } from "@/hooks/useSlot";
 import { setCurrentPlace } from "@/store/slices/placeSlice";
-import { resetBooking, setTickets } from "@/store/slices/bookingSlice";
+import {
+  resetBooking,
+  setDate,
+  setSlot,
+  setTickets,
+  setTotalAmount,
+} from "@/store/slices/bookingSlice";
 import DateSelector from "./bookingParts/DateSelector";
 import TicketCounter from "./bookingParts/TicketCounter";
 import VisitorForm from "./bookingParts/VisitorForm";
-import { ArrowRight, Landmark, Lock, MapPin, Ticket } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  Clock,
+  Landmark,
+  Lock,
+  MapPin,
+  Ticket,
+} from "lucide-react";
 import FullPageLoader from "@/components/ui/FullPageLoader";
 
 let atomCheckoutScriptPromise;
@@ -74,6 +89,9 @@ export default function BookingFlowRight() {
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [locationSelectionStep, setLocationSelectionStep] = useState(1);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [selectedAnnexure, setSelectedAnnexure] = useState(null);
+  const [annexureDraftItems, setAnnexureDraftItems] = useState({});
+  const [annexureBookingItems, setAnnexureBookingItems] = useState(null);
   const [entryFeeVenueId, setEntryFeeVenueId] = useState(null);
   const [selectedEntryFeeGroup, setSelectedEntryFeeGroup] = useState(null);
   const [isDirectEntryFeeModalDismissed, setIsDirectEntryFeeModalDismissed] =
@@ -112,6 +130,7 @@ export default function BookingFlowRight() {
   const selectedLocation =
     bookingLocations.find((location) => location.id === selectedLocationId) ||
     directEntryFeeLocation;
+  const bookingLocationId = selectedLocationId || directEntryFeeLocation?.id;
   const isDirectEntryFeeUnavailable =
     entryFeeIds.length > 0 &&
     !isLoadingLocations &&
@@ -149,6 +168,21 @@ export default function BookingFlowRight() {
 
     return groups;
   }, []);
+  const annexureGroups = (selectedLocation?.venues || []).reduce(
+    (groups, venue) => {
+      if (!venue.annexure) return groups;
+      const group = groups.find((item) => item.annexure === venue.annexure);
+
+      if (group) {
+        group.venues.push(venue);
+      } else {
+        groups.push({ annexure: venue.annexure, venues: [venue] });
+      }
+
+      return groups;
+    },
+    [],
+  );
 
   const startBookingForEntryFee = (selectedEntryFees) => {
     const firstEntryFee = selectedEntryFees[0];
@@ -181,12 +215,54 @@ export default function BookingFlowRight() {
     setStep(3);
   };
 
-  const startBookingForVenue = (venue) => {
+  const startBookingForAnnexureOptions = () => {
+    const selectedItems = Object.values(annexureDraftItems);
+    if (
+      !selectedItems.length ||
+      selectedItems.some(
+        (item) =>
+          !item.slotDateTime ||
+          (item.rateMode === "duration" && !item.durationHours) ||
+          (item.rateMode === "headcount" &&
+            Number(item.persons || 0) + Number(item.students || 0) < 1),
+      )
+    ) {
+      return;
+    }
+
+    const firstItem = selectedItems[0];
+    const totalAmount = selectedItems.reduce(
+      (total, item) => total + Number(item.amount || 0),
+      0,
+    );
+    const bookingItems = selectedItems.map((item) => ({
+      placeId: item.place.id,
+      slotDateTime: item.slotDateTime,
+      durationHours: item.durationHours || null,
+      persons: Number(item.persons || 0),
+      students: Number(item.students || 0),
+    }));
+
     setBookingError("");
     dispatch(resetBooking());
-    dispatch(setCurrentPlace(venue));
+    dispatch(setCurrentPlace(firstItem.place));
+    dispatch(setDate(firstItem.date));
+    dispatch(setSlot(firstItem.slot));
+    dispatch(setTotalAmount(totalAmount));
+    setAnnexureBookingItems(bookingItems);
     setEntryFeeVenueId(null);
+    setSelectedAnnexure(null);
     setLocationConfirmed(true);
+    setStep(3);
+  };
+
+  const returnToAnnexureSelection = () => {
+    setLocationConfirmed(false);
+    setLocationSelectionStep(2);
+    setAnnexureBookingItems(null);
+    setSelectedAnnexure(null);
+    setAnnexureDraftItems({});
+    setStep(0);
   };
 
   // ============================================================
@@ -237,11 +313,16 @@ export default function BookingFlowRight() {
   const handleFinalBooking = async (visitorInfo) => {
     try {
       setBookingError("");
+<<<<<<< HEAD
       const paymentMethod = entryFeeVenueId
         ? "ONLINE"
         : isLoggedIn
           ? visitorInfo?.paymentMethod
           : "ONLINE";
+=======
+      const isAnnexureBooking = Boolean(annexureBookingItems?.length);
+      const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
       if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
         throw new Error("Please select a valid payment method");
@@ -255,6 +336,7 @@ export default function BookingFlowRight() {
         throw new Error("Place information is not available");
       }
 
+<<<<<<< HEAD
       // if (!locationConfirmed || !selectedLocationId) {
       //   throw new Error("Please select a location before booking");
       // }
@@ -272,6 +354,18 @@ export default function BookingFlowRight() {
         }
       }
 
+=======
+      if (!locationConfirmed || !bookingLocationId) {
+        throw new Error("Please select a location before booking");
+      }
+
+      if (
+        !isAnnexureBooking &&
+        (!reduxData?.date || !reduxData?.slot?.time)
+      ) {
+        throw new Error("Please select a valid date and slot");
+      }
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
       const tickets = Object.entries(reduxData?.tickets || {})
         .filter(([, quantity]) => Number(quantity) > 0)
@@ -280,6 +374,7 @@ export default function BookingFlowRight() {
           quantity: Number(quantity),
         }));
 
+<<<<<<< HEAD
       if (
         tickets.length === 0 ||
         tickets.some(
@@ -298,6 +393,15 @@ export default function BookingFlowRight() {
 
       const slotDateTime = isEntryFeeBooking
         ? null
+=======
+      if (!isAnnexureBooking && !tickets.length) {
+        throw new Error("Please select at least one ticket");
+      }
+
+      const firstAnnexureItem = annexureBookingItems?.[0];
+      const slotDateTime = isAnnexureBooking
+        ? firstAnnexureItem.slotDateTime
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         : `${reduxData.date}T${reduxData.slot.time}:00.000Z`;
 
       const totalSeats = tickets.reduce(
@@ -323,16 +427,27 @@ export default function BookingFlowRight() {
 
       const payload = {
         placeId,
+<<<<<<< HEAD
         locationId: selectedLocationId,
         slotDateTime: isEntryFeeBooking ? null : slotDateTime,
+=======
+        locationId: bookingLocationId,
+        slotDateTime,
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         name: visitorInfo?.name,
         email: visitorInfo?.email,
         phone: visitorInfo?.phone,
         paymentMethod,
+<<<<<<< HEAD
         bookingType: isEntryFeeBooking ? "ENTRY_FEE" : "TICKET",
         totalAmount: Number(reduxData?.totalAmount || 0),
+=======
+        bookingType: isAnnexureBooking ? "ANNEXURE" : "TICKET",
+        totalAmount: parseFloat(reduxData?.totalAmount || 0),
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         totalSeats,
-        tickets,
+        tickets: isAnnexureBooking ? [] : tickets,
+        ...(isAnnexureBooking ? { annexureItems: annexureBookingItems } : {}),
       };
 
 
@@ -495,6 +610,8 @@ export default function BookingFlowRight() {
                 isSubmitting,
                 isLoggedIn,
                 entryFeeVenueId,
+                annexureBookingItems,
+                onAnnexureBack: returnToAnnexureSelection,
               })}
               {bookingError && (
                 <p
@@ -627,14 +744,22 @@ export default function BookingFlowRight() {
                         <Landmark size={16} className="text-[#994113]" />
                         Venues
                       </h3>
-                      {selectedLocation?.venues?.length ? (
+                      {annexureGroups.length ? (
                         <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
-                          {selectedLocation.venues.map((venue) => (
+                          {annexureGroups.map((group) => (
                             <button
-                              key={venue.id}
+                              key={group.annexure}
                               type="button"
+<<<<<<< HEAD
                               onClick={() => startBookingForVenue(venue)}
                               className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+=======
+                              onClick={() => {
+                                setSelectedAnnexure(group);
+                                setAnnexureDraftItems({});
+                              }}
+                              className="group w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
                             >
                               <span className="flex items-start justify-between gap-3">
                                 <span className="flex min-w-0 items-start gap-3">
@@ -642,15 +767,13 @@ export default function BookingFlowRight() {
                                     <Landmark size={18} />
                                   </span>
                                   <span className="min-w-0">
-                                    <span className="block truncate font-bold text-slate-800">
-                                      {venue.name}
+                                    <span className="block font-bold text-slate-800">
+                                      Annexure {group.annexure}
                                     </span>
-                                    {venue.location && (
-                                      <span className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500">
-                                        <MapPin size={12} />
-                                        {venue.location}
-                                      </span>
-                                    )}
+                                    <span className="mt-1 block text-xs text-slate-500">
+                                      {group.venues.length} available option
+                                      {group.venues.length === 1 ? "" : "s"}
+                                    </span>
                                   </span>
                                 </span>
                                 <ArrowRight
@@ -658,15 +781,15 @@ export default function BookingFlowRight() {
                                   className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
                                 />
                               </span>
-                              <span className="mt-4 block text-xs font-bold text-[#994113]">
-                                Browse venue tickets
+                              <span className="mt-3 block text-xs font-bold text-[#994113]">
+                                Choose Annexure {group.annexure} options
                               </span>
                             </button>
                           ))}
                         </div>
                       ) : (
                         <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                          No venues are configured for this location yet.
+                          No Annexure options are configured for this location yet.
                         </p>
                       )}
                     </section>
@@ -748,6 +871,88 @@ export default function BookingFlowRight() {
                 )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {selectedAnnexure && (
+        <div
+          className="fixed inset-0 z-[2100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="annexure-options-title"
+        >
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#994113]">
+              {selectedLocation?.name}
+            </p>
+            <h2
+              id="annexure-options-title"
+              className="mt-2 text-xl font-bold text-slate-900"
+            >
+              Select Annexure {selectedAnnexure.annexure} options
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Choose one or more options. Each option has its own date and slot.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {selectedAnnexure.venues.map((venue) => (
+                <AnnexureOptionRow
+                  key={venue.id}
+                  venue={venue}
+                  value={annexureDraftItems[venue.id]}
+                  onChange={(nextValue) =>
+                    setAnnexureDraftItems((current) => {
+                      const next = { ...current };
+                      if (nextValue) next[venue.id] = nextValue;
+                      else delete next[venue.id];
+                      return next;
+                    })
+                  }
+                />
+              ))}
+            </div>
+
+            <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+              <span>{Object.keys(annexureDraftItems).length} options selected</span>
+              <span className="text-[#994113]">
+                Total: ₹
+                {Object.values(annexureDraftItems)
+                  .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+                  .toFixed(2)}
+              </span>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedAnnexure(null)}
+                className="rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={
+                  !Object.values(annexureDraftItems).length ||
+                  Object.values(annexureDraftItems).some(
+                    (item) =>
+                      !item.slotDateTime ||
+                      item.amount == null ||
+                      (item.rateMode === "duration" && !item.durationHours) ||
+                      (item.rateMode === "headcount" &&
+                        Number(item.persons || 0) +
+                          Number(item.students || 0) <
+                          1),
+                  )
+                }
+                onClick={startBookingForAnnexureOptions}
+                className="rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Continue booking
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -920,6 +1125,274 @@ export default function BookingFlowRight() {
   );
 }
 
+function AnnexureOptionRow({ venue, value, onChange }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const date = value?.date || today;
+  const hasDurationRates =
+    venue.rate4Hours != null || venue.rate8Hours != null;
+  const hasHeadcountRates =
+    venue.ratePerPerson != null || venue.ratePerStudent != null;
+  const rateMode = hasDurationRates
+    ? "duration"
+    : hasHeadcountRates
+      ? "headcount"
+      : "unavailable";
+  const { data: slots = [], isLoading, isError, refetch } = useSlots({
+    placeId: venue.id,
+    date,
+    enabled: Boolean(value),
+  });
+
+  const updateValue = (changes) => {
+    const nextValue = { ...value, ...changes, place: venue, date, rateMode };
+    if (rateMode === "duration") {
+      nextValue.amount =
+        nextValue.durationHours === 8
+          ? venue.rate8Hours
+          : venue.rate4Hours;
+      nextValue.persons = 0;
+      nextValue.students = 0;
+    } else if (rateMode === "headcount") {
+      nextValue.durationHours = null;
+      nextValue.amount =
+        Number(nextValue.persons || 0) *
+          Number(venue.ratePerPerson || 0) +
+        Number(nextValue.students || 0) *
+          Number(venue.ratePerStudent || 0);
+    } else {
+      nextValue.amount = null;
+    }
+
+    onChange(nextValue);
+  };
+
+  const selectOption = (checked) => {
+    if (!checked) {
+      onChange(null);
+      return;
+    }
+
+    const defaultDuration = venue.rate4Hours != null ? 4 : 8;
+    const defaultPersons = venue.ratePerPerson != null ? 1 : 0;
+    const defaultStudents = venue.ratePerStudent != null ? 1 : 0;
+    const initialAmount =
+      rateMode === "duration"
+        ? defaultDuration === 4
+          ? venue.rate4Hours
+          : venue.rate8Hours
+        : defaultPersons * Number(venue.ratePerPerson || 0) +
+          defaultStudents * Number(venue.ratePerStudent || 0);
+
+    onChange({
+      place: venue,
+      date: today,
+      slot: null,
+      slotDateTime: null,
+      rateMode,
+      durationHours: rateMode === "duration" ? defaultDuration : null,
+      persons: defaultPersons,
+      students: defaultStudents,
+      amount: rateMode === "unavailable" ? null : initialAmount,
+    });
+  };
+
+  return (
+    <section
+      className={`rounded-xl border p-4 ${
+        value
+          ? "border-[#994113] bg-amber-50/50 ring-1 ring-[#994113]/15"
+          : "border-slate-200"
+      }`}
+    >
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={Boolean(value)}
+          onChange={(event) => selectOption(event.target.checked)}
+          className="mt-1 h-5 w-5 shrink-0 accent-[#994113]"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-slate-800">
+            {venue.annexureOption}: {venue.name}
+          </span>
+          {venue.shortDescription && (
+            <span className="mt-1 block text-xs text-slate-500">
+              {venue.shortDescription}
+            </span>
+          )}
+          <span className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-emerald-700">
+            {venue.rate4Hours != null && (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-1">
+                4 hours: ₹{Number(venue.rate4Hours).toLocaleString("en-IN")}
+              </span>
+            )}
+            {venue.rate8Hours != null && (
+              <span className="rounded-full bg-orange-100 px-2.5 py-1 text-orange-800">
+                8 hours: ₹{Number(venue.rate8Hours).toLocaleString("en-IN")}
+              </span>
+            )}
+            {venue.ratePerPerson != null && (
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-blue-800">
+                Per person: ₹
+                {Number(venue.ratePerPerson).toLocaleString("en-IN")}
+              </span>
+            )}
+            {venue.ratePerStudent != null && (
+              <span className="rounded-full bg-purple-100 px-2.5 py-1 text-purple-800">
+                Per student: ₹
+                {Number(venue.ratePerStudent).toLocaleString("en-IN")}
+              </span>
+            )}
+          </span>
+        </span>
+      </label>
+
+      {value && (
+        <div className="mt-4 grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
+          {rateMode === "duration" ? (
+            <label className="text-xs font-semibold text-slate-600">
+              Duration
+              <select
+                value={value.durationHours}
+                onChange={(event) =>
+                  updateValue({ durationHours: Number(event.target.value) })
+                }
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              >
+                {venue.rate4Hours != null && <option value={4}>4 hours</option>}
+                {venue.rate8Hours != null && <option value={8}>8 hours</option>}
+              </select>
+            </label>
+          ) : rateMode === "headcount" ? (
+            <>
+              {venue.ratePerPerson != null && (
+                <label className="text-xs font-semibold text-slate-600">
+                  Persons
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={value.persons}
+                    onChange={(event) =>
+                      updateValue({
+                        persons: Math.max(
+                          0,
+                          Math.floor(Number(event.target.value) || 0),
+                        ),
+                      })
+                    }
+                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+              )}
+              {venue.ratePerStudent != null && (
+                <label className="text-xs font-semibold text-slate-600">
+                  Students
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={value.students}
+                    onChange={(event) =>
+                      updateValue({
+                        students: Math.max(
+                          0,
+                          Math.floor(Number(event.target.value) || 0),
+                        ),
+                      })
+                    }
+                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-red-600">
+              Pricing is not configured for this option.
+            </p>
+          )}
+
+          <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+            <span className="flex items-center gap-1">
+              <CalendarDays size={14} />
+              Visit date
+            </span>
+            <input
+              type="date"
+              min={today}
+              value={date}
+              onChange={(event) => {
+                const nextDate = event.target.value;
+                onChange({
+                  ...value,
+                  place: venue,
+                  date: nextDate,
+                  slot: null,
+                  slotDateTime: null,
+                });
+              }}
+              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            />
+          </label>
+
+          <div className="sm:col-span-2">
+            <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-600">
+              <Clock size={14} />
+              Available slots
+            </p>
+            {isLoading ? (
+              <p className="text-sm text-slate-500">Loading available slots...</p>
+            ) : isError ? (
+              <div className="text-sm text-red-600">
+                Could not load slots.{" "}
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="font-semibold underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : slots.filter((slot) => slot.status === "available").length ? (
+              <div className="flex flex-wrap gap-2">
+                {slots
+                  .filter((slot) => slot.status === "available")
+                  .map((slot) => (
+                    <button
+                      key={slot.time}
+                      type="button"
+                      onClick={() =>
+                        updateValue({
+                          slot,
+                          slotDateTime: `${date}T${slot.time}:00.000Z`,
+                        })
+                      }
+                      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+                        value.slot?.time === slot.time
+                          ? "border-[#994113] bg-[#994113] text-white"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-[#994113]"
+                      }`}
+                    >
+                      {slot.displayTime || slot.time}
+                    </button>
+                  ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">
+                No available slots for this date.
+              </p>
+            )}
+          </div>
+
+          <p className="text-sm font-bold text-[#994113] sm:col-span-2">
+            Option total: ₹{Number(value.amount || 0).toFixed(2)}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ============================================================
 // STEP RENDERER
 // ============================================================
@@ -931,6 +1404,8 @@ function renderStep(step, props) {
     isSubmitting,
     isLoggedIn,
     entryFeeVenueId,
+    annexureBookingItems,
+    onAnnexureBack,
   } = props;
 
   switch (step) {
@@ -956,11 +1431,20 @@ function renderStep(step, props) {
       return (
         <VisitorForm
           onSubmit={handleFinalBooking}
+<<<<<<< HEAD
           onBack={() =>
             entryFeeVenueId ? setStep(2) : setStep(2)
           }
           showCashOption={entryFeeVenueId ? false : isLoggedIn}
           isSubmitting={isSubmitting}
+=======
+          onBack={
+            annexureBookingItems?.length
+              ? onAnnexureBack
+              : () => setStep(2)
+          }
+          showCashOption={isLoggedIn}
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
         />
       );
 

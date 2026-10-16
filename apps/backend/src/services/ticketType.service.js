@@ -81,10 +81,12 @@ class TicketTypeService {
           return { deleted: true };
 
         case "getAll":
-          if (!data.placeId) throw ApiError.badRequest("placeId required");
+          if (!data.allPlaces && !data.placeId) {
+            throw ApiError.badRequest("placeId required");
+          }
 
           return await prisma.ticketType.findMany({
-            where: { placeId: data.placeId },
+            where: data.allPlaces ? {} : { placeId: data.placeId },
 
             include: {
               place: true,

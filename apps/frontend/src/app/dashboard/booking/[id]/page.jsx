@@ -236,7 +236,9 @@ export default function BookingDetailsPage() {
                     </label>
                     <p className="text-slate-900 font-medium mt-1 flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-slate-400" />
-                      {booking.place?.name || "N/A"}
+                      {booking.bookingType === "ANNEXURE"
+                        ? "Multiple Annexure options"
+                        : booking.place?.name || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -286,11 +288,14 @@ export default function BookingDetailsPage() {
                   </div>
                   <div>
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Total Tickets
+                      {booking.bookingType === "ANNEXURE"
+                        ? "Reserved Units"
+                        : "Total Tickets"}
                     </label>
                     <p className="text-slate-900 font-medium mt-1 flex items-center gap-2">
                       <Users className="w-4 h-4 text-slate-400" />
-                      {booking.totalSeats || 0} tickets
+                      {booking.totalSeats || 0}
+                      {booking.bookingType === "ANNEXURE" ? " units" : " tickets"}
                     </p>
                   </div>
                   <div>
@@ -327,12 +332,38 @@ export default function BookingDetailsPage() {
               <div className="border-b border-slate-100 px-6 py-4">
                 <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                   <Ticket className="w-5 h-5 text-slate-600" />
-                  Tickets
+                  {booking.bookingType === "ANNEXURE"
+                    ? "Selected Annexure options"
+                    : "Tickets"}
                 </h2>
               </div>
 
               <div className="p-6">
-                {booking?.tickets?.length > 0 ? (
+                {booking.bookingType === "ANNEXURE" ? (
+                  <div className="space-y-3">
+                    {(booking.annexureItems || []).map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-slate-200 p-4"
+                      >
+                        <p className="font-semibold text-slate-900">
+                          {item.place?.annexure} - {item.place?.annexureOption}:{" "}
+                          {item.place?.name}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {new Date(item.slotDateTime).toLocaleString("en-IN")}
+                          {" · "}
+                          {item.durationHours != null
+                            ? `${item.durationHours} hours`
+                            : `${item.persons} persons, ${item.students} students`}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-emerald-700">
+                          ₹{Number(item.amount).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : booking?.tickets?.length > 0 ? (
                   <div className="space-y-4">
                     {booking.tickets.map((ticket) => (
                       <div

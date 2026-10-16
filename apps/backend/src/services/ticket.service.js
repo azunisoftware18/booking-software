@@ -550,6 +550,7 @@ class TicketService {
       include: {
         place: true,
         tickets: { include: { type: true } },
+        annexureItems: { include: { place: true } },
       },
     });
 
@@ -561,6 +562,12 @@ class TicketService {
     const pdfPromise = new Promise((resolve) =>
       doc.on("end", () => resolve(Buffer.concat(buffers)))
     );
+
+    if (booking.bookingType === "ANNEXURE") {
+      TicketService._drawAnnexureReceipt(doc, booking);
+      doc.end();
+      return pdfPromise;
+    }
 
     // Pre-generate all QR codes
     const qrImages = await Promise.all(
@@ -607,6 +614,96 @@ class TicketService {
 
     doc.end();
     return pdfPromise;
+  }
+
+  static _drawAnnexureReceipt(doc, booking) {
+    const pageWidth = doc.page.width;
+    const margin = 48;
+    let cursorY = 50;
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(22)
+      .fillColor("#0b2149")
+      .text("Annexure Booking Confirmation", margin, cursorY, {
+        width: pageWidth - margin * 2,
+        align: "center",
+      });
+    cursorY += 42;
+
+    doc
+      .font("Helvetica")
+      .fontSize(11)
+      .fillColor("#333333")
+      .text(`Booking ID: ${booking.id}`, margin, cursorY);
+    cursorY += 18;
+    doc.text(`Customer: ${booking.name}`, margin, cursorY);
+    cursorY += 18;
+    doc.text(`Payment status: ${booking.status}`, margin, cursorY);
+    cursorY += 30;
+
+    for (const item of booking.annexureItems || []) {
+      if (cursorY > doc.page.height - 170) {
+        doc.addPage();
+        cursorY = 50;
+      }
+
+      const slot = new Date(item.slotDateTime);
+      const date = slot.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+      const time = slot.toLocaleTimeString("en-IN", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      const attendance =
+        item.durationHours != null
+          ? `Duration: ${item.durationHours} hours`
+          : `Persons: ${item.persons}; Students: ${item.students}`;
+
+      doc
+        .roundedRect(margin, cursorY, pageWidth - margin * 2, 112, 10)
+        .fillAndStroke("#f8f5ef", "#b8860b");
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(12)
+        .fillColor("#0b2149")
+        .text(
+          `${item.place.annexure || ""}${item.place.annexureOption ? ` - ${item.place.annexureOption}` : ""}`,
+          margin + 14,
+          cursorY + 12,
+          { width: pageWidth - margin * 2 - 28 },
+        );
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor("#333333")
+        .text(item.place.name, margin + 14, cursorY + 31, {
+          width: pageWidth - margin * 2 - 28,
+        })
+        .text(`Date and time: ${date}, ${time}`, margin + 14, cursorY + 54)
+        .text(attendance, margin + 14, cursorY + 70)
+        .text(
+          `Amount: Rs ${Number(item.amount).toFixed(2)}`,
+          margin + 14,
+          cursorY + 86,
+        );
+      cursorY += 128;
+    }
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(14)
+      .fillColor("#994113")
+      .text(
+        `Combined total: Rs ${Number(booking.totalAmount).toFixed(2)}`,
+        margin,
+        cursorY + 2,
+        { width: pageWidth - margin * 2, align: "right" },
+      );
   }
 
   // 🔥 Helper: draws one beautiful ticket page

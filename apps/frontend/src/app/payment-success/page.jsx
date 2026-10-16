@@ -84,7 +84,9 @@ function SuccessContent() {
                         <div className="space-y-0.5">
                             <span className="text-[9px] tracking-[4px] text-jaipur-dark uppercase font-bold font-sans block">Official Bookinig Ticket</span>
                             <h3 className="font-serif text-xl sm:text-2xl lg:text-3xl text-royal-blue font-bold tracking-wide truncate px-4">
-                                {booking?.place?.name || booking?.placeId?.name || ""}
+                                {booking?.bookingType === "ANNEXURE"
+                                    ? "Annexure booking"
+                                    : booking?.place?.name || booking?.placeId?.name || ""}
                             </h3>
                             <p className="text-[11px] sm:text-xs font-sans text-gray-400 font-semibold tracking-wide">{booking?.place?.location || "Jaipur, Rajasthan"}</p>
                         </div>
@@ -101,7 +103,9 @@ function SuccessContent() {
                                 <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block">{formattedTime}</span>
                             </div>
                             <div>
-                                <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-sans font-medium">Reserved Seats</span>
+                                <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-sans font-medium">
+                                    {booking?.bookingType === "ANNEXURE" ? "Reserved units" : "Reserved seats"}
+                                </span>
                                 
                                 <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block truncate">
                                     Visitor <span className="text-jaipur-dark px-1 font-sans font-black">:</span> <span className="text-jaipur-dark text-sm sm:text-lg">{booking?.totalSeats || "-"}</span>
@@ -112,6 +116,36 @@ function SuccessContent() {
                                 {/* <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block">Easebuzz</span> */}
                             </div>
                         </div>
+                        {booking?.bookingType === "ANNEXURE" &&
+                            booking.annexureItems?.length > 0 && (
+                                <div className="mt-4 border-t border-gold/10 px-4 pt-3 text-left">
+                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                        Selected options
+                                    </p>
+                                    <div className="max-h-28 space-y-2 overflow-y-auto">
+                                        {booking.annexureItems.map((item) => (
+                                            <div key={item.id} className="flex justify-between gap-3 text-xs">
+                                                <span className="min-w-0 text-royal-blue">
+                                                    <span className="block truncate font-semibold">
+                                                        {item.place?.annexure}-{item.place?.annexureOption}: {item.place?.name}
+                                                    </span>
+                                                    <span className="block text-gray-500">
+                                                        {new Date(item.slotDateTime).toLocaleString("en-IN")}
+                                                    </span>
+                                                    <span className="block text-gray-500">
+                                                        {item.durationHours != null
+                                                            ? `${item.durationHours} hours`
+                                                            : `${item.persons} persons, ${item.students} students`}
+                                                    </span>
+                                                </span>
+                                                <span className="shrink-0 font-bold text-jaipur-dark">
+                                                    ₹{Number(item.amount).toLocaleString("en-IN")}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                     </div>
  
                     <div className="relative w-full px-6 my-0.5 z-10">

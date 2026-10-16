@@ -23,7 +23,8 @@ class BookingService {
       placeId,
       locationId,
       slotDateTime,
-      tickets,
+      tickets = [],
+      annexureItems = [],
       name,
       email,
       phone,
@@ -43,6 +44,7 @@ class BookingService {
       throw ApiError.badRequest("Please select a location before booking");
     }
 
+<<<<<<< HEAD
     const isEntryFeeBooking = bookingType === "ENTRY_FEE";
 
     if (!isEntryFeeBooking && !slotDateTime) {
@@ -55,10 +57,24 @@ class BookingService {
       !["TICKET", "ENTRY_FEE"].includes(bookingType)
     ) {
       throw ApiError.badRequest("Invalid booking type");
+=======
+    if (!slotDateTime && bookingType !== "ANNEXURE") {
+      throw ApiError.badRequest("Slot date and time are required");
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
     }
 
-    if (!Array.isArray(tickets) || tickets.length === 0) {
+    if (
+      bookingType !== "ANNEXURE" &&
+      (!Array.isArray(tickets) || tickets.length === 0)
+    ) {
       throw ApiError.badRequest("At least one ticket is required");
+    }
+
+    if (
+      bookingType === "ANNEXURE" &&
+      (!Array.isArray(annexureItems) || annexureItems.length === 0)
+    ) {
+      throw ApiError.badRequest("Select at least one Annexure option");
     }
 
     if (!name || !email || !phone) {
@@ -86,13 +102,277 @@ class BookingService {
             id: locationId,
             status: "ACTIVE",
           },
-          select: { id: true },
+          select: { id: true, name: true, city: true },
         });
 
         if (!selectedLocation) {
           throw ApiError.badRequest(
             "Selected location is invalid or no longer available"
           );
+        }
+
+        if (bookingType === "ANNEXURE") {
+          const placeIds = annexureItems.map((item) => item.placeId);
+
+          if (placeId !== placeIds[0]) {
+            throw ApiError.badRequest(
+              "Primary place must match the first selected Annexure option"
+            );
+          }
+
+          if (
+            new Date(slotDateTime).getTime() !==
+            new Date(annexureItems[0].slotDateTime).getTime()
+          ) {
+            throw ApiError.badRequest(
+              "Primary slot must match the first selected Annexure option"
+            );
+          }
+
+          if (new Set(placeIds).size !== placeIds.length) {
+            throw ApiError.badRequest(
+              "An Annexure option can only be selected once"
+            );
+          }
+
+          const places = await tx.place.findMany({
+            where: { id: { in: placeIds } },
+            select: {
+              id: true,
+              locationId: true,
+              location: true,
+              name: true,
+              annexure: true,
+              annexureOption: true,
+              rate4Hours: true,
+              rate8Hours: true,
+              ratePerPerson: true,
+              ratePerStudent: true,
+            },
+          });
+
+          if (places.length !== placeIds.length) {
+            throw ApiError.badRequest("One or more Annexure options are invalid");
+          }
+
+          const requestedAnnexure = places[0]?.annexure;
+          const normalizedLocationValues = [
+            selectedLocation.name,
+            selectedLocation.city,
+          ]
+            .filter(Boolean)
+            .map((value) => value.trim().toLowerCase());
+          const placeIsAtSelectedLocation = (place) => {
+            if (place.locationId) {
+              return place.locationId === selectedLocation.id;
+            }
+
+            return [place.location, place.name]
+              .filter(Boolean)
+              .some((value) => {
+                const normalized = value.trim().toLowerCase();
+                return normalizedLocationValues.some(
+                  (locationName) =>
+                    normalized === locationName ||
+                    normalized.startsWith(`${locationName} (`) ||
+                    normalized.startsWith(`${locationName},`)
+                );
+              });
+          };
+
+          const normalizedItems = [];
+          const now = new Date();
+
+          for (const item of annexureItems) {
+            const place = places.find(({ id }) => id === item.placeId);
+
+            if (
+              !place?.annexure ||
+              !place.annexureOption ||
+              place.annexure !== requestedAnnexure
+            ) {
+              throw ApiError.badRequest(
+                "Selected place is not a valid Annexure option"
+              );
+            }
+
+            if (!placeIsAtSelectedLocation(place)) {
+              throw ApiError.badRequest(
+                "An Annexure option does not belong to the selected location"
+              );
+            }
+
+            const itemSlotDate = new Date(item.slotDateTime);
+            if (
+              Number.isNaN(itemSlotDate.getTime()) ||
+              itemSlotDate <= now
+            ) {
+              throw ApiError.badRequest(
+                `Select a valid future slot for ${place.name}`
+              );
+            }
+
+            const startTime = itemSlotDate.toISOString().slice(11, 16);
+            const template = await tx.slotTemplate.findUnique({
+              where: {
+                placeId_startTime: {
+                  placeId: place.id,
+                  startTime,
+                },
+              },
+            });
+            if (!template) {
+              throw ApiError.badRequest(
+                `The selected slot is not available for ${place.name}`
+              );
+            }
+
+            let amount;
+            let seatCount;
+            const persons = Number(item.persons || 0);
+            const students = Number(item.students || 0);
+
+            if (
+              place.rate4Hours !== null ||
+              place.rate8Hours !== null
+            ) {
+              if (persons !== 0 || students !== 0) {
+                throw ApiError.badRequest(
+                  `Headcount is not valid for ${place.name}`
+                );
+              }
+
+              const rate =
+                item.durationHours === 4
+                  ? place.rate4Hours
+                  : item.durationHours === 8
+                    ? place.rate8Hours
+                    : null;
+              if (rate === null || rate === undefined) {
+                throw ApiError.badRequest(
+                  `Select a valid duration for ${place.name}`
+                );
+              }
+              amount = Number(rate);
+              seatCount = 1;
+            } else if (
+              place.ratePerPerson !== null ||
+              place.ratePerStudent !== null
+            ) {
+              if (
+                item.durationHours != null ||
+                !Number.isInteger(persons) ||
+                !Number.isInteger(students) ||
+                persons < 0 ||
+                students < 0 ||
+                persons + students < 1 ||
+                (persons > 0 && place.ratePerPerson === null) ||
+                (students > 0 && place.ratePerStudent === null)
+              ) {
+                throw ApiError.badRequest(
+                  `Enter a valid person/student count for ${place.name}`
+                );
+              }
+              amount =
+                persons * Number(place.ratePerPerson || 0) +
+                students * Number(place.ratePerStudent || 0);
+              seatCount = persons + students;
+            } else {
+              throw ApiError.badRequest(
+                `Pricing is not configured for ${place.name}`
+              );
+            }
+
+            amount = Math.round(amount * 100) / 100;
+            const capacity = await this.getSlotCapacity(
+              tx,
+              place.id,
+              itemSlotDate
+            );
+            const activeStatusFilter = {
+              OR: [
+                { status: "PAID" },
+                {
+                  status: "PENDING",
+                  expiresAt: { gt: now },
+                },
+              ],
+            };
+            const [regularBookings, annexureReservations] = await Promise.all([
+              tx.booking.findMany({
+                where: {
+                  placeId: place.id,
+                  slotDateTime: itemSlotDate,
+                  bookingType: { not: "ANNEXURE" },
+                  ...activeStatusFilter,
+                },
+                select: { totalSeats: true },
+              }),
+              tx.bookingAnnexureItem.findMany({
+                where: {
+                  placeId: place.id,
+                  slotDateTime: itemSlotDate,
+                  booking: { is: activeStatusFilter },
+                },
+                select: { seatCount: true },
+              }),
+            ]);
+            const usedSeats =
+              regularBookings.reduce((sum, booking) => sum + booking.totalSeats, 0) +
+              annexureReservations.reduce(
+                (sum, reservation) => sum + reservation.seatCount,
+                0
+              );
+
+            if (usedSeats + seatCount > capacity) {
+              throw ApiError.badRequest(
+                `Not enough capacity remains for ${place.name}`
+              );
+            }
+
+            normalizedItems.push({
+              placeId: place.id,
+              slotDateTime: itemSlotDate,
+              durationHours: item.durationHours || null,
+              persons,
+              students,
+              seatCount,
+              amount,
+            });
+          }
+
+          const totalAmount = Math.round(
+            normalizedItems.reduce((sum, item) => sum + item.amount, 0) * 100
+          ) / 100;
+          const totalSeats = normalizedItems.reduce(
+            (sum, item) => sum + item.seatCount,
+            0
+          );
+          const primaryItem = normalizedItems[0];
+
+          return tx.booking.create({
+            data: {
+              userId: user?.id || null,
+              placeId: primaryItem.placeId,
+              locationId: selectedLocation.id,
+              slotDateTime: primaryItem.slotDateTime,
+              bookingType: "ANNEXURE",
+              name,
+              email,
+              phone,
+              paymentMethod,
+              totalAmount,
+              totalSeats,
+              status: paymentMethod === "ONLINE" ? "PENDING" : "PAID",
+              expiresAt,
+              txnId,
+              ticketPayload: [],
+              annexureItems: {
+                create: normalizedItems,
+              },
+            },
+            include: { annexureItems: { include: { place: true } } },
+          });
         }
 
         // --------------------------------------------------------
@@ -396,6 +676,7 @@ class BookingService {
       where: { id: bookingId },
       select: {
         id: true,
+        bookingType: true,
         status: true,
         totalAmount: true,
         totalSeats: true,
@@ -405,6 +686,23 @@ class BookingService {
           select: {
             name: true,
             location: true,
+          },
+        },
+        annexureItems: {
+          select: {
+            id: true,
+            slotDateTime: true,
+            durationHours: true,
+            persons: true,
+            students: true,
+            amount: true,
+            place: {
+              select: {
+                name: true,
+                annexure: true,
+                annexureOption: true,
+              },
+            },
           },
         },
       },
@@ -425,6 +723,7 @@ class BookingService {
       include: {
         place: true,
         tickets: true,
+        annexureItems: { include: { place: true } },
       },
     });
 
@@ -458,6 +757,7 @@ class BookingService {
         include: {
           place: true,
           tickets: true,
+          annexureItems: { include: { place: true } },
         },
       });
     } else if (paymentId && !booking.paymentId) {
@@ -471,6 +771,7 @@ class BookingService {
         include: {
           place: true,
           tickets: true,
+          annexureItems: { include: { place: true } },
         },
       });
     }
@@ -551,6 +852,7 @@ class BookingService {
       include: {
         place: true,
         tickets: true,
+        annexureItems: { include: { place: true } },
       },
     });
 
@@ -558,7 +860,24 @@ class BookingService {
     // EMAIL + WHATSAPP
     // ----------------------------------------------------------
 
-    const message = `🎟️ *Dear ${booking.name},*
+    const annexureDetails = booking.annexureItems
+      .map((item) => {
+        const date = new Date(item.slotDateTime).toLocaleString("en-IN");
+        return `• ${item.place.name} — ${date} — Rs ${item.amount}`;
+      })
+      .join("\n");
+    const message = booking.bookingType === "ANNEXURE"
+      ? `Dear ${booking.name},
+
+Your Annexure booking is confirmed.
+
+${annexureDetails}
+
+Combined total: Rs ${booking.totalAmount}
+Payment Method: ${booking.paymentMethod}
+
+Please keep the attached booking confirmation for your visit.`
+      : `🎟️ *Dear ${booking.name},*
 
 Thank you for booking with *${booking.place.name}*! 🥳
 
@@ -708,6 +1027,7 @@ We can't wait to welcome you! 🎉`;
       include: {
         place: true,
         user: true,
+        annexureItems: { include: { place: true } },
         tickets: {
           include: {
             type: true,
@@ -733,6 +1053,7 @@ We can't wait to welcome you! 🎉`;
       include: {
         place: true,
         user: true,
+        annexureItems: { include: { place: true } },
         tickets: {
           include: {
             type: true,

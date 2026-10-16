@@ -56,8 +56,13 @@ model User {
 model Place {
   id               String  @id @default(uuid())
   createdById      String? @map("created_by_id")
+  locationId       String? @map("location_id")
   annexure         String?
   annexureOption   String? @map("annexure_option")
+  rate4Hours       Float?  @map("rate_4_hours")
+  rate8Hours       Float?  @map("rate_8_hours")
+  ratePerPerson    Float?  @map("rate_per_person")
+  ratePerStudent   Float?  @map("rate_per_student")
   name             String
   location         String?
   latitude         Float?
@@ -75,12 +80,15 @@ model Place {
   slotTemplates SlotTemplate[]
   slotOverrides SlotOverride[]
   bookings      Booking[]
+  bookingAnnexureItems BookingAnnexureItem[]
   users         User[]
   createdBy     User?   @relation("PlaceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  bookingLocation Location? @relation("PlaceBookingLocation", fields: [locationId], references: [id], onDelete: SetNull)
 
   @@index([createdById])
+  @@index([locationId])
   @@unique([name, location])
-  @@unique([annexure, annexureOption])
+  @@unique([locationId, annexure, annexureOption])
   @@map("places")
 }
 
@@ -145,8 +153,13 @@ model Booking {
 
   userId       String?  @map("user_id")
   placeId      String   @map("place_id")
+<<<<<<< HEAD
   locationId String @map("location_id")
   slotDateTime DateTime? @map("slot_date_time")
+=======
+  locationId   String?  @map("location_id")
+  slotDateTime DateTime @map("slot_date_time")
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
   bookingType BookingType @default(TICKET) @map("booking_type")
 
@@ -172,11 +185,37 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at")
 
   tickets Ticket[]
+  annexureItems BookingAnnexureItem[]
   user    User?    @relation(fields: [userId], references: [id])
   place   Place    @relation(fields: [placeId], references: [id])
+<<<<<<< HEAD
   location Location @relation(fields: [locationId], references: [id])
+=======
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 
+  @@index([locationId])
   @@map("bookings")
+}
+
+model BookingAnnexureItem {
+  id            String   @id @default(uuid())
+  bookingId     String   @map("booking_id")
+  placeId       String   @map("place_id")
+  slotDateTime  DateTime @map("slot_date_time")
+  durationHours Int?     @map("duration_hours")
+  persons       Int      @default(0)
+  students      Int      @default(0)
+  seatCount     Int      @map("seat_count")
+  amount        Float
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  place   Place   @relation(fields: [placeId], references: [id])
+
+  @@index([placeId, slotDateTime])
+  @@index([bookingId])
+  @@map("booking_annexure_items")
 }
 
 model Location {
@@ -193,6 +232,8 @@ model Location {
   updatedAt DateTime @updatedAt 
 
   users     User[]
+  places    Place[] @relation("PlaceBookingLocation")
+  bookings  Booking[]
   createdBy User?   @relation("LocationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   bookings Booking[]
 
@@ -346,7 +387,11 @@ enum GateType {
 enum BookingType {
   TICKET
   PASS
+<<<<<<< HEAD
   ENTRY_FEE
+=======
+  ANNEXURE
+>>>>>>> 717a7dd6cd51cb7069ac529c487421cb4b460f59
 }
 
 enum PaymentMethod {

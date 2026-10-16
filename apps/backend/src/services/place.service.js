@@ -5,12 +5,35 @@ import { upload, deleteByKey } from "../utils/s3Service.js";
 const publicPlaceSelect = {
   id: true,
   name: true,
+  locationId: true,
+  annexure: true,
+  annexureOption: true,
+  rate4Hours: true,
+  rate8Hours: true,
+  ratePerPerson: true,
+  ratePerStudent: true,
   location: true,
   latitude: true,
   longitude: true,
   imageUrl: true,
   shortDescription: true,
   description: true,
+  createdAt: true,
+  slotTemplates: {
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      capacity: true,
+    },
+    orderBy: { startTime: "asc" },
+  },
+};
+
+const placeListInclude = {
+  slotTemplates: {
+    orderBy: { startTime: "asc" },
+  },
 };
 
 class PlaceService {
@@ -23,13 +46,33 @@ class PlaceService {
     }
 
     const {
+      annexure,
+      annexureOption,
+      rate4Hours,
+      rate8Hours,
+      ratePerPerson,
+      ratePerStudent,
       name,
       location,
       shortDescription,
       description,
       latitude,
       longitude,
+      slotTemplates = [],
     } = payload;
+
+    const assignedLocationId =
+      currentUser.locationId ||
+      (
+        await prisma.location.findFirst({
+          where: {
+            OR: [{ name: location }, { city: location }],
+            status: "ACTIVE",
+          },
+          select: { id: true },
+        })
+      )?.id ||
+      null;
 
     // Check duplicate
     const existing = await prisma.place.findFirst({
@@ -65,18 +108,42 @@ class PlaceService {
       imageKey = uploaded?.key || null;
     }
 
-    return await prisma.place.create({
-      data: {
-        createdById: currentUser.id,
-        name,
-        location,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        shortDescription: shortDescription || null,
-        description: description || null,
-        imageUrl,
-        imageKey,
-      },
+    return await prisma.$transaction(async (tx) => {
+      const place = await tx.place.create({
+        data: {
+          createdById: currentUser.id,
+          locationId: assignedLocationId,
+          annexure,
+          annexureOption,
+          rate4Hours: rate4Hours == null ? null : Number(rate4Hours),
+          rate8Hours: rate8Hours == null ? null : Number(rate8Hours),
+          ratePerPerson:
+            ratePerPerson == null ? null : Number(ratePerPerson),
+          ratePerStudent:
+            ratePerStudent == null ? null : Number(ratePerStudent),
+          name,
+          location,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          shortDescription: shortDescription || null,
+          description: description || null,
+          imageUrl,
+          imageKey,
+        },
+      });
+
+      if (slotTemplates.length) {
+        await tx.slotTemplate.createMany({
+          data: slotTemplates.map(({ startTime, endTime, capacity }) => ({
+            placeId: place.id,
+            startTime,
+            endTime,
+            capacity,
+          })),
+        });
+      }
+
+      return place;
     });
   }
 
@@ -146,6 +213,7 @@ class PlaceService {
 
     if (user.role?.roleCode === "SUPER_ADMIN") {
       return prisma.place.findMany({
+        include: placeListInclude,
         orderBy: {
           createdAt: "desc",
         },
@@ -191,6 +259,7 @@ class PlaceService {
 
       return prisma.place.findMany({
         where,
+        include: placeListInclude,
         orderBy: { createdAt: "desc" },
       });
     }
@@ -202,6 +271,7 @@ class PlaceService {
       user.role?.roleCode !== "LOCATION_ADMIN"
     ) {
       return prisma.place.findMany({
+        include: placeListInclude,
         orderBy: {
           createdAt: "desc",
         },
@@ -211,6 +281,7 @@ class PlaceService {
     if (isAdmin) {
       return prisma.place.findMany({
         where: { createdById: user.id },
+        include: placeListInclude,
         orderBy: { createdAt: "desc" },
       });
     }
@@ -224,6 +295,7 @@ class PlaceService {
       where: {
         id: user.placeId,
       },
+      include: placeListInclude,
       orderBy: {
         createdAt: "desc",
       },
@@ -293,6 +365,12 @@ class PlaceService {
     }
 
     const {
+      annexure,
+      annexureOption,
+      rate4Hours,
+      rate8Hours,
+      ratePerPerson,
+      ratePerStudent,
       name,
       location,
       shortDescription,
@@ -303,6 +381,32 @@ class PlaceService {
 
     const nextName = name ?? existing.name;
     const nextLocation = location ?? existing.location;
+    const nextLocationId =
+      nextLocation === existing.location
+        ? existing.locationId
+        : (
+            await prisma.location.findFirst({
+              where: {
+                OR: [{ name: nextLocation }, { city: nextLocation }],
+                status: "ACTIVE",
+              },
+              select: { id: true },
+            })
+          )?.id || null;
+    const nextAnnexure = annexure ?? existing.annexure;
+    const nextAnnexureOption = annexureOption ?? existing.annexureOption;
+    const nextRate4Hours =
+      rate4Hours !== undefined ? Number(rate4Hours) : existing.rate4Hours;
+    const nextRate8Hours =
+      rate8Hours !== undefined ? Number(rate8Hours) : existing.rate8Hours;
+    const nextRatePerPerson =
+      ratePerPerson !== undefined
+        ? Number(ratePerPerson)
+        : existing.ratePerPerson;
+    const nextRatePerStudent =
+      ratePerStudent !== undefined
+        ? Number(ratePerStudent)
+        : existing.ratePerStudent;
 
     // Check duplicate
     const duplicate = await prisma.place.findFirst({
@@ -369,6 +473,13 @@ class PlaceService {
     const isSame =
       nextName === existing.name &&
       nextLocation === existing.location &&
+      nextLocationId === existing.locationId &&
+      nextAnnexure === existing.annexure &&
+      nextAnnexureOption === existing.annexureOption &&
+      nextRate4Hours === existing.rate4Hours &&
+      nextRate8Hours === existing.rate8Hours &&
+      nextRatePerPerson === existing.ratePerPerson &&
+      nextRatePerStudent === existing.ratePerStudent &&
       nextLatitude === Number(existing.latitude) &&
       nextLongitude === Number(existing.longitude) &&
       nextShortDescription === existing.shortDescription &&
@@ -390,6 +501,13 @@ class PlaceService {
       data: {
         name: nextName,
         location: nextLocation,
+        locationId: nextLocationId,
+        annexure: nextAnnexure,
+        annexureOption: nextAnnexureOption,
+        rate4Hours: nextRate4Hours,
+        rate8Hours: nextRate8Hours,
+        ratePerPerson: nextRatePerPerson,
+        ratePerStudent: nextRatePerStudent,
         latitude: nextLatitude,
         longitude: nextLongitude,
         shortDescription: nextShortDescription,

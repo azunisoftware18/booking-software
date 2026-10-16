@@ -61,12 +61,17 @@ const annexureOptions = [
 ];
 
 const optionalDescription = z.string().optional();
+const optionalRate = z.coerce.number().min(0).nullable().optional();
 
 class PlaceValidation {
   static get create() {
     return z.object({
       annexure: z.enum(["A", "B", "C", "D"]),
       annexureOption: z.enum(annexureOptions),
+      rate4Hours: optionalRate,
+      rate8Hours: optionalRate,
+      ratePerPerson: optionalRate,
+      ratePerStudent: optionalRate,
       name: z.string().min(2, "Name required"),
       // location: z.string().min(2, "Location required"),
       shortDescription: optionalDescription,
@@ -99,6 +104,10 @@ class PlaceValidation {
     return z.object({
       annexure: z.enum(["A", "B", "C", "D"]).optional(),
       annexureOption: z.enum(annexureOptions).optional(),
+      rate4Hours: optionalRate,
+      rate8Hours: optionalRate,
+      ratePerPerson: optionalRate,
+      ratePerStudent: optionalRate,
       name: z.string().min(2).optional(),
       // location: z.string().min(2, "Location required").optional(),
       shortDescription: optionalDescription,

@@ -134,26 +134,47 @@ class SlotService {
       },
     });
 
-    const bookings = await prisma.ticket.findMany({
-      where: {
-        placeId,
-
-        status: {
-          not: "CANCELLED",
-        },
-
-        slotDateTime: {
-          gte: new Date(`${date}T00:00:00.000Z`),
-          lt: new Date(`${date}T23:59:59.999Z`),
-        },
-      },
-
-      select: {
-        slotDateTime: true,
-      },
-    });
-
     const now = new Date();
+    const activeBookingFilter = {
+      OR: [
+        { status: "PAID" },
+        {
+          status: "PENDING",
+          expiresAt: { gt: now },
+        },
+      ],
+    };
+    const [bookings, annexureBookings] = await Promise.all([
+      prisma.booking.findMany({
+        where: {
+          placeId,
+          slotDateTime: {
+            gte: new Date(`${date}T00:00:00.000Z`),
+            lt: new Date(`${date}T23:59:59.999Z`),
+          },
+          bookingType: { not: "ANNEXURE" },
+          ...activeBookingFilter,
+        },
+        select: {
+          slotDateTime: true,
+          totalSeats: true,
+        },
+      }),
+      prisma.bookingAnnexureItem.findMany({
+        where: {
+          placeId,
+          slotDateTime: {
+            gte: new Date(`${date}T00:00:00.000Z`),
+            lt: new Date(`${date}T23:59:59.999Z`),
+          },
+          booking: { is: activeBookingFilter },
+        },
+        select: {
+          slotDateTime: true,
+          seatCount: true,
+        },
+      }),
+    ]);
 
     return templates.map((t) => {
       const override = overrides.find((o) => o.startTime === t.startTime);
@@ -162,13 +183,28 @@ class SlotService {
 
       const slotDateTime = new Date(`${date}T${t.startTime}:00`);
 
-      const booked = bookings.filter((b) => {
-        const bookingHour = new Date(b.slotDateTime).getUTCHours();
+      const bookedRegularSeats = bookings.reduce((total, booking) => {
+        const bookingTime = new Date(booking.slotDateTime)
+          .toISOString()
+          .slice(11, 16);
 
-        const slotHour = Number(t.startTime.split(":")[0]);
+        return bookingTime === t.startTime
+          ? total + booking.totalSeats
+          : total;
+      }, 0);
+      const bookedAnnexureSeats = annexureBookings.reduce(
+        (total, booking) => {
+          const bookingTime = new Date(booking.slotDateTime)
+            .toISOString()
+            .slice(11, 16);
 
-        return bookingHour === slotHour;
-      }).length;
+          return bookingTime === t.startTime
+            ? total + booking.seatCount
+            : total;
+        },
+        0,
+      );
+      const booked = bookedRegularSeats + bookedAnnexureSeats;
 
       const available = Math.max(capacity - booked, 0);
 

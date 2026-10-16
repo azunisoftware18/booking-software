@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import api from "../api";
 
 // 🔥 GET ALL TICKET TYPES
-export const useTicketTypes = (placeId) => {
+export const useTicketTypes = (placeId, allPlaces = false) => {
   return useQuery({
-    queryKey: ["ticketTypes", placeId],
+    queryKey: ["ticketTypes", allPlaces ? "all-places" : placeId],
 
     queryFn: async () => {
       const payload = {
         action: "getAll",
 
         data: {
-          placeId,
+          ...(placeId ? { placeId } : {}),
         },
       };
 
@@ -20,6 +20,6 @@ export const useTicketTypes = (placeId) => {
       return res?.data?.data;
     },
 
-    enabled: !!placeId,
+    enabled: allPlaces || !!placeId,
   });
 };

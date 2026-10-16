@@ -2,24 +2,44 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash, MapPin, Calendar, Globe, Image, PlusCircle } from "lucide-react";
+import { Pencil, Trash, MapPin, Calendar, Globe, Image, Clock } from "lucide-react";
 import ActionMenu from "../common/ActionMenu";
 import { TableLoader, TableEmpty } from "@/components/table/core";
 import SearchField from "@/components/ui/SearchField"; // SearchField import karein
 import { useGetMe } from "@/lib/queries/useGetMe";
-import Link from "next/link";
-import Button from "../ui/Button";
 import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
+
+const isLocationPlaceholder = (place) => {
+  const placeName = place.name?.trim().toLowerCase();
+  const locationName = place.location
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  const hasPlaceDetails = Boolean(
+    place.imageUrl ||
+      place.image ||
+      place.images?.[0] ||
+      place.annexure ||
+      place.annexureOption ||
+      place.shortDescription ||
+      place.description ||
+      place.slotTemplates?.length,
+  );
+
+  return Boolean(placeName && locationName === placeName && !hasPlaceDetails);
+};
 
 export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
   const [search, setSearch] = useState("");
   const router = useRouter();
 
   const filteredPlaces = useMemo(() => {
-    return data.filter((place) =>
-      [place.name, place.location].some((val) =>
-        val?.toLowerCase().includes(search.toLowerCase()),
-      ),
+    return data.filter(
+      (place) =>
+        !isLocationPlaceholder(place) &&
+        [place.name, place.location].some((val) =>
+          val?.toLowerCase().includes(search.toLowerCase()),
+        ),
     );
   }, [data, search]);
 
@@ -75,6 +95,13 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
               const annexureOption = ANNEXURE_OPTIONS[place.annexure]?.find(
                 (option) => option.value === place.annexureOption,
               );
+              const venueRates = [
+                ["4 hours", annexureOption?.rate4Hours],
+                ["8 hours", annexureOption?.rate8Hours],
+                ["Per person", annexureOption?.ratePerPerson],
+                ["Per student", annexureOption?.ratePerStudent],
+              ].filter(([, amount]) => amount != null);
+              const slotTemplates = place.slotTemplates || [];
 
               return (
                 <div
@@ -104,28 +131,6 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
                         <MapPin className="w-3.5 h-3.5 mr-1" />
                         {place.location || "Unknown Location"}
                       </div>
-                      {annexureOption &&
-                        (annexureOption.rate4Hours ||
-                          annexureOption.rate8Hours) && (
-                          <div className="mt-2 flex flex-wrap gap-x-3 text-sm font-semibold text-emerald-700">
-                            {annexureOption.rate4Hours && (
-                              <span>
-                                4 hours: ₹
-                                {annexureOption.rate4Hours.toLocaleString(
-                                  "en-IN",
-                                )}
-                              </span>
-                            )}
-                            {annexureOption.rate8Hours && (
-                              <span>
-                                8 hours: ₹
-                                {annexureOption.rate8Hours.toLocaleString(
-                                  "en-IN",
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        )}
                     </div>
 
                     <ActionMenu
@@ -149,6 +154,50 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
                     />
                   </div>
 
+                  {(place.annexure || venueRates.length > 0) && (
+                    <section className="mb-4 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                        {place.annexure
+                          ? `Annexure ${place.annexure} · ${annexureOption?.label || place.annexureOption}`
+                          : annexureOption?.label}
+                      </p>
+                      {venueRates.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-emerald-700">
+                          {venueRates.map(([label, amount]) => (
+                            <span key={label}>
+                              {label}: ₹{Number(amount).toLocaleString("en-IN")}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {(place.shortDescription || place.description) && (
+                    <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-slate-600">
+                      {place.shortDescription || place.description}
+                    </p>
+                  )}
+
+                  {slotTemplates.length > 0 && (
+                    <section className="mb-4 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">
+                        <Clock className="h-3.5 w-3.5" />
+                        Booking slots
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {slotTemplates.map((slot) => (
+                          <span
+                            key={slot.id || `${slot.startTime}-${slot.endTime}`}
+                            className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
+                          >
+                            {slot.startTime}–{slot.endTime} · {slot.capacity} seats
+                          </span>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   {/* Coordinates Section */}
                   {/* <div className="bg-slate-50 rounded-lg p-3 flex justify-between mb-4">
                     <div className="text-center flex-1 border-r border-slate-200">
@@ -169,8 +218,7 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
                     </div>
                   </div> */}
 
-                  {/* Footer: Date */}
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+                  <div className="flex items-center pt-4 border-t border-slate-100 mt-auto">
                     <div className="flex items-center text-xs text-slate-400">
                       <Calendar className="w-3.5 h-3.5 mr-1" />
                       {new Date(place.createdAt).toLocaleDateString("en-GB", {
@@ -179,13 +227,6 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
                         year: "numeric",
                       })}
                     </div>
-                    <Link href={`/book-tickets/${place.id || place._id}`}>
-                      <Button
-                        icon={PlusCircle}
-                        iconPosition="left"
-                        text="Book Now"
-                      />
-                    </Link>
                   </div>
                 </div>
                 </div>

@@ -44,6 +44,10 @@ export default function PlacePage() {
       const payload = {
         annexure: formData.annexure,
         annexureOption: formData.annexureOption,
+        rate4Hours: formData.rate4Hours,
+        rate8Hours: formData.rate8Hours,
+        ratePerPerson: formData.ratePerPerson,
+        ratePerStudent: formData.ratePerStudent,
         name: formData.name.trim(),
         location: formData.location.trim(),
         latitude: Number(formData.latitude),
@@ -152,6 +156,12 @@ export default function PlacePage() {
     me?.data?.data?.permissions ??
     [];
   const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
+  const assignedLocation = [
+    me?.location?.city,
+    me?.location?.state,
+  ]
+    .filter(Boolean)
+    .join(", ") || me?.location?.name || "";
 
   const canCreatePlace = !isSuperAdmin && permissions.some(
     (permission) =>
@@ -229,6 +239,7 @@ export default function PlacePage() {
         defaultValues={editData}
         existingPlaces={places}
         canCreateSlots={canCreateSlots}
+        assignedLocation={assignedLocation}
       />
     </div>
   );

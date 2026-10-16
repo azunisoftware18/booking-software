@@ -63,6 +63,10 @@ export const useCreatePlace = () => {
 
       formData.append("annexure", payload.annexure);
       formData.append("annexureOption", payload.annexureOption);
+      formData.append("rate4Hours", String(payload.rate4Hours ?? ""));
+      formData.append("rate8Hours", String(payload.rate8Hours ?? ""));
+      formData.append("ratePerPerson", String(payload.ratePerPerson ?? ""));
+      formData.append("ratePerStudent", String(payload.ratePerStudent ?? ""));
       formData.append("name", payload.name);
       formData.append("location", payload.location);
       formData.append("latitude", String(payload.latitude));
@@ -107,6 +111,10 @@ export const useUpdatePlace = () => {
 
       formData.append("annexure", payload.annexure);
       formData.append("annexureOption", payload.annexureOption);
+      formData.append("rate4Hours", String(payload.rate4Hours ?? ""));
+      formData.append("rate8Hours", String(payload.rate8Hours ?? ""));
+      formData.append("ratePerPerson", String(payload.ratePerPerson ?? ""));
+      formData.append("ratePerStudent", String(payload.ratePerStudent ?? ""));
       formData.append("name", payload.name);
       formData.append("location", payload.location);
       formData.append("latitude", String(payload.latitude));

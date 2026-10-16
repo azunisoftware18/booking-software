@@ -164,11 +164,7 @@ export default function TicketTypeTable({
               </td> */}
 
               <td className="px-6 py-4 font-medium text-slate-800">
-                {ticket.isAvailable === false
-                  ? "N.A."
-                  : Number(ticket.price) === 0
-                    ? "Free"
-                    : `₹${ticket.price}/-`}
+                {Number(ticket.price) === 0 ? "Free" : `₹${ticket.price}/-`}
               </td>
               <td className="px-6 py-4 font-medium text-slate-800">
                 {Number(ticket.taxPercent || 0)}%
@@ -186,7 +182,6 @@ export default function TicketTypeTable({
                   )}
                 </td>
               )}
-
             </TableRow>
           ))
         )}
