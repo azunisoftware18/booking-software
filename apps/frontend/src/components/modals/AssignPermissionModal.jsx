@@ -67,6 +67,11 @@ export default function AssignPermissionModal({
     }, {});
   }, [permissionsData]);
 
+  const allPermissions = Object.values(grouped).flat();
+  const allPermissionsAssigned =
+    allPermissions.length > 0 &&
+    allPermissions.every((permission) => selected.includes(permission.id));
+
   if (!open || !user) return null;
 
   const isAllowed = (permissionId) => selected.includes(permissionId);
@@ -208,9 +213,19 @@ export default function AssignPermissionModal({
             <p className="text-sm font-medium text-slate-700">
               Select Permissions
             </p>
-            <p className="text-xs font-medium text-slate-500">
-              {selected.length} selected
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-slate-500">
+                {selected.length} selected
+              </p>
+              <Button
+                text={allPermissionsAssigned ? "Remove All" : "Assign All"}
+                type="button"
+                size="sm"
+                variant={allPermissionsAssigned ? "destructive" : "default"}
+                disabled={isBusy || allPermissions.length === 0}
+                onClick={() => toggleAll(allPermissions)}
+              />
+            </div>
           </div>
 
           {isBusy ? (
