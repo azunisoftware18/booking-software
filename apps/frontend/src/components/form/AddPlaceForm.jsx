@@ -329,6 +329,10 @@ export default function AddPlaceForm({
         ...data,
         annexure: selectedAnnexure,
         annexureOption: selectedAnnexureOption,
+        rate4Hours: selectedOptionObj?.rate4Hours ?? null,
+        rate8Hours: selectedOptionObj?.rate8Hours ?? null,
+        ratePerPerson: selectedOptionObj?.ratePerPerson ?? null,
+        ratePerStudent: selectedOptionObj?.ratePerStudent ?? null,
         slotTemplates: configuredSlots,
         name: getAnnexureOptionLabel(
           selectedAnnexure,

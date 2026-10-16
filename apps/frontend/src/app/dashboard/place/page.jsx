@@ -44,6 +44,10 @@ export default function PlacePage() {
       const payload = {
         annexure: formData.annexure,
         annexureOption: formData.annexureOption,
+        rate4Hours: formData.rate4Hours,
+        rate8Hours: formData.rate8Hours,
+        ratePerPerson: formData.ratePerPerson,
+        ratePerStudent: formData.ratePerStudent,
         name: formData.name.trim(),
         location: formData.location.trim(),
         latitude: Number(formData.latitude),

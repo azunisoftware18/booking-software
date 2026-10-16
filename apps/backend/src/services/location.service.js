@@ -45,19 +45,27 @@ export const locationService = {
 
     const places = await prisma.place.findMany({
       where: {
-        OR: locations.flatMap(({ name }) => [
-          { name },
-          { location: name },
-          { location: { startsWith: `${name} (` } },
-          { location: { startsWith: `${name},` } },
-        ]),
+        OR: [
+          { locationId: { in: locations.map(({ id }) => id) } },
+          ...locations.flatMap(({ name }) => [
+            { name },
+            { location: name },
+            { location: { startsWith: `${name} (` } },
+            { location: { startsWith: `${name},` } },
+          ]),
+        ],
       },
       select: {
         id: true,
+        locationId: true,
         name: true,
         location: true,
         annexure: true,
         annexureOption: true,
+        rate4Hours: true,
+        rate8Hours: true,
+        ratePerPerson: true,
+        ratePerStudent: true,
         latitude: true,
         longitude: true,
         imageUrl: true,
@@ -81,10 +89,15 @@ export const locationService = {
         place: {
           select: {
             id: true,
+            locationId: true,
             name: true,
             location: true,
             annexure: true,
             annexureOption: true,
+            rate4Hours: true,
+            rate8Hours: true,
+            ratePerPerson: true,
+            ratePerStudent: true,
             latitude: true,
             longitude: true,
             imageUrl: true,
@@ -114,13 +127,23 @@ export const locationService = {
       const venueMap = new Map();
 
       for (const place of places) {
-        if (matchesLocation(place.name) || matchesLocation(place.location)) {
+        const belongsToLocation = place.locationId
+          ? place.locationId === location.id
+          : matchesLocation(place.name) || matchesLocation(place.location);
+        if (belongsToLocation) {
           venueMap.set(place.id, place);
         }
       }
 
       for (const ticketType of locationTicketTypes) {
-        venueMap.set(ticketType.place.id, ticketType.place);
+        const ticketPlace = ticketType.place;
+        const belongsToLocation = ticketPlace.locationId
+          ? ticketPlace.locationId === location.id
+          : matchesLocation(ticketPlace.name) ||
+            matchesLocation(ticketPlace.location);
+        if (belongsToLocation) {
+          venueMap.set(ticketPlace.id, ticketPlace);
+        }
       }
 
       const venues = [...venueMap.values()];
