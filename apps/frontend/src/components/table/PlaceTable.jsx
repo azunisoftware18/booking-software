@@ -9,15 +9,37 @@ import SearchField from "@/components/ui/SearchField"; // SearchField import kar
 import { useGetMe } from "@/lib/queries/useGetMe";
 import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 
+const isLocationPlaceholder = (place) => {
+  const placeName = place.name?.trim().toLowerCase();
+  const locationName = place.location
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  const hasPlaceDetails = Boolean(
+    place.imageUrl ||
+      place.image ||
+      place.images?.[0] ||
+      place.annexure ||
+      place.annexureOption ||
+      place.shortDescription ||
+      place.description ||
+      place.slotTemplates?.length,
+  );
+
+  return Boolean(placeName && locationName === placeName && !hasPlaceDetails);
+};
+
 export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
   const [search, setSearch] = useState("");
   const router = useRouter();
 
   const filteredPlaces = useMemo(() => {
-    return data.filter((place) =>
-      [place.name, place.location].some((val) =>
-        val?.toLowerCase().includes(search.toLowerCase()),
-      ),
+    return data.filter(
+      (place) =>
+        !isLocationPlaceholder(place) &&
+        [place.name, place.location].some((val) =>
+          val?.toLowerCase().includes(search.toLowerCase()),
+        ),
     );
   }, [data, search]);
 
