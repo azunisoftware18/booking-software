@@ -1,0 +1,2 @@
+ALTER TABLE `bookings`
+  MODIFY `booking_type` ENUM('TICKET', 'PASS', 'ENTRY_FEE', 'ANNEXURE') NOT NULL DEFAULT 'TICKET';

@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash, MapPin, Calendar, Globe, Image, Clock } from "lucide-react";
 import ActionMenu from "../common/ActionMenu";
-import { TableLoader, TableEmpty } from "@/components/table/core";
+import { TableEmpty } from "@/components/table/core";
 import SearchField from "@/components/ui/SearchField"; // SearchField import karein
 import { useGetMe } from "@/lib/queries/useGetMe";
 import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
@@ -83,8 +83,20 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
       {/* Content Area */}
       <div className="p-6">
         {loading ? (
-          <div className="p-8">
-            <TableLoader rows={3} />
+          <div className="grid grid-cols-1 gap-6 p-2 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, index) => (
+              <div
+                key={index}
+                className="animate-pulse overflow-hidden rounded-xl border border-slate-200"
+              >
+                <div className="h-48 bg-slate-100" />
+                <div className="space-y-3 p-5">
+                  <div className="h-5 w-2/3 rounded bg-slate-100" />
+                  <div className="h-4 w-1/2 rounded bg-slate-100" />
+                  <div className="h-16 rounded bg-slate-100" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredPlaces.length === 0 ? (
           <TableEmpty message="No tourist places found matching your search." />

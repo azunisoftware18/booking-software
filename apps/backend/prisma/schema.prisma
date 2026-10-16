@@ -378,6 +378,7 @@ enum BookingType {
   TICKET
   PASS
   ENTRY_FEE
+  ANNEXURE
 }
 
 enum PaymentMethod {

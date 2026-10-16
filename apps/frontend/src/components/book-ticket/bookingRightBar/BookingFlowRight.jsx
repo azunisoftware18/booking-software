@@ -708,7 +708,10 @@ export default function BookingFlowRight() {
                             <button
                               key={group.annexure}
                               type="button"
-                              onClick={() => startBookingForVenue(venue)}
+                              onClick={() => {
+                                setAnnexureDraftItems({});
+                                setSelectedAnnexure(group);
+                              }}
                               className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
                             >
                               <span className="flex items-start justify-between gap-3">
@@ -1076,7 +1079,12 @@ export default function BookingFlowRight() {
 }
 
 function AnnexureOptionRow({ venue, value, onChange }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
   const date = value?.date || today;
   const hasDurationRates =
     venue.rate4Hours != null || venue.rate8Hours != null;
@@ -1087,14 +1095,51 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     : hasHeadcountRates
       ? "headcount"
       : "unavailable";
-  const { data: slots = [], isLoading, isError, refetch } = useSlots({
+  const { data: slots = [], isLoading, isError } = useSlots({
     placeId: venue.id,
     date,
     enabled: Boolean(value),
   });
+  const [year, month, day] = today.split("-").map(Number);
+  const nextDay = new Date(year, month - 1, day + 1);
+  const nextDateValue = [
+    nextDay.getFullYear(),
+    String(nextDay.getMonth() + 1).padStart(2, "0"),
+    String(nextDay.getDate()).padStart(2, "0"),
+  ].join("-");
+  const shouldCheckNextDay =
+    Boolean(value) &&
+    date === today &&
+    !isLoading &&
+    !isError &&
+    slots.length > 0 &&
+    !slots.some((slot) => slot.status === "available");
+  const {
+    data: nextDaySlots = [],
+    isLoading: isLoadingNextDay,
+    isError: isNextDayError,
+    refetch: refetchNextDay,
+  } = useSlots({
+    placeId: venue.id,
+    date: nextDateValue,
+    enabled: shouldCheckNextDay,
+  });
+  const availabilityDate = shouldCheckNextDay ? nextDateValue : date;
+  const availabilitySlots = shouldCheckNextDay ? nextDaySlots : slots;
+  const isLoadingAvailability = shouldCheckNextDay
+    ? isLoadingNextDay
+    : isLoading;
+  const isAvailabilityError = shouldCheckNextDay ? isNextDayError : isError;
+  const refetchAvailability = shouldCheckNextDay ? refetchNextDay : undefined;
 
   const updateValue = (changes) => {
-    const nextValue = { ...value, ...changes, place: venue, date, rateMode };
+    const nextValue = {
+      ...value,
+      ...changes,
+      place: venue,
+      date: changes.date ?? availabilityDate,
+      rateMode,
+    };
     if (rateMode === "duration") {
       nextValue.amount =
         nextValue.durationHours === 8
@@ -1266,10 +1311,15 @@ function AnnexureOptionRow({ venue, value, onChange }) {
               <CalendarDays size={14} />
               Visit date
             </span>
+            {shouldCheckNextDay && (
+              <span className="mt-1 block font-normal text-slate-500">
+                No slots remain today. Showing tomorrow&apos;s availability.
+              </span>
+            )}
             <input
               type="date"
               min={today}
-              value={date}
+              value={availabilityDate}
               onChange={(event) => {
                 const nextDate = event.target.value;
                 onChange({
@@ -1289,22 +1339,22 @@ function AnnexureOptionRow({ venue, value, onChange }) {
               <Clock size={14} />
               Available slots
             </p>
-            {isLoading ? (
+            {isLoadingAvailability ? (
               <p className="text-sm text-slate-500">Loading available slots...</p>
-            ) : isError ? (
+            ) : isAvailabilityError ? (
               <div className="text-sm text-red-600">
                 Could not load slots.{" "}
                 <button
                   type="button"
-                  onClick={() => refetch()}
+                  onClick={() => refetchAvailability?.()}
                   className="font-semibold underline"
                 >
                   Retry
                 </button>
               </div>
-            ) : slots.filter((slot) => slot.status === "available").length ? (
+            ) : availabilitySlots.filter((slot) => slot.status === "available").length ? (
               <div className="flex flex-wrap gap-2">
-                {slots
+                {availabilitySlots
                   .filter((slot) => slot.status === "available")
                   .map((slot) => (
                     <button
@@ -1313,7 +1363,8 @@ function AnnexureOptionRow({ venue, value, onChange }) {
                       onClick={() =>
                         updateValue({
                           slot,
-                          slotDateTime: `${date}T${slot.time}:00.000Z`,
+                          date: availabilityDate,
+                          slotDateTime: `${availabilityDate}T${slot.time}:00.000Z`,
                         })
                       }
                       className={`rounded-lg border px-3 py-2 text-sm font-semibold ${value.slot?.time === slot.time
