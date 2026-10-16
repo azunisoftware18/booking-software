@@ -3,7 +3,6 @@
 import { useForm } from "react-hook-form";
 import {
   MapPin,
-  Globe,
   Plus,
   ImageIcon,
   Upload,
@@ -33,6 +32,7 @@ export default function AddPlaceForm({
   onCancel,
   existingPlaces = [],
   canCreateSlots = false,
+  assignedLocation = "",
 }) {
   const [preview, setPreview] = useState(null);
   const [imageError, setImageError] = useState("");
@@ -68,7 +68,7 @@ export default function AddPlaceForm({
       annexure: defaultValues?.annexure || "",
       annexureOption: defaultValues?.annexureOption || "",
       name: "",
-      location: "",
+      location: defaultValues?.location || assignedLocation,
       shortDescription: "",
       description: "",
       latitude: "",
@@ -117,7 +117,7 @@ export default function AddPlaceForm({
         getAnnexureOptionLabel(annexure, option) ||
         defaultValues?.name ||
         "",
-      location: defaultValues?.location || "",
+      location: defaultValues?.location || assignedLocation,
       latitude: defaultValues?.latitude ?? "",
       longitude: defaultValues?.longitude ?? "",
       shortDescription: defaultValues?.shortDescription || "",
@@ -134,7 +134,7 @@ export default function AddPlaceForm({
     setAnnexureError("");
     setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
     setSlotError("");
-  }, [defaultValues, reset]);
+  }, [assignedLocation, defaultValues, reset]);
 
   // =========================================================
   // ANNEXURE DROPDOWN
@@ -338,7 +338,7 @@ export default function AddPlaceForm({
           selectedAnnexure,
           selectedAnnexureOption,
         ),
-        location: data.location.trim(),
+        location: (data.location || assignedLocation).trim(),
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
         image: data.image || null,
@@ -350,7 +350,7 @@ export default function AddPlaceForm({
         annexure: "",
         annexureOption: "",
         name: "",
-        location: "",
+        location: assignedLocation,
         shortDescription: "",
         description: "",
         latitude: "",
@@ -764,7 +764,7 @@ export default function AddPlaceForm({
         )}
 
         {/* =====================================================
-            VENUE NAME + LOCATION
+            VENUE NAME
         ===================================================== */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <InputField
@@ -778,11 +778,8 @@ export default function AddPlaceForm({
                 value.trim().length > 0 || "Venue name is required",
             })}
           />
-
-          <InputField
-            label="Location"
-            icon={Globe}
-            error={errors.location?.message}
+          <input
+            type="hidden"
             {...register("location", {
               required: "Location is required",
               validate: (value) =>
