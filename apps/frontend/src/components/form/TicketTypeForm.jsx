@@ -10,11 +10,15 @@ const centerRates = {
     { name: "Per Person", price: 5 },
     { name: "Per Student*", price: 3 },
     { name: "Group of Student**", price: 2 },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
   ],
   Udaipur: [
-    { name: "General Public", unavailable: true },
-    { name: "Student", unavailable: true },
-    { name: "Group of Student**", unavailable: true },
+    { name: "General Public", price: 10 },
+    { name: "Student", price: 5 },
+    { name: "Group of Student**", price: 3 },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
   ],
   Nawalgarh: [
     { name: "General Public", price: 20 },
@@ -27,8 +31,15 @@ const centerRates = {
     { name: "General Public", price: 20 },
     { name: "Student", price: 15 },
     { name: "Group of Student**", price: 0, free: true },
-    { name: "Planetarium", unavailable: true },
-    { name: "Planetarium (in Group)", unavailable: true },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
+  ],
+  Ajmer: [
+    { name: "General Public", price: 20 },
+    { name: "Student", price: 15 },
+    { name: "Group of Student**", price: 0, free: true },
+    { name: "Planetarium", price: 10 },
+    { name: "Planetarium (in Group)", price: 5 },
   ],
 };
 

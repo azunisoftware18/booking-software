@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreVertical } from "lucide-react";
 
 export default function ActionMenu({
@@ -8,12 +9,54 @@ export default function ActionMenu({
   className = "",
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - triggerRect.bottom;
+      const spaceAbove = triggerRect.top;
+      const placeAbove =
+        spaceBelow < menuRect.height + 8 && spaceAbove > spaceBelow;
+      const top = placeAbove
+        ? triggerRect.top - menuRect.height - 8
+        : triggerRect.bottom + 8;
+      const left = Math.min(
+        Math.max(8, triggerRect.right - menuRect.width),
+        window.innerWidth - menuRect.width - 8,
+      );
+
+      setMenuPosition({
+        top: Math.max(8, Math.min(top, window.innerHeight - menuRect.height - 8)),
+        left,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, items.length]);
 
   // close on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
+      if (
+        !triggerRef.current?.contains(e.target) &&
+        !menuRef.current?.contains(e.target)
+      ) {
         setOpen(false);
       }
     };
@@ -29,9 +72,10 @@ export default function ActionMenu({
   }, []);
 
   return (
-    <div ref={ref} className={`relative inline-block text-left ${className}`}>
+    <div className={`relative inline-block text-left ${className}`}>
       {/* Trigger */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="p-2 rounded-full hover:bg-slate-100 transition"
@@ -40,8 +84,13 @@ export default function ActionMenu({
       </button>
 
       {/* Menu */}
-      {open && (
-        <div className="absolute right-0 mt-2 w-40 rounded-xl bg-white border border-gray-200 shadow-lg z-50">
+      {open && typeof document !== "undefined" &&
+        createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left }}
+          className="w-40 rounded-xl bg-white border border-gray-200 shadow-lg z-50"
+        >
           <ul className="py-1 text-sm">
             {items.map((item, idx) => {
               const Icon = item.icon;
@@ -63,7 +112,8 @@ export default function ActionMenu({
               );
             })}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
