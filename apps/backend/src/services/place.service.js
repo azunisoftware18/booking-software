@@ -91,10 +91,7 @@ class PlaceService {
 
     // Upload image
     if (file) {
-      console.log("=== CREATE PLACE IMAGE ===");
-      console.log("Original name:", file.originalname);
-      console.log("Mimetype:", file.mimetype);
-      console.log("Path:", file.path);
+      
 
       if (!file.path) {
         throw ApiError.badRequest("Uploaded file path is missing");
@@ -102,7 +99,7 @@ class PlaceService {
 
       const uploaded = await upload(file.path);
 
-      console.log("S3 uploaded:", uploaded);
+   
 
       imageUrl = uploaded?.url || null;
       imageKey = uploaded?.key || null;
@@ -430,10 +427,7 @@ class PlaceService {
     // UPLOAD NEW IMAGE
     // =======================================================
     if (file) {
-      console.log("=== UPDATE PLACE IMAGE ===");
-      console.log("Original name:", file.originalname);
-      console.log("Mimetype:", file.mimetype);
-      console.log("Path:", file.path);
+     
 
       if (!file.path) {
         throw ApiError.badRequest("Uploaded file path is missing");
@@ -441,7 +435,6 @@ class PlaceService {
 
       const uploaded = await upload(file.path);
 
-      console.log("S3 uploaded:", uploaded);
 
       imageUrl = uploaded?.url || null;
       imageKey = uploaded?.key || null;

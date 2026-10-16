@@ -89,7 +89,6 @@ export default function TicketScanner() {
           );
           if (backCamera) {
             cameraId = backCamera.id;
-            console.log("Using back camera:", backCamera.label);
           } else {
             cameraId = { facingMode: "environment" };
           }

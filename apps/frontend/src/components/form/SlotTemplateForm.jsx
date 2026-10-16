@@ -57,7 +57,6 @@ useEffect(() => {
       endTime: formatTime24(data.endTime),
     };
 
-    console.log("FINAL PAYLOAD:", payload); // ✅ check
 
     await onSubmit?.(payload);
     reset();

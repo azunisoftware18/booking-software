@@ -336,11 +336,8 @@ export default function BookingFlowRight() {
       // }
 
       const isEntryFeeBooking = Boolean(entryFeeVenueId);
+      const isAnnexureBooking = Boolean(annexureBookingItems?.length);
 
-      console.log("Entry Fee Venue ID:", entryFeeVenueId);
-      console.log("Is Entry Fee Booking:", isEntryFeeBooking);
-      console.log("Redux Date:", reduxData?.date);
-      console.log("Redux Slot:", reduxData?.slot);
 
       if (!isEntryFeeBooking) {
         if (!reduxData?.date || !reduxData?.slot?.time) {
@@ -357,7 +354,7 @@ export default function BookingFlowRight() {
         }));
 
       if (
-        tickets.length === 0 ||
+        (!isAnnexureBooking && tickets.length === 0) ||
         tickets.some(
           (ticket) =>
             !Number.isSafeInteger(ticket.quantity) ||
@@ -365,11 +362,6 @@ export default function BookingFlowRight() {
         )
       ) {
         throw new Error("Please select valid ticket quantities");
-      }
-
-
-      if (!tickets.length) {
-        throw new Error("Please select at least one ticket");
       }
 
       const slotDateTime = isEntryFeeBooking
@@ -405,7 +397,11 @@ export default function BookingFlowRight() {
         email: visitorInfo?.email,
         phone: visitorInfo?.phone,
         paymentMethod,
-        bookingType: isEntryFeeBooking ? "ENTRY_FEE" : "TICKET",
+        bookingType: isAnnexureBooking
+          ? "ANNEXURE"
+          : isEntryFeeBooking
+            ? "ENTRY_FEE"
+            : "TICKET",
         totalAmount: Number(reduxData?.totalAmount || 0),
         totalSeats,
         tickets: isAnnexureBooking ? [] : tickets,
@@ -897,8 +893,8 @@ export default function BookingFlowRight() {
                       (item.rateMode === "duration" && !item.durationHours) ||
                       (item.rateMode === "headcount" &&
                         Number(item.persons || 0) +
-                          Number(item.students || 0) <
-                          1),
+                        Number(item.students || 0) <
+                        1),
                   )
                 }
                 onClick={startBookingForAnnexureOptions}
@@ -1110,9 +1106,9 @@ function AnnexureOptionRow({ venue, value, onChange }) {
       nextValue.durationHours = null;
       nextValue.amount =
         Number(nextValue.persons || 0) *
-          Number(venue.ratePerPerson || 0) +
+        Number(venue.ratePerPerson || 0) +
         Number(nextValue.students || 0) *
-          Number(venue.ratePerStudent || 0);
+        Number(venue.ratePerStudent || 0);
     } else {
       nextValue.amount = null;
     }
@@ -1135,7 +1131,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
           ? venue.rate4Hours
           : venue.rate8Hours
         : defaultPersons * Number(venue.ratePerPerson || 0) +
-          defaultStudents * Number(venue.ratePerStudent || 0);
+        defaultStudents * Number(venue.ratePerStudent || 0);
 
     onChange({
       place: venue,
@@ -1152,11 +1148,10 @@ function AnnexureOptionRow({ venue, value, onChange }) {
 
   return (
     <section
-      className={`rounded-xl border p-4 ${
-        value
+      className={`rounded-xl border p-4 ${value
           ? "border-[#994113] bg-amber-50/50 ring-1 ring-[#994113]/15"
           : "border-slate-200"
-      }`}
+        }`}
     >
       <label className="flex cursor-pointer items-start gap-3">
         <input
@@ -1321,11 +1316,10 @@ function AnnexureOptionRow({ venue, value, onChange }) {
                           slotDateTime: `${date}T${slot.time}:00.000Z`,
                         })
                       }
-                      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
-                        value.slot?.time === slot.time
+                      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${value.slot?.time === slot.time
                           ? "border-[#994113] bg-[#994113] text-white"
                           : "border-slate-300 bg-white text-slate-700 hover:border-[#994113]"
-                      }`}
+                        }`}
                     >
                       {slot.displayTime || slot.time}
                     </button>

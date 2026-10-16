@@ -30,7 +30,6 @@ class SlotTemplateService {
   }
 
   static async getAll(placeId) {
-    console.log("Fetching slot templates for placeId:", placeId);
     return prisma.slotTemplate.findMany({
       where: { placeId },
       orderBy: { startTime: "asc" },
@@ -119,7 +118,6 @@ class SlotService {
       where: { placeId },
     });
 
-    console.log(placeId, date);
 
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);

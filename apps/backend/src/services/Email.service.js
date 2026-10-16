@@ -39,7 +39,6 @@ class EmailService {
         attachments, 
       });
 
-      console.log("Email Success:", info.messageId);
       return info;
     } catch (error) {
       console.log("Email Error:", error.message);
@@ -58,7 +57,6 @@ class EmailService {
         attachments,
       });
 
-      console.log("Email Success:", info.messageId);
       return info;
     } catch (error) {
       console.log("Email Error:", error.message);

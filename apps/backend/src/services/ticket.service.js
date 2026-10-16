@@ -720,7 +720,6 @@ class TicketService {
       total,
     }
   ) {
-    console.log(booking);
     
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;

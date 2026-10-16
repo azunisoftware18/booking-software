@@ -9,7 +9,7 @@ static get createBooking() {
 
     slotDateTime: z.string().nullable().optional(),
 
-    bookingType: z.enum(["TICKET", "PASS", "ENTRY_FEE"]).optional(),
+    bookingType: z.enum(["TICKET", "PASS", "ENTRY_FEE", "ANNEXURE"]).optional(),
 
     name: z.string().min(2),
     email: z.string().email(),
@@ -22,7 +22,16 @@ static get createBooking() {
         typeId: z.string().uuid(),
         quantity: z.number().min(1),
       })
-    ).min(1),
+    ).optional(),
+    annexureItems: z.array(
+      z.object({
+        placeId: z.string().uuid(),
+        slotDateTime: z.string().min(1),
+        durationHours: z.number().int().nullable().optional(),
+        persons: z.number().int().min(0).optional(),
+        students: z.number().int().min(0).optional(),
+      })
+    ).optional(),
   }).superRefine((data, ctx) => {
     if (
       data.bookingType !== "ENTRY_FEE" &&
@@ -32,6 +41,22 @@ static get createBooking() {
         code: "custom",
         path: ["slotDateTime"],
         message: "Please select a valid date and slot",
+      });
+    }
+
+    if (data.bookingType === "ANNEXURE") {
+      if (!data.annexureItems?.length) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["annexureItems"],
+          message: "Select at least one Annexure option",
+        });
+      }
+    } else if (!data.tickets?.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tickets"],
+        message: "At least one ticket is required",
       });
     }
   });

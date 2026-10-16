@@ -6,8 +6,7 @@ class RoleController {
   // CREATE ROLE
   // =========================================================
   static create = async (req, res) => {
-    console.log("=== CREATE ROLE ===");
-    console.log("BODY:", req.body);
+    
 
     const data = await RoleService.createRole({
       ...req.body,
@@ -49,9 +48,7 @@ static getAll = async (req, res) => {
   // UPDATE ROLE
   // =========================================================
   static update = async (req, res) => {
-    console.log("=== UPDATE ROLE ===");
-    console.log("BODY:", req.body);
-    console.log("PARAMS:", req.params);
+    
 
     const data = await RoleService.updateRole(
       req.params.id,

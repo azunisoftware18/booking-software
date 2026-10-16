@@ -52,9 +52,7 @@ class BookingService {
       );
     }
 
-    if (
-      !["TICKET", "ENTRY_FEE"].includes(bookingType)
-    ) {
+    if (!["TICKET", "ENTRY_FEE", "ANNEXURE"].includes(bookingType)) {
       throw ApiError.badRequest("Invalid booking type");
     }
 
