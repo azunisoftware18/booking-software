@@ -32,6 +32,8 @@ export default function AddPlaceForm({
   onCancel,
   existingPlaces = [],
   canCreateSlots = false,
+  canUpdateSlots = false,
+  canDeleteSlots = false,
   assignedLocation = "",
 }) {
   const [preview, setPreview] = useState(null);
@@ -122,7 +124,7 @@ export default function AddPlaceForm({
       longitude: defaultValues?.longitude ?? "",
       shortDescription: defaultValues?.shortDescription || "",
       description: defaultValues?.description || "",
-      image: defaultValues?.image || "",
+      image: defaultValues?.image || defaultValues?.imageUrl || "",
     });
 
     setSelectedAnnexure(annexure);
@@ -132,7 +134,16 @@ export default function AddPlaceForm({
     setShowAnnexurePopup(false);
     setImageError("");
     setAnnexureError("");
-    setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
+    setSlotTemplates(
+      defaultValues?.id
+        ? (defaultValues.slotTemplates || []).map((slot) => ({
+            id: slot.id,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            capacity: String(slot.capacity),
+          }))
+        : [{ startTime: "", endTime: "", capacity: "" }],
+    );
     setSlotError("");
   }, [assignedLocation, defaultValues, reset]);
 
@@ -286,14 +297,16 @@ export default function AddPlaceForm({
         return;
       }
 
-      const configuredSlots = canCreateSlots
+      const canEditSlotTemplates =
+        Boolean(defaultValues?.id) && canUpdateSlots;
+      const configuredSlots = canCreateSlots || canEditSlotTemplates
         ? slotTemplates.map((slot) => ({
             ...slot,
             capacity: Number(slot.capacity),
           }))
         : [];
 
-      if (canCreateSlots) {
+      if (canCreateSlots || canEditSlotTemplates) {
         if (
           configuredSlots.some(
             (slot) =>
@@ -642,7 +655,10 @@ export default function AddPlaceForm({
           </div>
         )}
 
-        {!defaultValues?.id && (
+        {(!defaultValues?.id ||
+          canCreateSlots ||
+          canUpdateSlots ||
+          canDeleteSlots) && (
           <section className="space-y-3 rounded-xl border border-slate-200 p-4">
             <div>
               <h3 className="text-sm font-semibold text-slate-800">
@@ -655,15 +671,20 @@ export default function AddPlaceForm({
               </p>
             </div>
 
-            {!canCreateSlots ? (
+            {!defaultValues?.id && !canCreateSlots ? (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 You need slot creation permission to add booking slots.
               </p>
             ) : (
               <>
+                {slotTemplates.length === 0 && (
+                  <p className="text-sm text-slate-500">
+                    No booking slots are configured for this destination.
+                  </p>
+                )}
                 {slotTemplates.map((slot, index) => (
                   <div
-                    key={index}
+                    key={slot.id || index}
                     className="grid grid-cols-1 items-end gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
                   >
                     <label className="space-y-1 text-xs font-medium text-slate-600">
@@ -671,6 +692,7 @@ export default function AddPlaceForm({
                       <input
                         type="time"
                         value={slot.startTime}
+                        disabled={Boolean(defaultValues?.id) && !canUpdateSlots}
                         onChange={(event) => {
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
@@ -689,6 +711,7 @@ export default function AddPlaceForm({
                       <input
                         type="time"
                         value={slot.endTime}
+                        disabled={Boolean(defaultValues?.id) && !canUpdateSlots}
                         onChange={(event) => {
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
@@ -709,6 +732,7 @@ export default function AddPlaceForm({
                         min="1"
                         step="1"
                         value={slot.capacity}
+                        disabled={Boolean(defaultValues?.id) && !canUpdateSlots}
                         onChange={(event) => {
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
@@ -724,7 +748,9 @@ export default function AddPlaceForm({
                     </label>
                     <button
                       type="button"
-                      disabled={slotTemplates.length === 1}
+                      disabled={
+                        Boolean(slot.id) && !canDeleteSlots
+                      }
                       onClick={() => {
                         setSlotTemplates((current) =>
                           current.filter((_, itemIndex) => itemIndex !== index),
@@ -745,20 +771,27 @@ export default function AddPlaceForm({
                   </p>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSlotTemplates((current) => [
-                      ...current,
-                      { startTime: "", endTime: "", capacity: "" },
-                    ]);
-                    setSlotError("");
-                  }}
-                  className="text-sm font-semibold text-blue-600 hover:underline"
-                >
-                  + Add another slot
-                </button>
+                {canCreateSlots && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSlotTemplates((current) => [
+                        ...current,
+                        { startTime: "", endTime: "", capacity: "" },
+                      ]);
+                      setSlotError("");
+                    }}
+                    className="text-sm font-semibold text-blue-600 hover:underline"
+                  >
+                    + Add another slot
+                  </button>
+                )}
               </>
+            )}
+            {defaultValues?.id && !canUpdateSlots && canDeleteSlots && (
+              <p className="text-xs text-slate-500">
+                Slot timing and capacity can’t be changed with your current permissions.
+              </p>
             )}
           </section>
         )}

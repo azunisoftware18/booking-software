@@ -17,6 +17,11 @@ import {
   useDeletePlace,
   useUpdatePlace,
 } from "@/lib/mutations/usePlace";
+import {
+  useCreateSlotTemplate,
+  useDeleteSlotTemplate,
+  useUpdateSlotTemplate,
+} from "@/lib/mutations/useSlot";
 import Button from "@/components/ui/Button";
 import { useGetMe } from "@/lib/queries/useGetMe";
 
@@ -26,6 +31,9 @@ export default function PlacePage() {
   const { mutateAsync: createPlace } = useCreatePlace();
   const { mutateAsync: deletePlace } = useDeletePlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
+  const { mutateAsync: createSlotTemplate } = useCreateSlotTemplate();
+  const { mutateAsync: updateSlotTemplate } = useUpdateSlotTemplate();
+  const { mutateAsync: deleteSlotTemplate } = useDeleteSlotTemplate();
   const [editData, setEditData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -89,6 +97,62 @@ export default function PlacePage() {
           id: editData.id,
           payload,
         });
+
+        const originalTemplates = editData.slotTemplates || [];
+        const submittedTemplates = formData.slotTemplates || [];
+        const submittedIds = new Set(
+          submittedTemplates.map((template) => template.id).filter(Boolean),
+        );
+
+        if (canUpdateSlots) {
+          for (const template of submittedTemplates) {
+            if (!template.id) continue;
+
+            const original = originalTemplates.find(
+              (item) => item.id === template.id,
+            );
+            if (
+              original &&
+              (original.startTime !== template.startTime ||
+                original.endTime !== template.endTime ||
+                Number(original.capacity) !== Number(template.capacity))
+            ) {
+              await updateSlotTemplate({
+                id: template.id,
+                payload: {
+                  placeId: editData.id,
+                  startTime: template.startTime,
+                  endTime: template.endTime,
+                  capacity: Number(template.capacity),
+                },
+              });
+            }
+          }
+        }
+
+        if (canCreateSlots) {
+          for (const template of submittedTemplates) {
+            if (template.id) continue;
+
+            await createSlotTemplate({
+              placeId: editData.id,
+              startTime: template.startTime,
+              endTime: template.endTime,
+              capacity: Number(template.capacity),
+            });
+          }
+        }
+
+        if (canDeleteSlots) {
+          for (const template of originalTemplates) {
+            if (submittedIds.has(template.id)) continue;
+
+            await deleteSlotTemplate({
+              id: template.id,
+              placeId: editData.id,
+            });
+          }
+        }
       }
 
       // ==============================
@@ -174,6 +238,18 @@ export default function PlacePage() {
       permission.action === "CREATE" &&
       permission.isActive,
   );
+  const canUpdateSlots = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "UPDATE" &&
+      permission.isActive,
+  );
+  const canDeleteSlots = permissions.some(
+    (permission) =>
+      permission.resource === "SLOT" &&
+      permission.action === "DELETE" &&
+      permission.isActive,
+  );
 
 
   return (
@@ -239,6 +315,8 @@ export default function PlacePage() {
         defaultValues={editData}
         existingPlaces={places}
         canCreateSlots={canCreateSlots}
+        canUpdateSlots={canUpdateSlots}
+        canDeleteSlots={canDeleteSlots}
         assignedLocation={assignedLocation}
       />
     </div>

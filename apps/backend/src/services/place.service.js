@@ -481,7 +481,7 @@ class PlaceService {
       imageKey === existing.imageKey;
 
     if (isSame) {
-      throw ApiError.badRequest("Already updated");
+      return existing;
     }
 
     // =======================================================

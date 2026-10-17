@@ -14,6 +14,7 @@ export const useCreateSlotTemplate = () => {
       qc.invalidateQueries({
         queryKey: ["slotTemplates", payload.placeId],
       });
+      qc.invalidateQueries({ queryKey: ["places"] });
     },
   });
 };
@@ -31,6 +32,7 @@ export const useUpdateSlotTemplate = () => {
       qc.invalidateQueries({
         queryKey: ["slotTemplates", variables.payload.placeId],
       });
+      qc.invalidateQueries({ queryKey: ["places"] });
     },
   });
 };
@@ -48,6 +50,7 @@ export const useDeleteSlotTemplate = () => {
       qc.invalidateQueries({
         queryKey: ["slotTemplates", variables.placeId],
       });
+      qc.invalidateQueries({ queryKey: ["places"] });
     },
   });
 };

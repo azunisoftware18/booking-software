@@ -61,7 +61,10 @@ const annexureOptions = [
 ];
 
 const optionalDescription = z.string().optional();
-const optionalRate = z.coerce.number().min(0).nullable().optional();
+const optionalRate = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.coerce.number().min(0).nullable().optional(),
+);
 
 class PlaceValidation {
   static get create() {
