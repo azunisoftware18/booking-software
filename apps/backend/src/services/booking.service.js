@@ -542,6 +542,7 @@ class BookingService {
           phone: booking.phone,
           userId: booking.userId || "",
         });
+        console.log("Atom payment initiated:", payment);
 
         return {
           booking,
