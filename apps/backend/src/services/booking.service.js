@@ -576,6 +576,7 @@ class BookingService {
       throw ApiError.badRequest("Invalid ATOM payment signature");
     }
 
+  console.log("ATOM payment response:", response);
     const instrument = response.payInstrument;
     const { merchDetails, payDetails, responseDetails } = instrument;
     if (String(merchDetails.merchId) !== String(envConfig.ATOM_MERCHANT_ID)) {
