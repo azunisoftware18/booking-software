@@ -80,7 +80,7 @@ export default function Page() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
           title="Total Revenue"
-          value={`₹${totalRevenue}`}
+          value={`₹${String(totalRevenue).slice(-2)}`}
           percentage={12}
           isUp={true}
           trendingText="Revenue generated"

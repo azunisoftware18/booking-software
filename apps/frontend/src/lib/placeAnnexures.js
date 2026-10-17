@@ -101,6 +101,31 @@ export const ANNEXURE_OPTIONS = {
       ratePerPerson: "20",
       ratePerStudent: "10",
     },
+
+    {
+      label: "3D Science Film Show (Approx 20-30 Minute)",
+      value: "C2",
+      ratePerPerson: "20",
+      ratePerStudent: "10",
+    },
+    {
+      label: "Taramandal (Planetarium) (Approx 20-30 Minute)",
+      value: "C3",
+      ratePerPerson: "10",
+      ratePerStudent: "5",
+    },
+    {
+      label: "I.T. Gallery",
+      value: "C4",
+      ratePerPerson: "20",
+      ratePerStudent: "10",
+    },
+    {
+      label: "Battery Operated Vehicle Ride",
+      value: "C5",
+      ratePerPerson: "10",
+      ratePerStudent: "7",
+    },
   ],
 
   D: [
