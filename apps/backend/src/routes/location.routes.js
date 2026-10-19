@@ -11,6 +11,7 @@ import {
 import AuthMiddleware from "../middlewares/auth.middleware.js";
 import PermissionMiddleware from "../middlewares/permission.middleware.js";
 import { PermissionsRegistry } from "../lib/PermissionsRegistry.js";
+import { settingUpload } from "../middlewares/multer.js";
 
 const router = Router();
 
@@ -31,12 +32,14 @@ router.post(
   "/",
   AuthMiddleware.isAuthenticated,
   AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  settingUpload.single("image"),
   createLocation,
 );
 router.patch(
   "/:id",
   AuthMiddleware.isAuthenticated,
   AuthMiddleware.authorize(["SUPER_ADMIN"]),
+  settingUpload.single("image"),
   updateLocation,
 );
 router.delete(

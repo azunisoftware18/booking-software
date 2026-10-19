@@ -154,7 +154,7 @@ export const createLocation = async (req, res) => {
     const location = await locationService.create({
       ...parsed.data,
       createdById: req.user.id,
-    });
+    }, req.file);
 
     return res.status(201).json({
       success: true,
@@ -187,7 +187,11 @@ export const updateLocation = async (req, res) => {
       });
     }
 
-    const location = await locationService.update(req.params.id, parsed.data);
+    const location = await locationService.update(
+      req.params.id,
+      parsed.data,
+      req.file,
+    );
 
     return res.status(200).json({
       success: true,

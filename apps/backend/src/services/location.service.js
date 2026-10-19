@@ -1,4 +1,5 @@
 import prisma from "../db/db.js";
+import { upload, deleteByKey } from "../utils/s3Service.js";
 
 const locationSelect = {
   id: true,
@@ -7,6 +8,7 @@ const locationSelect = {
   address: true,
   city: true,
   state: true,
+  imageUrl: true,
   status: true,
   createdAt: true,
   updatedAt: true,
@@ -28,6 +30,7 @@ export const locationService = {
         name: true,
         city: true,
         state: true,
+        imageUrl: true,
       },
       orderBy: [{ city: "asc" }, { name: "asc" }],
     });
@@ -212,19 +215,50 @@ export const locationService = {
     });
   },
 
-  async create(data) {
+  async create(data, file) {
+    let imageUrl = null;
+    let imageKey = null;
+
+    if (file) {
+      const uploaded = await upload(file.path);
+      imageUrl = uploaded.url;
+      imageKey = uploaded.key;
+    }
+
     return prisma.location.create({
-      data,
+      data: { ...data, imageUrl, imageKey },
       select: locationSelect,
     });
   },
 
-  async update(id, data) {
-    return prisma.location.update({
+  async update(id, data, file) {
+    const existing = await prisma.location.findUnique({
       where: { id },
-      data,
+      select: { imageUrl: true, imageKey: true },
+    });
+
+    let imageUrl = existing?.imageUrl || null;
+    let imageKey = existing?.imageKey || null;
+
+    if (file) {
+      const uploaded = await upload(file.path);
+      imageUrl = uploaded.url;
+      imageKey = uploaded.key;
+    }
+
+    const location = await prisma.location.update({
+      where: { id },
+      data: { ...data, imageUrl, imageKey },
       select: locationSelect,
     });
+
+    if (file && existing?.imageKey && existing.imageKey !== imageKey) {
+      await deleteByKey(existing.imageKey).catch((error) =>
+        console.error("Failed to delete old location image:", error),
+      );
+    }
+
+    return location;
   },
 
   async delete(id) {

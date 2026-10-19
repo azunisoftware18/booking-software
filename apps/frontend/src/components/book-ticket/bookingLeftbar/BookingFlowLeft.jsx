@@ -63,7 +63,7 @@ export default function BookingFlowLeft({ place, itemVariants }) {
           <br />
           <span className="bg-gradient-to-r from-gold via-jaipur-pink to-gold bg-clip-text text-transparent font-medium inline-block mt-1">
             {/* {place?.name} */}
-            {place?.location}
+            {place?.bookingLocation?.name}
           </span>
         </motion.h1>
 
@@ -86,14 +86,14 @@ export default function BookingFlowLeft({ place, itemVariants }) {
         }}
         className="w-full max-w-[380px] h-[220px] xl:h-[260px] p-1.5 bg-sandstone/5 rounded-[24px] border border-gold/20 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] shrink-0 overflow-hidden relative flex items-center justify-center"
       >
-        {place?.imageUrl ? (
+        {place?.bookingLocation?.imageUrl ? (
           <Image
             width={450}
             height={320}
             priority
-            alt={place?.name || "Place Image"}
+            alt={place?.bookingLocation?.name || "Place Image"}
             className="w-full h-full object-cover rounded-[18px] select-none"
-            src={place.imageUrl}
+            src={place?.bookingLocation?.imageUrl}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-sandstone/50 text-xs">

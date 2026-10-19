@@ -26,6 +26,7 @@ class PermissionMiddleware {
             "LOCATION.CREATE",
             "ROLE.CREATE",
             "USER.CREATE",
+            "PLACE.CREATE",
           ]);
 
           if (

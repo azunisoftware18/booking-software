@@ -227,10 +227,13 @@ export default function PlacePage() {
     .filter(Boolean)
     .join(", ") || me?.location?.name || "";
 
-  const canCreatePlace = !isSuperAdmin && permissions.some(
+  // Super Admin is allowed to create places from the API as well. Keep the
+  // button visible for that role so the image upload form is available.
+  const canCreatePlace = isSuperAdmin || permissions.some(
     (permission) =>
       permission.resource === "PLACE" &&
-      permission.action === "CREATE"
+      permission.action === "CREATE" &&
+      permission.isActive !== false,
   );
   const canCreateSlots = permissions.some(
     (permission) =>

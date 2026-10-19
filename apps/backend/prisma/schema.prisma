@@ -217,6 +217,8 @@ model Location {
   address     String?
   city        String?
   state       String?
+  imageUrl    String?
+  imageKey    String?
 
   status    String   @default("ACTIVE")
   createdAt DateTime @default(now())

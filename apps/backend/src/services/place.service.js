@@ -19,6 +19,13 @@ const publicPlaceSelect = {
   shortDescription: true,
   description: true,
   createdAt: true,
+  bookingLocation: {
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+    },
+  },
   slotTemplates: {
     select: {
       id: true,
@@ -31,6 +38,13 @@ const publicPlaceSelect = {
 };
 
 const placeListInclude = {
+  bookingLocation: {
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+    },
+  },
   slotTemplates: {
     orderBy: { startTime: "asc" },
   },

@@ -51,6 +51,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api";
 
+const isUploadFile = (value) =>
+  value && typeof value === "object" && typeof value.size === "number";
+
 // ============================================
 // CREATE PLACE
 // ============================================
@@ -82,7 +85,7 @@ export const useCreatePlace = () => {
       }
 
       // New image
-      if (payload.image instanceof File) {
+      if (isUploadFile(payload.image)) {
         formData.append("image", payload.image);
       }
 
@@ -129,7 +132,7 @@ export const useUpdatePlace = () => {
       );
 
       // Only send image when user selected a NEW image
-      if (payload.image instanceof File) {
+      if (isUploadFile(payload.image)) {
         formData.append("image", payload.image);
       }
 
