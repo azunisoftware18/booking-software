@@ -28,7 +28,10 @@ class TicketTypeController {
         ...payload.data,
         allPlaces: isSuperAdmin,
         ...(isLocationAdmin
-          ? { placeIds: accessiblePlaces.map((place) => place.id) }
+          ? {
+              placeIds: accessiblePlaces.map((place) => place.id),
+              createdById: req.user.id,
+            }
           : {}),
         includeCreator: isSuperAdmin,
       };

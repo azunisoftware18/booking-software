@@ -113,9 +113,12 @@ class TicketTypeService {
           return await prisma.ticketType.findMany({
             where: data.allPlaces
               ? {}
-              : Array.isArray(data.placeIds)
-                ? { placeId: { in: data.placeIds } }
-                : { placeId: data.placeId },
+              : {
+                  ...(Array.isArray(data.placeIds)
+                    ? { placeId: { in: data.placeIds } }
+                    : { placeId: data.placeId }),
+                  ...(data.createdById ? { createdById: data.createdById } : {}),
+                },
 
             include: {
               place: true,

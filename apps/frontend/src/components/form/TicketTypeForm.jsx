@@ -57,6 +57,15 @@ const centerRates = {
   ],
 };
 
+const allCenterRates = Array.from(
+  new Map(
+    Object.values(centerRates)
+      .flat()
+      .map((rate) => [rate.name, rate]),
+).values(),
+);
+const DEFAULT_TAX_PERCENT = 18;
+
 export default function TicketTypeForm({
   onSubmit,
   defaultValues = {},
@@ -79,7 +88,7 @@ export default function TicketTypeForm({
     defaultValues: {
       center: assignedCenter || "Jhalana Patan",
       name: "",
-      taxPercent: 0,
+      taxPercent: DEFAULT_TAX_PERCENT,
       price: "",
       isAvailable: true,
       ...defaultValues,
@@ -94,8 +103,10 @@ export default function TicketTypeForm({
     useWatch({ control, name: "taxPercent" }) || 0,
   );
   const ratesForSelectedCenter = assignedCenter
-    ? assignedRates
-    : centerRates[selectedCenter] || [];
+    ? assignedRates.length
+      ? assignedRates
+      : allCenterRates
+    : centerRates[selectedCenter] || allCenterRates;
   const selectedRate = ratesForSelectedCenter.find(
     (rate) => rate.name === selectedName,
   );
@@ -219,10 +230,12 @@ export default function TicketTypeForm({
                       ? defaultValues.isAvailable !== false
                       : true,
                 );
-                setValue(
+                  setValue(
                   "taxPercent",
                   rate?.taxPercent ??
-                    (isLegacyRate ? Number(defaultValues.taxPercent || 0) : 0),
+                    (isLegacyRate
+                      ? Number(defaultValues.taxPercent ?? DEFAULT_TAX_PERCENT)
+                      : DEFAULT_TAX_PERCENT),
                 );
               }}
             >

@@ -259,12 +259,7 @@ class PlaceService {
 
       if (locationFilters.length) {
         where = isAdmin
-          ? {
-              OR: [
-                ...locationFilters,
-                { createdById: user.id },
-              ],
-            }
+          ? { createdById: user.id }
           : { OR: locationFilters };
       }
 
@@ -278,7 +273,6 @@ class PlaceService {
     // Preserve existing access for legacy level-one users.
     if (
       user.level === 1 &&
-      user.role?.roleCode !== "ADMIN" &&
       user.role?.roleCode !== "LOCATION_ADMIN"
     ) {
       return prisma.place.findMany({
