@@ -27,6 +27,7 @@ static get createBooking() {
       z.object({
         placeId: z.string().uuid(),
         slotDateTime: z.string().min(1),
+        endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         durationHours: z.number().int().nullable().optional(),
         persons: z.number().int().min(0).optional(),
         students: z.number().int().min(0).optional(),

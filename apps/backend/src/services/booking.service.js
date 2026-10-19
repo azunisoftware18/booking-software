@@ -13,6 +13,26 @@ import { upload } from "../utils/s3Service.js";
 import WhatsappService from "./whatsapp.service.js";
 import EmailService from "./Email.service.js";
 
+const SECURITY_DEPOSIT_BY_OPTION = {
+  A1: 10000,
+  A2: 2500,
+  A3: 4000,
+  A4: 3000,
+  A5: 4000,
+  A6: 5500,
+  A7: 12000,
+};
+
+const ELECTRICITY_CHARGE_BY_OPTION = {
+  A1: { 4: 1500, 8: 3000 },
+  A2: { 4: 500, 8: 1000 },
+  A3: { 4: 200, 8: 400 },
+  A4: { 4: 200, 8: 400 },
+  A5: { 4: 100, 8: 200 },
+  A6: { 4: 1000, 8: 2000 },
+  A7: { 4: 1500, 8: 3000 },
+};
+
 class BookingService {
   // ============================================================
   // CREATE BOOKING
@@ -150,6 +170,41 @@ class BookingService {
             );
           }
 
+          const expandedAnnexureItems = annexureItems.flatMap((item) => {
+            const startDateTime = new Date(item.slotDateTime);
+            if (Number.isNaN(startDateTime.getTime())) {
+              throw ApiError.badRequest("Select a valid start date and slot");
+            }
+
+            const startDate = startDateTime.toISOString().slice(0, 10);
+            const endDateValue = item.endDate || startDate;
+            const endDate = new Date(`${endDateValue}T00:00:00.000Z`);
+            if (
+              !/^\d{4}-\d{2}-\d{2}$/.test(endDateValue) ||
+              Number.isNaN(endDate.getTime()) ||
+              endDate.toISOString().slice(0, 10) !== endDateValue ||
+              endDateValue < startDate
+            ) {
+              throw ApiError.badRequest(
+                "End date must be the same as or later than the start date"
+              );
+            }
+
+            const startTime = startDateTime.toISOString().slice(11, 16);
+            const dailyItems = [];
+            const dateCursor = new Date(`${startDate}T00:00:00.000Z`);
+            while (dateCursor <= endDate) {
+              const date = dateCursor.toISOString().slice(0, 10);
+              dailyItems.push({
+                ...item,
+                slotDateTime: `${date}T${startTime}:00.000Z`,
+              });
+              dateCursor.setUTCDate(dateCursor.getUTCDate() + 1);
+            }
+
+            return dailyItems;
+          });
+
           const requestedAnnexure = places[0]?.annexure;
           const normalizedLocationValues = [
             selectedLocation.name,
@@ -178,7 +233,7 @@ class BookingService {
           const normalizedItems = [];
           const now = new Date();
 
-          for (const item of annexureItems) {
+          for (const item of expandedAnnexureItems) {
             const place = places.find(({ id }) => id === item.placeId);
 
             if (
@@ -322,6 +377,13 @@ class BookingService {
               );
             }
 
+            const securityDeposit =
+              SECURITY_DEPOSIT_BY_OPTION[place.annexureOption] || 0;
+            const electricityCharge =
+              ELECTRICITY_CHARGE_BY_OPTION[place.annexureOption]?.[
+                item.durationHours
+              ] || 0;
+
             normalizedItems.push({
               placeId: place.id,
               slotDateTime: itemSlotDate,
@@ -330,12 +392,21 @@ class BookingService {
               students,
               seatCount,
               amount,
+              securityDeposit,
+              electricityCharge,
             });
           }
 
           const totalAmount =
             Math.round(
-              normalizedItems.reduce((sum, item) => sum + item.amount, 0) * 100
+              normalizedItems.reduce((sum, item) => {
+                return (
+                  sum +
+                  item.amount +
+                  item.securityDeposit +
+                  item.electricityCharge
+                );
+              }, 0) * 100
             ) / 100;
           const totalSeats = normalizedItems.reduce(
             (sum, item) => sum + item.seatCount,
@@ -361,7 +432,9 @@ class BookingService {
               txnId,
               ticketPayload: [],
               annexureItems: {
-                create: normalizedItems,
+                create: normalizedItems.map(
+                  ({ securityDeposit, electricityCharge, ...item }) => item,
+                ),
               },
             },
             include: { annexureItems: { include: { place: true } } },

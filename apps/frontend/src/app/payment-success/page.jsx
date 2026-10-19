@@ -43,6 +43,42 @@ function getTicketGstGroups(tickets = []) {
   return Array.from(groups.values());
 }
 
+function getAnnexureGroups(items = []) {
+  const groups = new Map();
+
+  for (const item of items) {
+    const time = new Date(item.slotDateTime).toISOString().slice(11, 16);
+    const key = [
+      item.placeId,
+      time,
+      item.durationHours ?? "",
+      item.persons ?? 0,
+      item.students ?? 0,
+    ].join(":");
+    const group = groups.get(key) || {
+      ...item,
+      key,
+      amount: 0,
+      slotDates: [],
+    };
+
+    group.amount += Number(item.amount || 0);
+    group.slotDates.push(item.slotDateTime);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const sortedDates = group.slotDates.sort(
+      (first, second) => new Date(first) - new Date(second),
+    );
+    return {
+      ...group,
+      firstSlotDateTime: sortedDates[0],
+      lastSlotDateTime: sortedDates[sortedDates.length - 1],
+    };
+  });
+}
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -74,13 +110,23 @@ function SuccessContent() {
   {
     console.log(booking);
   }
+  const annexureGroups = getAnnexureGroups(booking?.annexureItems);
+  const annexureDates = (booking?.annexureItems || [])
+    .map((item) => new Date(item.slotDateTime))
+    .sort((first, second) => first - second);
+  const formatVisitDate = (date) =>
+    date.toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   const formattedDate = booking?.slotDateTime
-    ? new Date(booking.slotDateTime).toLocaleDateString("en-IN", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
+    ? booking.bookingType === "ANNEXURE" && annexureDates.length > 1
+      ? `${formatVisitDate(annexureDates[0])} – ${formatVisitDate(
+          annexureDates[annexureDates.length - 1],
+        )}`
+      : formatVisitDate(new Date(booking.slotDateTime))
     : "-";
 
   const formattedTime = booking?.slotDateTime
@@ -184,19 +230,25 @@ function SuccessContent() {
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-sans font-medium">
                   {booking?.bookingType === "ANNEXURE"
-                    ? "Reserved units"
+                    ? "Reserved venue-days"
                     : "Reserved seats"}
                 </span>
 
-                <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block truncate">
-                  Visitor{" "}
-                  <span className="text-jaipur-dark px-1 font-sans font-black">
-                    :
-                  </span>{" "}
-                  <span className="text-jaipur-dark text-sm sm:text-lg">
+                {booking?.bookingType === "ANNEXURE" ? (
+                  <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block truncate">
                     {booking?.totalSeats || "-"}
                   </span>
-                </span>
+                ) : (
+                  <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block truncate">
+                    Visitor{" "}
+                    <span className="text-jaipur-dark px-1 font-sans font-black">
+                      :
+                    </span>{" "}
+                    <span className="text-jaipur-dark text-sm sm:text-lg">
+                      {booking?.totalSeats || "-"}
+                    </span>
+                  </span>
+                )}
               </div>
               <div className="text-right">
                 {/* <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-sans font-medium">Payment Mode</span> */}
@@ -210,9 +262,9 @@ function SuccessContent() {
                     Selected options
                   </p>
                   <div className="max-h-28 space-y-2 overflow-y-auto">
-                    {booking.annexureItems.map((item) => (
+                    {annexureGroups.map((item) => (
                       <div
-                        key={item.id}
+                        key={item.key}
                         className="flex justify-between gap-3 text-xs"
                       >
                         <span className="min-w-0 text-royal-blue">
@@ -221,13 +273,14 @@ function SuccessContent() {
                             {item.place?.name}
                           </span>
                           <span className="block text-gray-500">
-                            {new Date(item.slotDateTime).toLocaleString(
-                              "en-IN",
-                            )}
+                            {new Date(item.firstSlotDateTime).toLocaleDateString("en-IN")}
+                            {item.firstSlotDateTime !== item.lastSlotDateTime &&
+                              ` - ${new Date(item.lastSlotDateTime).toLocaleDateString("en-IN")}`}
+                            {`, ${new Date(`1970-01-01T${item.firstSlotDateTime.split("T")[1].slice(0, 5)}`).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`}
                           </span>
                           <span className="block text-gray-500">
                             {item.durationHours != null
-                              ? `${item.durationHours} hours`
+                              ? `${item.durationHours} hours × ${item.slotDates.length} ${item.slotDates.length === 1 ? "day" : "days"}`
                               : `${item.persons} persons, ${item.students} students`}
                           </span>
                         </span>

@@ -177,26 +177,68 @@ class TicketService {
     doc.text(`Payment status: ${booking.status}`, margin, cursorY);
     cursorY += 30;
 
+    const groupedItems = new Map();
     for (const item of booking.annexureItems || []) {
+      const time = new Date(item.slotDateTime).toISOString().slice(11, 16);
+      const key = [
+        item.placeId,
+        time,
+        item.durationHours ?? "",
+        item.persons ?? 0,
+        item.students ?? 0,
+      ].join(":");
+      const group = groupedItems.get(key) || {
+        ...item,
+        amount: 0,
+        slotDates: [],
+      };
+      group.amount += Number(item.amount || 0);
+      group.slotDates.push(item.slotDateTime);
+      groupedItems.set(key, group);
+    }
+
+    const sortedGroups = Array.from(groupedItems.values()).map((item) => {
+      const sortedDates = item.slotDates.sort(
+        (first, second) => new Date(first) - new Date(second),
+      );
+      return {
+        ...item,
+        firstSlotDateTime: sortedDates[0],
+        lastSlotDateTime: sortedDates[sortedDates.length - 1],
+      };
+    });
+
+    for (const item of sortedGroups) {
       if (cursorY > doc.page.height - 170) {
         doc.addPage();
         cursorY = 50;
       }
 
-      const slot = new Date(item.slotDateTime);
-      const date = slot.toLocaleDateString("en-IN", {
+      const dateOptions = {
         day: "2-digit",
         month: "long",
         year: "numeric",
-      });
+      };
+      const startDate = new Date(item.firstSlotDateTime).toLocaleDateString(
+        "en-IN",
+        dateOptions,
+      );
+      const endDate = new Date(item.lastSlotDateTime).toLocaleDateString(
+        "en-IN",
+        dateOptions,
+      );
+      const dateRange =
+        startDate === endDate ? startDate : `${startDate} to ${endDate}`;
+      const slot = new Date(item.firstSlotDateTime);
       const time = slot.toLocaleTimeString("en-IN", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       });
+      const dayCount = item.slotDates.length;
       const attendance =
         item.durationHours != null
-          ? `Duration: ${item.durationHours} hours`
+          ? `Duration: ${item.durationHours} hours × ${dayCount} ${dayCount === 1 ? "day" : "days"}`
           : `Persons: ${item.persons}; Students: ${item.students}`;
 
       doc
@@ -219,7 +261,7 @@ class TicketService {
         .text(item.place.name, margin + 14, cursorY + 31, {
           width: pageWidth - margin * 2 - 28,
         })
-        .text(`Date and time: ${date}, ${time}`, margin + 14, cursorY + 54)
+        .text(`Date${dayCount > 1 ? " range" : ""}: ${dateRange}, ${time}`, margin + 14, cursorY + 54)
         .text(attendance, margin + 14, cursorY + 70)
         .text(
           `Amount: Rs ${Number(item.amount).toFixed(2)}`,

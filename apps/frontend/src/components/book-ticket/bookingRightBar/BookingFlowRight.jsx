@@ -19,6 +19,7 @@ import {
 import DateSelector from "./bookingParts/DateSelector";
 import TicketCounter from "./bookingParts/TicketCounter";
 import VisitorForm from "./bookingParts/VisitorForm";
+import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 import {
   ArrowRight,
   CalendarDays,
@@ -50,6 +51,62 @@ function getEntryFeePriceBreakdown(entryFee) {
     taxPercent,
   };
 }
+
+const SECURITY_DEPOSIT_BY_OPTION = {
+  A1: 10000,
+  A2: 2500,
+  A3: 4000,
+  A4: 3000,
+  A5: 4000,
+  A6: 5500,
+  A7: 12000,
+};
+
+const ELECTRICITY_CHARGE_BY_OPTION = {
+  A1: { 4: 1500, 8: 3000 },
+  A2: { 4: 500, 8: 1000 },
+  A3: { 4: 200, 8: 400 },
+  A4: { 4: 200, 8: 400 },
+  A5: { 4: 100, 8: 200 },
+  A6: { 4: 1000, 8: 2000 },
+  A7: { 4: 1500, 8: 3000 },
+};
+
+const mapStaticAnnexurePlaces = (options, annexure, places = []) =>
+  options.map((option) => {
+    const place = places.find(
+      (venue) =>
+        String(venue.annexure).trim().toUpperCase() === annexure &&
+        String(venue.annexureOption).trim().toUpperCase() === option.value,
+    );
+
+    return {
+      ...option,
+      ...place,
+      id: place?.id || `unconfigured-${option.value}`,
+      annexure,
+      annexureOption: option.value,
+      name: option.label,
+      isConfigured: Boolean(place?.id),
+    };
+  });
+
+const getBookedDayCount = (item) => {
+  if (!item.date || !item.endDate) return 1;
+
+  const start = new Date(`${item.date}T00:00:00.000Z`);
+  const end = new Date(`${item.endDate}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime()) || end < start) return 1;
+
+  return Math.floor((end - start) / 86400000) + 1;
+};
+
+const getElectricityCharge = (item) =>
+  Number(
+    ELECTRICITY_CHARGE_BY_OPTION[item.place.annexureOption]?.[
+      item.durationHours
+    ] || 0,
+  );
 
 function loadAtomCheckoutScript(scriptUrl) {
   if (window.AtomPaynetz) return Promise.resolve();
@@ -109,6 +166,7 @@ export default function BookingFlowRight() {
   const [locationSelectionStep, setLocationSelectionStep] = useState(1);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [selectedAnnexure, setSelectedAnnexure] = useState(null);
+  const [showDepositForm, setShowDepositForm] = useState(false);
   const [annexureDraftItems, setAnnexureDraftItems] = useState({});
   const [annexureBookingItems, setAnnexureBookingItems] = useState(null);
   const [entryFeeVenueId, setEntryFeeVenueId] = useState(null);
@@ -150,6 +208,26 @@ export default function BookingFlowRight() {
   const selectedLocation =
     bookingLocations.find((location) => location.id === selectedLocationId) ||
     directEntryFeeLocation;
+  const isJaipurLocation = [selectedLocation?.name, selectedLocation?.city].some(
+    (value) => value?.toLowerCase().includes("jaipur"),
+  );
+  const jaipurVenues = isJaipurLocation
+    ? mapStaticAnnexurePlaces(
+        ANNEXURE_OPTIONS.A,
+        "A",
+        selectedLocation?.venues,
+      )
+    : [];
+  const planetariumPlaces = isJaipurLocation
+    ? mapStaticAnnexurePlaces(
+        ANNEXURE_OPTIONS.C,
+        "C",
+        selectedLocation?.venues,
+      )
+    : [];
+  const configuredPlanetariumCount = planetariumPlaces.filter(
+    (venue) => venue.isConfigured,
+  ).length;
   const bookingLocationId = selectedLocationId || directEntryFeeLocation?.id;
   const isDirectEntryFeeUnavailable =
     entryFeeIds.length > 0 &&
@@ -202,21 +280,28 @@ export default function BookingFlowRight() {
 
     return groups;
   }, []);
-  const annexureGroups = (selectedLocation?.venues || []).reduce(
-    (groups, venue) => {
-      if (!venue.annexure) return groups;
-      const group = groups.find((item) => item.annexure === venue.annexure);
-
-      if (group) {
-        group.venues.push(venue);
-      } else {
-        groups.push({ annexure: venue.annexure, venues: [venue] });
-      }
-
-      return groups;
-    },
-    [],
+  const selectedAnnexureItems = Object.values(annexureDraftItems);
+  const annexureRentalTotal = selectedAnnexureItems.reduce(
+    (total, item) =>
+      total + Number(item.amount || 0) * getBookedDayCount(item),
+    0,
   );
+  const annexureSecurityDepositTotal = selectedAnnexureItems.reduce(
+    (total, item) =>
+      total +
+      Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0) *
+        getBookedDayCount(item),
+    0,
+  );
+  const annexureElectricityTotal = selectedAnnexureItems.reduce(
+    (total, item) =>
+      total + getElectricityCharge(item) * getBookedDayCount(item),
+    0,
+  );
+  const annexurePayableTotal =
+    annexureRentalTotal +
+    annexureSecurityDepositTotal +
+    annexureElectricityTotal;
 
   const startBookingForEntryFee = (selectedEntryFees) => {
     const firstEntryFee = selectedEntryFees[0];
@@ -264,6 +349,7 @@ export default function BookingFlowRight() {
         (item) =>
           !item.slotDateTime ||
           (item.rateMode === "duration" && !item.durationHours) ||
+            (item.endDate && item.endDate < item.date) ||
           (item.rateMode === "headcount" &&
             Number(item.persons || 0) + Number(item.students || 0) < 1),
       )
@@ -273,12 +359,18 @@ export default function BookingFlowRight() {
 
     const firstItem = selectedItems[0];
     const totalAmount = selectedItems.reduce(
-      (total, item) => total + Number(item.amount || 0),
+      (total, item) =>
+        total +
+        (Number(item.amount || 0) +
+          Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0) +
+          getElectricityCharge(item)) *
+          getBookedDayCount(item),
       0,
     );
     const bookingItems = selectedItems.map((item) => ({
       placeId: item.place.id,
       slotDateTime: item.slotDateTime,
+      endDate: item.endDate || null,
       durationHours: item.durationHours || null,
       persons: Number(item.persons || 0),
       students: Number(item.students || 0),
@@ -307,6 +399,7 @@ export default function BookingFlowRight() {
     setLocationSelectionStep(2);
     setAnnexureBookingItems(null);
     setSelectedAnnexure(null);
+    setShowDepositForm(false);
     setAnnexureDraftItems({});
     setStep(0);
   };
@@ -751,23 +844,29 @@ export default function BookingFlowRight() {
                     entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
                   }`}
                 >
-                  {!entryFeeId && (
+                  {!entryFeeId && isJaipurLocation && (
                     <section className="min-w-0">
                       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
                         <Landmark size={16} className="text-[#994113]" />
                         Venues
                       </h3>
-                      {annexureGroups.length ? (
+                      {jaipurVenues.length ? (
                         <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
-                          {annexureGroups.map((group) => (
+                          {jaipurVenues.map((venue) => (
                             <button
-                              key={group.annexure}
+                              key={venue.id}
                               type="button"
+                              disabled={!venue.isConfigured}
                               onClick={() => {
+                                if (!venue.isConfigured) return;
                                 setAnnexureDraftItems({});
-                                setSelectedAnnexure(group);
+                                setShowDepositForm(false);
+                                setSelectedAnnexure({
+                                  annexure: "A",
+                                  venues: [venue],
+                                });
                               }}
-                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               <span className="flex items-start justify-between gap-3">
                                 <span className="flex min-w-0 items-start gap-3">
@@ -776,11 +875,12 @@ export default function BookingFlowRight() {
                                   </span>
                                   <span className="min-w-0">
                                     <span className="block font-bold text-slate-800">
-                                      Annexure {group.annexure}
+                                      {venue.name}
                                     </span>
                                     <span className="mt-1 block text-xs text-slate-500">
-                                      {group.venues.length} available option
-                                      {group.venues.length === 1 ? "" : "s"}
+                                      {venue.isConfigured
+                                        ? "Available for booking"
+                                        : "Jaipur Admin setup required"}
                                     </span>
                                   </span>
                                 </span>
@@ -790,7 +890,7 @@ export default function BookingFlowRight() {
                                 />
                               </span>
                               <span className="mt-3 block text-xs font-bold text-[#994113]">
-                                Choose Annexure {group.annexure} options
+                                {venue.isConfigured ? "Choose venue" : "Unavailable"}
                               </span>
                             </button>
                           ))}
@@ -809,7 +909,7 @@ export default function BookingFlowRight() {
                       <Ticket size={16} className="text-[#994113]" />
                       Entry fees
                     </h3>
-                    {entryFeeGroups.length ? (
+                    {entryFeeGroups.length || (isJaipurLocation && !entryFeeIds.length) ? (
                       <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
                         {entryFeeGroups.map((group) => (
                           <button
@@ -858,6 +958,44 @@ export default function BookingFlowRight() {
                             </span>
                           </button>
                         ))}
+                        {isJaipurLocation && !entryFeeIds.length && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAnnexureDraftItems({});
+                              setShowDepositForm(false);
+                              setSelectedAnnexure({
+                                annexure: "C",
+                                venues: planetariumPlaces,
+                              });
+                            }}
+                            className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                          >
+                            <span className="flex items-start justify-between gap-3">
+                              <span className="flex min-w-0 items-start gap-3">
+                                <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
+                                  <Ticket size={18} />
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block font-bold text-slate-800">Planetarium</span>
+                                  <span className="mt-1 block text-xs text-slate-600">
+                                    7D Theater, 3D Film, Taramandal, I.T. Gallery and more
+                                  </span>
+                                  <span className="mt-1 block text-xs text-slate-500">
+                                    ₹10–₹20 per person · ₹5–₹10 per student
+                                  </span>
+                                </span>
+                              </span>
+                              <ArrowRight size={16} className="mt-1 shrink-0 text-slate-400" />
+                            </span>
+                            <span className="mt-4 flex items-center justify-between text-xs font-bold text-[#994113]">
+                              <span>Browse ticket types</span>
+                              <span className="text-slate-500">
+                                {configuredPlanetariumCount}/{ANNEXURE_OPTIONS.C.length} configured
+                              </span>
+                            </span>
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
@@ -899,46 +1037,107 @@ export default function BookingFlowRight() {
               id="annexure-options-title"
               className="mt-2 text-xl font-bold text-slate-900"
             >
-              Select Annexure {selectedAnnexure.annexure} options
+              {showDepositForm
+                ? "Security deposit and electricity"
+                : selectedAnnexure.annexure === "C"
+                  ? "Planetarium tickets"
+                  : selectedAnnexure.venues.length === 1
+                    ? selectedAnnexure.venues[0].name
+                    : "Select venue options"}
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Choose one or more options. Each option has its own date and slot.
+              {showDepositForm
+                ? "Charges are calculated for each booked day."
+                : selectedAnnexure.annexure === "C"
+                  ? "Select ticket types, visitor quantities, date and slot."
+                  : "Choose a start date and slot. End date is optional for multi-day bookings."}
             </p>
 
             <div className="mt-5 space-y-3">
-              {selectedAnnexure.venues.map((venue) => (
-                <AnnexureOptionRow
-                  key={venue.id}
-                  venue={venue}
-                  value={annexureDraftItems[venue.id]}
-                  onChange={(nextValue) =>
-                    setAnnexureDraftItems((current) => {
-                      const next = { ...current };
-                      if (nextValue) next[venue.id] = nextValue;
-                      else delete next[venue.id];
-                      return next;
-                    })
-                  }
-                />
-              ))}
+              {showDepositForm
+                ? selectedAnnexureItems.map((item) => {
+                    const days = getBookedDayCount(item);
+                    const securityDeposit =
+                      Number(
+                        SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] ||
+                          0,
+                      ) * days;
+                    const electricity = getElectricityCharge(item) * days;
+
+                    return (
+                      <section
+                        key={item.place.id}
+                        className="rounded-xl border border-slate-200 p-4"
+                      >
+                        <h3 className="font-semibold text-slate-800">
+                          {item.place.name}
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.date} to {item.endDate || item.date} · {days}{" "}
+                          {days === 1 ? "day" : "days"}
+                        </p>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                            Security deposit: ₹
+                            {securityDeposit.toLocaleString("en-IN")}
+                          </p>
+                          <p className="text-sm font-semibold text-[#994113]">
+                            Electricity ({item.durationHours || 0} hours × {days}{" "}
+                            {days === 1 ? "day" : "days"}): ₹
+                            {electricity.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      </section>
+                    );
+                  })
+                : selectedAnnexure.venues.map((venue) => (
+                    <AnnexureOptionRow
+                      key={venue.id}
+                      venue={venue}
+                      value={annexureDraftItems[venue.id]}
+                      onChange={(nextValue) =>
+                        setAnnexureDraftItems((current) => {
+                          const next = { ...current };
+                          if (nextValue) next[venue.id] = nextValue;
+                          else delete next[venue.id];
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
             </div>
 
             <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
               <span>
-                {Object.keys(annexureDraftItems).length} options selected
+                {showDepositForm
+                  ? "Total payable"
+                  : `${selectedAnnexureItems.length} options selected`}
               </span>
               <span className="text-[#994113]">
-                Total: ₹
-                {Object.values(annexureDraftItems)
-                  .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+                {showDepositForm ? "" : "Rental: "}₹
+                {(showDepositForm
+                  ? annexurePayableTotal
+                  : annexureRentalTotal
+                )
                   .toFixed(2)}
               </span>
             </div>
 
+            {showDepositForm && (
+              <div className="space-y-1 text-sm text-slate-600">
+                <p>Venue charges: ₹{annexureRentalTotal.toFixed(2)}</p>
+                <p>Security deposit: ₹{annexureSecurityDepositTotal.toFixed(2)}</p>
+                <p>Electricity: ₹{annexureElectricityTotal.toFixed(2)}</p>
+              </div>
+            )}
+
             <div className="mt-5 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setSelectedAnnexure(null)}
+                onClick={() => {
+                  if (showDepositForm) setShowDepositForm(false);
+                  else setSelectedAnnexure(null);
+                }}
                 className="rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Back
@@ -946,8 +1145,8 @@ export default function BookingFlowRight() {
               <button
                 type="button"
                 disabled={
-                  !Object.values(annexureDraftItems).length ||
-                  Object.values(annexureDraftItems).some(
+                  !selectedAnnexureItems.length ||
+                  (!showDepositForm && selectedAnnexureItems.some(
                     (item) =>
                       !item.slotDateTime ||
                       item.amount == null ||
@@ -955,12 +1154,22 @@ export default function BookingFlowRight() {
                       (item.rateMode === "headcount" &&
                         Number(item.persons || 0) + Number(item.students || 0) <
                           1),
-                  )
+                  ))
                 }
-                onClick={startBookingForAnnexureOptions}
+                onClick={() => {
+                  if (selectedAnnexure.annexure === "C" || showDepositForm) {
+                    startBookingForAnnexureOptions();
+                  } else {
+                    setShowDepositForm(true);
+                  }
+                }}
                 className="rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Continue booking
+                {selectedAnnexure.annexure === "C"
+                  ? "Book tickets"
+                  : showDepositForm
+                    ? "Continue booking"
+                    : "Next"}
               </button>
             </div>
           </div>
@@ -1144,6 +1353,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     : hasHeadcountRates
       ? "headcount"
       : "unavailable";
+  const isConfigured = venue.isConfigured ?? true;
   const {
     data: slots = [],
     isLoading,
@@ -1151,7 +1361,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
   } = useSlots({
     placeId: venue.id,
     date,
-    enabled: Boolean(value),
+    enabled: Boolean(value) && isConfigured,
   });
   const [year, month, day] = today.split("-").map(Number);
   const nextDay = new Date(year, month - 1, day + 1);
@@ -1162,6 +1372,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
   ].join("-");
   const shouldCheckNextDay =
     Boolean(value) &&
+    isConfigured &&
     date === today &&
     !isLoading &&
     !isError &&
@@ -1211,6 +1422,8 @@ function AnnexureOptionRow({ venue, value, onChange }) {
   };
 
   const selectOption = (checked) => {
+    if (!isConfigured) return;
+
     if (!checked) {
       onChange(null);
       return;
@@ -1230,6 +1443,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     onChange({
       place: venue,
       date: today,
+      endDate: "",
       slot: null,
       slotDateTime: null,
       rateMode,
@@ -1252,6 +1466,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
         <input
           type="checkbox"
           checked={Boolean(value)}
+          disabled={!isConfigured}
           onChange={(event) => selectOption(event.target.checked)}
           className="mt-1 h-5 w-5 shrink-0 accent-[#994113]"
         />
@@ -1259,6 +1474,11 @@ function AnnexureOptionRow({ venue, value, onChange }) {
           <span className="block font-semibold text-slate-800">
             {venue.annexureOption}: {venue.name}
           </span>
+          {!isConfigured && (
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Jaipur Admin setup required for booking
+            </span>
+          )}
           {venue.shortDescription && (
             <span className="mt-1 block text-xs text-slate-500">
               {venue.shortDescription}
@@ -1376,12 +1596,30 @@ function AnnexureOptionRow({ venue, value, onChange }) {
                   ...value,
                   place: venue,
                   date: nextDate,
+                  endDate:
+                    value.endDate && value.endDate < nextDate
+                      ? ""
+                      : value.endDate,
                   slot: null,
                   slotDateTime: null,
                 });
               }}
               className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
             />
+          </label>
+
+          <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+            End date (optional)
+            <input
+              type="date"
+              min={value.date || availabilityDate}
+              value={value.endDate || ""}
+              onChange={(event) => updateValue({ endDate: event.target.value })}
+              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            />
+            <span className="mt-1 block font-normal text-slate-500">
+              Leave blank for a one-day booking.
+            </span>
           </label>
 
           <div className="sm:col-span-2">
@@ -1479,7 +1717,8 @@ function AnnexureOptionRow({ venue, value, onChange }) {
           </div>
 
           <p className="text-sm font-bold text-[#994113] sm:col-span-2">
-            Option total: ₹{Number(value.amount || 0).toFixed(2)}
+            Option total ({getBookedDayCount(value)} {getBookedDayCount(value) === 1 ? "day" : "days"}): ₹
+            {(Number(value.amount || 0) * getBookedDayCount(value)).toFixed(2)}
           </p>
         </div>
       )}
