@@ -125,7 +125,7 @@ export default function BookingFlowRight() {
   const currentUser = useSelector((state) => state.auth?.user);
   const isLoggedIn = Boolean(currentUser);
 
-  const { placeId, isPlaceLoaded } = usePlace();
+  const { currentPlace, placeId, isPlaceLoaded } = usePlace();
   const {
     data: bookingLocations = [],
     isLoading: isLoadingLocations,
@@ -233,7 +233,12 @@ export default function BookingFlowRight() {
 
     setBookingError("");
     dispatch(resetBooking());
-    dispatch(setCurrentPlace(venue));
+    dispatch(
+      setCurrentPlace({
+        ...venue,
+        bookingLocation: selectedLocation,
+      }),
+    );
     dispatch(
       setTickets(
         Object.fromEntries(
@@ -281,7 +286,12 @@ export default function BookingFlowRight() {
 
     setBookingError("");
     dispatch(resetBooking());
-    dispatch(setCurrentPlace(firstItem.place));
+    dispatch(
+      setCurrentPlace({
+        ...firstItem.place,
+        bookingLocation: selectedLocation,
+      }),
+    );
     dispatch(setDate(firstItem.date));
     dispatch(setSlot(firstItem.slot));
     dispatch(setTotalAmount(totalAmount));
@@ -669,7 +679,21 @@ export default function BookingFlowRight() {
                       id="booking-location"
                       value={selectedLocationId}
                       onChange={(event) => {
-                        setSelectedLocationId(event.target.value);
+                        const nextLocationId = event.target.value;
+                        const nextLocation = bookingLocations.find(
+                          (location) => location.id === nextLocationId,
+                        );
+
+                        setSelectedLocationId(nextLocationId);
+
+                        if (nextLocation) {
+                          dispatch(
+                            setCurrentPlace({
+                              ...(currentPlace || {}),
+                              bookingLocation: nextLocation,
+                            }),
+                          );
+                        }
                       }}
                       className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 font-normal outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
                     >

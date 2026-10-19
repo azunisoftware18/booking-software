@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import BookingFlowRight from "@/components/book-ticket/bookingRightBar/BookingFlowRight";
 import BookingFlowLeft from "@/components/book-ticket/bookingLeftbar/BookingFlowLeft";
 import FullPageLoader from "@/components/ui/FullPageLoader";
@@ -15,6 +16,7 @@ export default function Page() {
   const { placeId } = useParams();
   const router = useRouter();
   const dispatch = useDispatch();
+  const activePlace = useSelector((state) => state.place.currentPlace);
 
   const { data: place, isLoading } = usePlaceById(placeId);
 
@@ -120,7 +122,10 @@ export default function Page() {
                             bg-[#f8f4ed]
                         "
           >
-            <BookingFlowLeft place={place} itemVariants={itemVariants} />
+            <BookingFlowLeft
+              place={activePlace || place}
+              itemVariants={itemVariants}
+            />
 
             <section
               data-lenis-prevent
