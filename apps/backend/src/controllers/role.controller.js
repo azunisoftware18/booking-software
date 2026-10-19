@@ -38,7 +38,8 @@ static getAll = async (req, res) => {
   // =========================================================
   static getById = async (req, res) => {
     const data = await RoleService.getRoleById(
-      req.params.id
+      req.params.id,
+      req.user.id,
     );
 
     return res.success(data, "Role fetched");
@@ -52,7 +53,8 @@ static getAll = async (req, res) => {
 
     const data = await RoleService.updateRole(
       req.params.id,
-      req.body
+      req.body,
+      req.user.id,
     );
 
     return res.success(data, "Role updated");
@@ -63,7 +65,8 @@ static getAll = async (req, res) => {
   // =========================================================
   static delete = async (req, res) => {
     await RoleService.deleteRole(
-      req.params.id
+      req.params.id,
+      req.user.id,
     );
 
     return res.success(null, "Role deleted");

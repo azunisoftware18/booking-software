@@ -15,14 +15,26 @@ class TicketTypeController {
     const payload = { ...req.body };
 
     if (payload.action === "getAll") {
+      const roleCode = req.user?.role?.roleCode;
+      const isSuperAdmin = roleCode === "SUPER_ADMIN";
+      const isLocationAdmin =
+        ["ADMIN", "LOCATION_ADMIN"].includes(roleCode) &&
+        req.user?.locationId;
+      const accessiblePlaces = isLocationAdmin
+        ? await PlaceService.getAllPlaces(req.user)
+        : [];
+
       payload.data = {
         ...payload.data,
-        allPlaces: req.user?.role?.roleCode === "SUPER_ADMIN",
-        includeCreator: req.user?.role?.roleCode === "SUPER_ADMIN",
+        allPlaces: isSuperAdmin,
+        ...(isLocationAdmin
+          ? { placeIds: accessiblePlaces.map((place) => place.id) }
+          : {}),
+        includeCreator: isSuperAdmin,
       };
     }
 
-    if (payload.action === "create") {
+    if (["create", "upsert"].includes(payload.action)) {
       let accessiblePlaces = await PlaceService.getAllPlaces(req.user);
 
       if (
@@ -58,7 +70,15 @@ class TicketTypeController {
       };
     }
 
-    const data = await TicketTypeService.handle(payload);
+    const requiresPlaceAccess = ["create", "upsert", "update", "delete"].includes(
+      payload.action,
+    );
+    const allowedPlaceIds =
+      requiresPlaceAccess &&
+      req.user?.role?.roleCode !== "SUPER_ADMIN"
+        ? (await PlaceService.getAllPlaces(req.user)).map((place) => place.id)
+        : null;
+    const data = await TicketTypeService.handle(payload, allowedPlaceIds);
     res.success(data, "Success");
   };
 }

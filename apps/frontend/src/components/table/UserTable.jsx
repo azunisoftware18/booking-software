@@ -75,8 +75,8 @@ export default function UserTable({
   return (
     <div className="p-6">
       <TableShell
-        title="Users"
-        subtitle={`${filteredUsers.length} total users found`}
+        title={isSuperAdmin ? "Users" : "My Employees"}
+        subtitle={`${filteredUsers.length} ${isSuperAdmin ? "total users" : "employees"} found`}
         searchProps={{
           value: search,
           onChange: (e) => {

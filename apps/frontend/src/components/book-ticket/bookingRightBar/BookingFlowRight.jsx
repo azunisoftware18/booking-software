@@ -32,6 +32,25 @@ import FullPageLoader from "@/components/ui/FullPageLoader";
 
 let atomCheckoutScriptPromise;
 
+function getEntryFeePriceBreakdown(entryFee) {
+  const total = Math.round(Number(entryFee.price) * 100) / 100;
+  const taxPercent = Number(entryFee.taxPercent || 0);
+  const base =
+    taxPercent > 0
+      ? Math.round((total / (1 + taxPercent / 100)) * 100) / 100
+      : total;
+  const tax = Math.round((total - base) * 100) / 100;
+  const cgst = Math.round((tax / 2) * 100) / 100;
+
+  return {
+    base,
+    cgst,
+    sgst: Math.round((tax - cgst) * 100) / 100,
+    total,
+    taxPercent,
+  };
+}
+
 function loadAtomCheckoutScript(scriptUrl) {
   if (window.AtomPaynetz) return Promise.resolve();
   if (atomCheckoutScriptPromise) return atomCheckoutScriptPromise;
@@ -96,8 +115,9 @@ export default function BookingFlowRight() {
   const [selectedEntryFeeGroup, setSelectedEntryFeeGroup] = useState(null);
   const [isDirectEntryFeeModalDismissed, setIsDirectEntryFeeModalDismissed] =
     useState(false);
-  const [selectedEntryFeeQuantities, setSelectedEntryFeeQuantities] =
-    useState(() => initialEntryFeeQuantities);
+  const [selectedEntryFeeQuantities, setSelectedEntryFeeQuantities] = useState(
+    () => initialEntryFeeQuantities,
+  );
   const [bookingError, setBookingError] = useState("");
 
   const dispatch = useDispatch();
@@ -118,10 +138,10 @@ export default function BookingFlowRight() {
 
   const directEntryFeeLocation = entryFeeIds.length
     ? bookingLocations.find((location) =>
-      entryFeeIds.every((id) =>
-        location.entryFees?.some((entryFee) => entryFee.id === id),
-      ),
-    )
+        entryFeeIds.every((id) =>
+          location.entryFees?.some((entryFee) => entryFee.id === id),
+        ),
+      )
     : null;
   const directEntryFees =
     directEntryFeeLocation?.entryFees?.filter((entryFee) =>
@@ -138,18 +158,32 @@ export default function BookingFlowRight() {
     directEntryFees.length !== entryFeeIds.length;
   const visibleLocationSelectionStep =
     entryFeeIds.length &&
-      (directEntryFeeLocation || isDirectEntryFeeUnavailable)
+    (directEntryFeeLocation || isDirectEntryFeeUnavailable)
       ? 2
       : locationSelectionStep;
   const directEntryFeeGroup =
     directEntryFees.length && !isDirectEntryFeeModalDismissed
       ? {
-        venueId: directEntryFees[0].venueId || directEntryFees[0].placeId,
-        venueName: directEntryFees[0].venueName,
-        entryFees: directEntryFees,
-      }
+          venueId: directEntryFees[0].venueId || directEntryFees[0].placeId,
+          venueName: directEntryFees[0].venueName,
+          entryFees: directEntryFees,
+        }
       : null;
   const activeEntryFeeGroup = selectedEntryFeeGroup || directEntryFeeGroup;
+  const selectedEntryFeeTotals = (activeEntryFeeGroup?.entryFees || []).reduce(
+    (totals, entryFee) => {
+      const breakdown = getEntryFeePriceBreakdown(entryFee);
+      const quantity = Number(selectedEntryFeeQuantities[entryFee.id] || 0);
+
+      return {
+        base: totals.base + breakdown.base * quantity,
+        cgst: totals.cgst + breakdown.cgst * quantity,
+        sgst: totals.sgst + breakdown.sgst * quantity,
+        total: totals.total + breakdown.total * quantity,
+      };
+    },
+    { base: 0, cgst: 0, sgst: 0, total: 0 },
+  );
   const visibleEntryFees = selectedLocation?.entryFees || [];
   const entryFeeGroups = visibleEntryFees.reduce((groups, entryFee) => {
     if (entryFeeIds.length && !entryFeeIds.includes(entryFee.id)) return groups;
@@ -338,13 +372,11 @@ export default function BookingFlowRight() {
       const isEntryFeeBooking = Boolean(entryFeeVenueId);
       const isAnnexureBooking = Boolean(annexureBookingItems?.length);
 
-
       if (!isEntryFeeBooking) {
         if (!reduxData?.date || !reduxData?.slot?.time) {
           throw new Error("Please select a valid date and slot");
         }
       }
-
 
       const tickets = Object.entries(reduxData?.tickets || {})
         .filter(([, quantity]) => Number(quantity) > 0)
@@ -357,8 +389,7 @@ export default function BookingFlowRight() {
         (!isAnnexureBooking && tickets.length === 0) ||
         tickets.some(
           (ticket) =>
-            !Number.isSafeInteger(ticket.quantity) ||
-            ticket.quantity <= 0
+            !Number.isSafeInteger(ticket.quantity) || ticket.quantity <= 0,
         )
       ) {
         throw new Error("Please select valid ticket quantities");
@@ -376,18 +407,16 @@ export default function BookingFlowRight() {
       const selectedLocationDetails =
         bookingLocations.find(
           (location) =>
-            String(location._id ?? location.id) ===
-            String(selectedLocationId)
+            String(location._id ?? location.id) === String(selectedLocationId),
         ) ||
         (String(directEntryFeeLocation?._id ?? directEntryFeeLocation?.id) ===
-          String(selectedLocationId)
+        String(selectedLocationId)
           ? directEntryFeeLocation
           : null);
 
       if (!selectedLocationDetails) {
         throw new Error("Selected location details not found");
       }
-
 
       const payload = {
         placeId,
@@ -407,7 +436,6 @@ export default function BookingFlowRight() {
         tickets: isAnnexureBooking ? [] : tickets,
         ...(isAnnexureBooking ? { annexureItems: annexureBookingItems } : {}),
       };
-
 
       const res = await createBooking(payload);
 
@@ -693,8 +721,9 @@ export default function BookingFlowRight() {
                 )}
 
                 <div
-                  className={`mt-5 grid gap-5 ${entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
-                    }`}
+                  className={`mt-5 grid gap-5 ${
+                    entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
+                  }`}
                 >
                   {!entryFeeId && (
                     <section className="min-w-0">
@@ -742,7 +771,8 @@ export default function BookingFlowRight() {
                         </div>
                       ) : (
                         <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                          No Annexure options are configured for this location yet.
+                          No Annexure options are configured for this location
+                          yet.
                         </p>
                       )}
                     </section>
@@ -868,7 +898,9 @@ export default function BookingFlowRight() {
             </div>
 
             <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-              <span>{Object.keys(annexureDraftItems).length} options selected</span>
+              <span>
+                {Object.keys(annexureDraftItems).length} options selected
+              </span>
               <span className="text-[#994113]">
                 Total: ₹
                 {Object.values(annexureDraftItems)
@@ -895,9 +927,8 @@ export default function BookingFlowRight() {
                       item.amount == null ||
                       (item.rateMode === "duration" && !item.durationHours) ||
                       (item.rateMode === "headcount" &&
-                        Number(item.persons || 0) +
-                        Number(item.students || 0) <
-                        1),
+                        Number(item.persons || 0) + Number(item.students || 0) <
+                          1),
                   )
                 }
                 onClick={startBookingForAnnexureOptions}
@@ -932,19 +963,17 @@ export default function BookingFlowRight() {
                 const quantity = Number(
                   selectedEntryFeeQuantities[entryFee.id] || 0,
                 );
-                const taxPercent = Number(entryFee.taxPercent || 0);
-                const priceWithTax =
-                  Math.round(
-                    Number(entryFee.price) * (1 + taxPercent / 100) * 100,
-                  ) / 100;
+                const breakdown = getEntryFeePriceBreakdown(entryFee);
+                const { taxPercent, total: priceWithTax } = breakdown;
 
                 return (
                   <div
                     key={entryFee.id}
-                    className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors sm:p-5 ${quantity > 0
-                      ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
-                      : "border-slate-200"
-                      }`}
+                    className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors sm:p-5 ${
+                      quantity > 0
+                        ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
+                        : "border-slate-200"
+                    }`}
                   >
                     <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                       <input
@@ -967,8 +996,12 @@ export default function BookingFlowRight() {
                             ? "Free"
                             : `₹${priceWithTax.toFixed(2)}`}
                           {taxPercent > 0 && (
-                            <span className="ml-1 text-xs font-medium text-slate-500">
-                              incl. {taxPercent}% GST
+                            <span className="mt-1 block text-xs font-medium text-slate-500">
+                              GST included · Base ₹{breakdown.base.toFixed(2)} · CGST{" "}
+                              {taxPercent / 2}% ₹
+                              {breakdown.cgst.toFixed(2)} · SGST{" "}
+                              {taxPercent / 2}% ₹
+                              {breakdown.sgst.toFixed(2)}
                             </span>
                           )}
                         </span>
@@ -1014,23 +1047,14 @@ export default function BookingFlowRight() {
                   )}
                   )
                 </span>
+                <span className="mt-1 block text-xs font-medium text-slate-500">
+                  Base ₹{selectedEntryFeeTotals.base.toFixed(2)} · CGST ₹
+                  {selectedEntryFeeTotals.cgst.toFixed(2)} · SGST ₹
+                  {selectedEntryFeeTotals.sgst.toFixed(2)}
+                </span>
               </span>
               <span className="text-[#994113]">
-                ₹
-                {activeEntryFeeGroup.entryFees
-                  .reduce((total, entryFee) => {
-                    const taxPercent = Number(entryFee.taxPercent || 0);
-                    const unitPrice =
-                      Math.round(
-                        Number(entryFee.price) * (1 + taxPercent / 100) * 100,
-                      ) / 100;
-                    return (
-                      total +
-                      unitPrice *
-                      Number(selectedEntryFeeQuantities[entryFee.id] || 0)
-                    );
-                  }, 0)
-                  .toFixed(2)}
+                ₹{selectedEntryFeeTotals.total.toFixed(2)}
               </span>
             </div>
             <div className="mt-6 flex justify-end gap-3">
@@ -1086,8 +1110,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
   const date = value?.date || today;
-  const hasDurationRates =
-    venue.rate4Hours != null || venue.rate8Hours != null;
+  const hasDurationRates = venue.rate4Hours != null || venue.rate8Hours != null;
   const hasHeadcountRates =
     venue.ratePerPerson != null || venue.ratePerStudent != null;
   const rateMode = hasDurationRates
@@ -1095,7 +1118,11 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     : hasHeadcountRates
       ? "headcount"
       : "unavailable";
-  const { data: slots = [], isLoading, isError } = useSlots({
+  const {
+    data: slots = [],
+    isLoading,
+    isError,
+  } = useSlots({
     placeId: venue.id,
     date,
     enabled: Boolean(value),
@@ -1142,18 +1169,14 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     };
     if (rateMode === "duration") {
       nextValue.amount =
-        nextValue.durationHours === 8
-          ? venue.rate8Hours
-          : venue.rate4Hours;
+        nextValue.durationHours === 8 ? venue.rate8Hours : venue.rate4Hours;
       nextValue.persons = 0;
       nextValue.students = 0;
     } else if (rateMode === "headcount") {
       nextValue.durationHours = null;
       nextValue.amount =
-        Number(nextValue.persons || 0) *
-        Number(venue.ratePerPerson || 0) +
-        Number(nextValue.students || 0) *
-        Number(venue.ratePerStudent || 0);
+        Number(nextValue.persons || 0) * Number(venue.ratePerPerson || 0) +
+        Number(nextValue.students || 0) * Number(venue.ratePerStudent || 0);
     } else {
       nextValue.amount = null;
     }
@@ -1176,7 +1199,7 @@ function AnnexureOptionRow({ venue, value, onChange }) {
           ? venue.rate4Hours
           : venue.rate8Hours
         : defaultPersons * Number(venue.ratePerPerson || 0) +
-        defaultStudents * Number(venue.ratePerStudent || 0);
+          defaultStudents * Number(venue.ratePerStudent || 0);
 
     onChange({
       place: venue,
@@ -1193,10 +1216,11 @@ function AnnexureOptionRow({ venue, value, onChange }) {
 
   return (
     <section
-      className={`rounded-xl border p-4 ${value
+      className={`rounded-xl border p-4 ${
+        value
           ? "border-[#994113] bg-amber-50/50 ring-1 ring-[#994113]/15"
           : "border-slate-200"
-        }`}
+      }`}
     >
       <label className="flex cursor-pointer items-start gap-3">
         <input
@@ -1337,10 +1361,12 @@ function AnnexureOptionRow({ venue, value, onChange }) {
           <div className="sm:col-span-2">
             <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-600">
               <Clock size={14} />
-              Available slots
+              Select Available slots
             </p>
             {isLoadingAvailability ? (
-              <p className="text-sm text-slate-500">Loading available slots...</p>
+              <p className="text-sm text-slate-500">
+                Loading available slots...
+              </p>
             ) : isAvailabilityError ? (
               <div className="text-sm text-red-600">
                 Could not load slots.{" "}
@@ -1352,29 +1378,72 @@ function AnnexureOptionRow({ venue, value, onChange }) {
                   Retry
                 </button>
               </div>
-            ) : availabilitySlots.filter((slot) => slot.status === "available").length ? (
-              <div className="flex flex-wrap gap-2">
+            ) : availabilitySlots.filter((slot) => slot.status === "available")
+                .length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {availabilitySlots
                   .filter((slot) => slot.status === "available")
-                  .map((slot) => (
-                    <button
-                      key={slot.time}
-                      type="button"
-                      onClick={() =>
-                        updateValue({
-                          slot,
-                          date: availabilityDate,
-                          slotDateTime: `${availabilityDate}T${slot.time}:00.000Z`,
-                        })
-                      }
-                      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${value.slot?.time === slot.time
-                          ? "border-[#994113] bg-[#994113] text-white"
-                          : "border-slate-300 bg-white text-slate-700 hover:border-[#994113]"
-                        }`}
-                    >
-                      {slot.displayTime || slot.time}
-                    </button>
-                  ))}
+                  .map((slot) => {
+                    const isSelected = value.slot?.time === slot.time;
+
+                    return (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        onClick={() =>
+                          updateValue({
+                            slot,
+                            date: availabilityDate,
+                            slotDateTime: `${availabilityDate}T${slot.time}:00.000Z`,
+                          })
+                        }
+                        className={`
+            group relative flex flex-col items-center justify-center
+            gap-1 rounded-xl border p-3 text-center
+            transition-all duration-200 ease-in-out
+            focus:outline-none focus:ring-2 focus:ring-[#994113]
+            focus:ring-offset-2
+            ${
+              isSelected
+                ? "border-[#994113] bg-[#994113] text-white shadow-md shadow-orange-900/20"
+                : "border-slate-200 bg-white text-slate-800 hover:border-[#994113] hover:bg-orange-50 hover:shadow-sm"
+            }
+          `}
+                      >
+                        <div className="text-sm font-bold tracking-wide">
+                          {slot.startTime || slot.time}-{slot.endTime}
+                        </div>
+
+                        <span
+                          className={`text-xs font-medium ${
+                            isSelected
+                              ? "text-orange-100"
+                              : "text-slate-500 group-hover:text-[#994113]"
+                          }`}
+                        >
+                          {slot.available} / {slot.capacity} seats
+                        </span>
+
+                        {isSelected && (
+                          <span className="absolute right-2 top-2">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              className="h-4 w-4"
+                              aria-hidden="true"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.704 5.29a1 1 0 010 1.415l-7.2 7.2a1 1 0 01-1.415 0l-3.5-3.5a1 1 0 011.414-1.415l2.794 2.794 6.493-6.494a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
               </div>
             ) : (
               <p className="text-sm text-slate-500">
@@ -1430,9 +1499,7 @@ function renderStep(step, props) {
       return (
         <VisitorForm
           onSubmit={handleFinalBooking}
-          onBack={() =>
-            entryFeeVenueId ? setStep(2) : setStep(2)
-          }
+          onBack={() => (entryFeeVenueId ? setStep(2) : setStep(2))}
           showCashOption={entryFeeVenueId ? false : isLoggedIn}
           isSubmitting={isSubmitting}
         />

@@ -1,9 +1,19 @@
 import prisma from "../db/db.js";
 import { ApiError } from "../utils/ApiError.js";
+import PlaceService from "./place.service.js";
+
+async function assertPlaceAccess(placeId, currentUser) {
+  const places = await PlaceService.getAllPlaces(currentUser);
+
+  if (!places.some((place) => place.id === placeId)) {
+    throw ApiError.forbidden("Access to this place denied");
+  }
+}
 
 class SlotTemplateService {
-  static async create(payload) {
+  static async create(payload, currentUser) {
     const { placeId, startTime, endTime, capacity } = payload;
+    await assertPlaceAccess(placeId, currentUser);
 
     const place = await prisma.place.findUnique({
       where: { id: placeId },
@@ -29,29 +39,52 @@ class SlotTemplateService {
     });
   }
 
-  static async getAll(placeId) {
+  static async getAll(placeId, currentUser) {
+    await assertPlaceAccess(placeId, currentUser);
+
     return prisma.slotTemplate.findMany({
       where: { placeId },
       orderBy: { startTime: "asc" },
     });
   }
 
-  static async update(id, payload) {
+  static async update(id, payload, currentUser) {
+    const existing = await prisma.slotTemplate.findUnique({
+      where: { id },
+      select: { placeId: true },
+    });
+
+    if (!existing) throw ApiError.notFound("Slot template not found");
+    await assertPlaceAccess(existing.placeId, currentUser);
+
+    if (payload.placeId && payload.placeId !== existing.placeId) {
+      throw ApiError.forbidden("A slot template cannot be moved to another place");
+    }
+
     return prisma.slotTemplate.update({
       where: { id },
-      data: payload,
+      data: { ...payload, placeId: existing.placeId },
     });
   }
 
-  static async delete(id) {
+  static async delete(id, currentUser) {
+    const existing = await prisma.slotTemplate.findUnique({
+      where: { id },
+      select: { placeId: true },
+    });
+
+    if (!existing) throw ApiError.notFound("Slot template not found");
+    await assertPlaceAccess(existing.placeId, currentUser);
+
     await prisma.slotTemplate.delete({ where: { id } });
     return true;
   }
 }
 
 class SlotOverrideService {
-  static async upsert(payload) {
+  static async upsert(payload, currentUser) {
     const { placeId, date, startTime, capacity, isClosed } = payload;
+    await assertPlaceAccess(placeId, currentUser);
 
     const parsedDate = new Date(`${date}T00:00:00.000Z`);
 
@@ -77,7 +110,9 @@ class SlotOverrideService {
       },
     });
   }
-  static async getAll(placeId, date) {
+  static async getAll(placeId, date, currentUser) {
+    await assertPlaceAccess(placeId, currentUser);
+
     const start = new Date(`${date}T00:00:00.000Z`);
 
     const end = new Date(`${date}T23:59:59.999Z`);
@@ -113,11 +148,12 @@ const formatTime12Hour = (time) => {
   });
 };
 class SlotService {
-  static async getSlotsByDate(placeId, date) {
+  static async getSlotsByDate(placeId, date, currentUser) {
+    await assertPlaceAccess(placeId, currentUser);
+
     const templates = await prisma.slotTemplate.findMany({
       where: { placeId },
     });
-
 
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
@@ -186,22 +222,15 @@ class SlotService {
           .toISOString()
           .slice(11, 16);
 
-        return bookingTime === t.startTime
-          ? total + booking.totalSeats
-          : total;
+        return bookingTime === t.startTime ? total + booking.totalSeats : total;
       }, 0);
-      const bookedAnnexureSeats = annexureBookings.reduce(
-        (total, booking) => {
-          const bookingTime = new Date(booking.slotDateTime)
-            .toISOString()
-            .slice(11, 16);
+      const bookedAnnexureSeats = annexureBookings.reduce((total, booking) => {
+        const bookingTime = new Date(booking.slotDateTime)
+          .toISOString()
+          .slice(11, 16);
 
-          return bookingTime === t.startTime
-            ? total + booking.seatCount
-            : total;
-        },
-        0,
-      );
+        return bookingTime === t.startTime ? total + booking.seatCount : total;
+      }, 0);
       const booked = bookedRegularSeats + bookedAnnexureSeats;
 
       const available = Math.max(capacity - booked, 0);
@@ -214,7 +243,8 @@ class SlotService {
 
       return {
         time: t.startTime,
-        displayTime: formatTime12Hour(t.startTime),
+        startTime: formatTime12Hour(t.startTime),
+        endTime: formatTime12Hour(t.endTime),
         capacity,
         booked,
         available,

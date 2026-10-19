@@ -84,7 +84,6 @@ export default function UserManagementPage() {
           fullName: data.fullName,
           email: data.email,
           roleId: data.roleId,
-          placeId: data.placeId,
           isActive: data.isActive ?? true,
           ...(data.password && { password: data.password }),
         },

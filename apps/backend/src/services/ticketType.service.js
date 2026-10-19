@@ -13,7 +13,7 @@ class TicketTypeService {
     return { ...data, taxPercent };
   }
 
-  static async handle(payload) {
+  static async handle(payload, allowedPlaceIds = null) {
     const { action, data } = payload;
 
     try {
@@ -27,6 +27,20 @@ class TicketTypeService {
 
         case "update": {
           if (!data.id) throw ApiError.badRequest("ID required");
+
+          if (allowedPlaceIds) {
+            const accessibleTicketType = await prisma.ticketType.findFirst({
+              where: {
+                id: data.id,
+                placeId: { in: allowedPlaceIds },
+              },
+              select: { id: true },
+            });
+
+            if (!accessibleTicketType) {
+              throw ApiError.notFound("Ticket type not found");
+            }
+          }
 
           const updateData = this.validateTaxPercent(data);
           return await prisma.ticketType.update({
@@ -66,6 +80,13 @@ class TicketTypeService {
             throw ApiError.notFound("Ticket type not found");
           }
 
+          if (
+            allowedPlaceIds &&
+            !allowedPlaceIds.includes(ticketType.placeId)
+          ) {
+            throw ApiError.notFound("Ticket type not found");
+          }
+
           if (ticketType._count.tickets > 0) {
             throw ApiError.badRequest(
               "Cannot delete ticket type because it is already used by tickets"
@@ -81,12 +102,20 @@ class TicketTypeService {
           return { deleted: true };
 
         case "getAll":
-          if (!data.allPlaces && !data.placeId) {
+          if (
+            !data.allPlaces &&
+            !data.placeId &&
+            !Array.isArray(data.placeIds)
+          ) {
             throw ApiError.badRequest("placeId required");
           }
 
           return await prisma.ticketType.findMany({
-            where: data.allPlaces ? {} : { placeId: data.placeId },
+            where: data.allPlaces
+              ? {}
+              : Array.isArray(data.placeIds)
+                ? { placeId: { in: data.placeIds } }
+                : { placeId: data.placeId },
 
             include: {
               place: true,

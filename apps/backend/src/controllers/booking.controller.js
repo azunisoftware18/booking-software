@@ -60,7 +60,7 @@ class BookingController {
   // GET ALL BOOKINGS
   // ============================================================
   static getAll = async (req, res) => {
-    const data = await BookingService.getAllBookings();
+    const data = await BookingService.getAllBookings(req.user);
 
     return res.json(ApiResponse.success(data, "Bookings fetched"));
   };
@@ -71,7 +71,7 @@ class BookingController {
   static getById = async (req, res) => {
     const id = req.params.id.trim();
 
-    const data = await BookingService.getBookingById(id);
+    const data = await BookingService.getBookingById(id, req.user);
 
     return res.json(ApiResponse.success(data, "Booking fetched"));
   };

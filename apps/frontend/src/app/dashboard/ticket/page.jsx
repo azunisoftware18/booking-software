@@ -52,7 +52,10 @@ export default function TicketTypePage() {
   );
   const assignedLocation = me?.location;
   const assignedCenter = assignedLocation?.city || assignedLocation?.name;
-  const visibleTicketTypes = !isSuperAdmin && assignedCenter
+  const isLocationAdmin = ["ADMIN", "LOCATION_ADMIN"].includes(
+    me?.role?.roleCode,
+  );
+  const visibleTicketTypes = !isSuperAdmin && !isLocationAdmin && assignedCenter
     ? (ticketTypes || []).filter(
         (ticket) =>
           ticket.center?.trim().toLowerCase() ===
@@ -77,8 +80,7 @@ export default function TicketTypePage() {
   const bookingTotal = selectedBookingEntryFees
     .reduce((total, ticket) => {
       const price = Number(ticket.price || 0);
-      const taxPercent = Number(ticket.taxPercent || 0);
-      const unitPrice = Math.round(price * (1 + taxPercent / 100) * 100) / 100;
+      const unitPrice = Math.round(price * 100) / 100;
       return total + unitPrice * Number(bookingEntryFeeQuantities[ticket.id]);
     }, 0)
     .toFixed(2);
@@ -358,9 +360,18 @@ export default function TicketTypePage() {
                       selectedBookingCenter?.trim().toLowerCase());
                 const taxPercent = Number(ticket.taxPercent || 0);
                 const priceWithTax =
-                  Math.round(
-                    Number(ticket.price || 0) * (1 + taxPercent / 100) * 100,
-                  ) / 100;
+                  Math.round(Number(ticket.price || 0) * 100) / 100;
+                const basePrice =
+                  taxPercent > 0
+                    ? Math.round(
+                        (priceWithTax / (1 + taxPercent / 100)) * 100,
+                      ) / 100
+                    : priceWithTax;
+                const taxAmount =
+                  Math.round((priceWithTax - basePrice) * 100) / 100;
+                const cgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+                const sgstAmount =
+                  Math.round((taxAmount - cgstAmount) * 100) / 100;
 
                 return (
                   <div
@@ -397,8 +408,10 @@ export default function TicketTypePage() {
                             ? "Free"
                             : `₹${priceWithTax.toFixed(2)}`}
                           {taxPercent > 0 && (
-                            <span className="ml-1 text-xs font-medium text-slate-500">
-                              incl. {taxPercent}% GST
+                            <span className="mt-1 block text-xs font-medium text-slate-500">
+                              GST included · Base ₹{basePrice.toFixed(2)} · CGST{" "}
+                              {taxPercent / 2}% ₹{cgstAmount.toFixed(2)} · SGST{" "}
+                              {taxPercent / 2}% ₹{sgstAmount.toFixed(2)}
                             </span>
                           )}
                         </span>

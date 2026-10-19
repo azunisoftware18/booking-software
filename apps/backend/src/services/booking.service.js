@@ -417,9 +417,7 @@ class BookingService {
             throw ApiError.badRequest("Invalid ticket quantity");
           }
 
-          const unitAmount =
-            Math.round(type.price * (1 + (type.taxPercent || 0) / 100) * 100) /
-            100;
+          const unitAmount = Math.round(type.price * 100) / 100;
           totalAmount += unitAmount * quantity;
           totalSeats += quantity;
         });
@@ -681,6 +679,18 @@ class BookingService {
           select: {
             name: true,
             location: true,
+          },
+        },
+        tickets: {
+          select: {
+            type: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                taxPercent: true,
+              },
+            },
           },
         },
         annexureItems: {
@@ -1017,8 +1027,24 @@ We can't wait to welcome you! 🎉`;
   // ============================================================
   // GET ALL BOOKINGS
   // ============================================================
-  static async getAllBookings() {
+  static getBookingScope(currentUser) {
+    if (currentUser?.role?.roleCode === "SUPER_ADMIN") return {};
+    if (currentUser?.locationId) {
+      return { locationId: currentUser.locationId };
+    }
+    if (currentUser?.placeId) {
+      return { placeId: currentUser.placeId };
+    }
+
+    return null;
+  }
+
+  static async getAllBookings(currentUser) {
+    const scope = this.getBookingScope(currentUser);
+    if (!scope) return [];
+
     const bookings = await prisma.booking.findMany({
+      where: scope,
       include: {
         place: true,
         user: true,
@@ -1040,10 +1066,14 @@ We can't wait to welcome you! 🎉`;
   // ============================================================
   // GET BOOKING BY ID
   // ============================================================
-  static async getBookingById(id) {
-    const booking = await prisma.booking.findUnique({
+  static async getBookingById(id, currentUser) {
+    const scope = this.getBookingScope(currentUser);
+    if (!scope) throw ApiError.notFound("Booking not found");
+
+    const booking = await prisma.booking.findFirst({
       where: {
         id,
+        ...scope,
       },
       include: {
         place: true,

@@ -334,8 +334,6 @@
 //   drawField(rightX, cursorY, "Venue", "Springfield School Kiran Path, Sector-3, Mansarovar, Jaipur, Rajasthan - 302020");
 //   cursorY += 45;
 
-
-
 //   // ─── DASHED DIVIDER before QR ───
 //   doc
 //     .moveTo(cardX + 50, cursorY)
@@ -498,9 +496,6 @@
 
 // export default TicketService;
 
-
-
-
 import prisma from "../db/db.js";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
@@ -596,6 +591,35 @@ class TicketService {
       minute: "2-digit",
       hour12: true,
     });
+    const gstBreakdown = booking.tickets.reduce(
+      (summary, ticket) => {
+        const type = ticket.type;
+        const taxPercent = Number(type.taxPercent || 0);
+        const total = Math.round(Number(type.price) * 100) / 100;
+        const base =
+          taxPercent > 0
+            ? Math.round((total / (1 + taxPercent / 100)) * 100) / 100
+            : total;
+        const tax = Math.round((total - base) * 100) / 100;
+        const cgst = Math.round((tax / 2) * 100) / 100;
+
+        if (taxPercent > 0) {
+          summary.base += base;
+          summary.cgst += cgst;
+          summary.sgst += Math.round((tax - cgst) * 100) / 100;
+          summary.rates.add(taxPercent / 2);
+        }
+
+        return summary;
+      },
+      { base: 0, cgst: 0, sgst: 0, rates: new Set() }
+    );
+    gstBreakdown.base = Math.round(gstBreakdown.base * 100) / 100;
+    gstBreakdown.cgst = Math.round(gstBreakdown.cgst * 100) / 100;
+    gstBreakdown.sgst = Math.round(gstBreakdown.sgst * 100) / 100;
+    gstBreakdown.rates = [...gstBreakdown.rates]
+      .map((rate) => `${rate}%`)
+      .join(", ");
 
     for (let i = 0; i < booking.tickets.length; i++) {
       if (i > 0) doc.addPage();
@@ -607,6 +631,7 @@ class TicketService {
         formattedDate,
         formattedTime,
         colors,
+        gstBreakdown,
         index: i,
         total: booking.tickets.length,
       });
@@ -675,7 +700,7 @@ class TicketService {
           `${item.place.annexure || ""}${item.place.annexureOption ? ` - ${item.place.annexureOption}` : ""}`,
           margin + 14,
           cursorY + 12,
-          { width: pageWidth - margin * 2 - 28 },
+          { width: pageWidth - margin * 2 - 28 }
         );
       doc
         .font("Helvetica")
@@ -689,7 +714,7 @@ class TicketService {
         .text(
           `Amount: Rs ${Number(item.amount).toFixed(2)}`,
           margin + 14,
-          cursorY + 86,
+          cursorY + 86
         );
       cursorY += 128;
     }
@@ -702,7 +727,7 @@ class TicketService {
         `Combined total: Rs ${Number(booking.totalAmount).toFixed(2)}`,
         margin,
         cursorY + 2,
-        { width: pageWidth - margin * 2, align: "right" },
+        { width: pageWidth - margin * 2, align: "right" }
       );
   }
 
@@ -716,11 +741,11 @@ class TicketService {
       formattedDate,
       formattedTime,
       colors,
+      gstBreakdown,
       index,
       total,
     }
   ) {
-    
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
     const margin = 30;
@@ -850,7 +875,7 @@ class TicketService {
       leftX,
       cursorY,
       "Venue",
-      "Springfield School, Kiran Path, Sector-3, Mansarovar, Jaipur, Rajasthan - 302020",
+      "Science Department",
       cardW - 100 // Full width
     );
     cursorY += 55; // Extra space for the longer address to wrap nicely
@@ -887,7 +912,8 @@ class TicketService {
     cursorY += 16;
 
     // ─── FOOTER AMOUNT BAR ───
-    const footerH = 80;
+    const hasGst = Boolean(gstBreakdown.rates);
+    const footerH = hasGst ? 120 : 80;
     const footerY = cardY + cardH - footerH - 10;
 
     // Divider above footer
@@ -900,11 +926,43 @@ class TicketService {
       .stroke()
       .undash();
 
+    if (hasGst) {
+      doc
+        .fontSize(8)
+        .fillColor(colors.gray)
+        .font("Helvetica-Bold")
+        .text(
+          `Taxable amount: Rs ${gstBreakdown.base.toFixed(2)}`,
+          cardX + 50,
+          footerY + 8
+        );
+
+      doc
+        .fontSize(8)
+        .fillColor(colors.gray)
+        .font("Helvetica-Bold")
+        .text(
+          `CGST (${gstBreakdown.rates}): Rs ${gstBreakdown.cgst.toFixed(2)}`,
+          cardX + 50,
+          footerY + 20
+        );
+
+      doc
+        .fontSize(8)
+        .fillColor(colors.gray)
+        .font("Helvetica-Bold")
+        .text(
+          `SGST (${gstBreakdown.rates}): Rs ${gstBreakdown.sgst.toFixed(2)}`,
+          cardX + 50,
+          footerY + 32
+        );
+    }
+
     doc
       .fontSize(8)
       .fillColor(colors.gray)
       .font("Helvetica-Bold")
-      .text("TOTAL FARE PAID", cardX + 50, footerY + 18, {
+      .text("TOTAL FARE PAID", cardX + 50, footerY + (hasGst ? 48 : 18), {
         characterSpacing: 1,
       });
 
@@ -912,14 +970,18 @@ class TicketService {
       .fontSize(24)
       .fillColor(colors.royalBlue)
       .font("Times-Bold")
-      .text(`Rs ${booking.totalAmount}`, cardX + 50, footerY + 30);
+      .text(
+        `Rs ${booking.totalAmount}`,
+        cardX + 50,
+        footerY + (hasGst ? 59 : 30)
+      );
 
     const txnId = `#ET-${String(booking.id).slice(-6).toUpperCase()}`;
     doc
       .fontSize(10)
       .fillColor(colors.gray)
       .font("Courier-Bold")
-      .text(txnId, cardX + cardW - 200, footerY + 40, {
+      .text(txnId, cardX + cardW - 200, footerY + (hasGst ? 68 : 40), {
         width: 150,
         align: "right",
       });

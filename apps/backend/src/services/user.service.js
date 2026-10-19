@@ -147,11 +147,12 @@ class UserService {
 
     // Assign hierarchy fields on the server
     const nextLevel = isSuperAdmin ? 2 : 3;
-    const nextPlaceId = isSuperAdmin ? placeId : actor.placeId;
+    const nextPlaceId = isSuperAdmin ? placeId || null : actor.placeId;
 
-    // A place is required for a newly created user
-    if (!nextPlaceId) {
-      throw ApiError.badRequest("Place is required");
+    if (!isSuperAdmin && !nextPlaceId) {
+      throw ApiError.badRequest(
+        "Your account must be assigned to a place before creating employees",
+      );
     }
 
     // Level 2 users cannot assign another place
@@ -163,18 +164,19 @@ class UserService {
       throw ApiError.forbidden("You can only assign your own place");
     }
 
-    // Check place exists
-    const place = await prisma.place.findUnique({
-      where: {
-        id: nextPlaceId,
-      },
-      select: {
-        id: true,
-      },
-    });
+    if (nextPlaceId) {
+      const place = await prisma.place.findUnique({
+        where: {
+          id: nextPlaceId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    if (!place) {
-      throw ApiError.notFound("Place not found");
+      if (!place) {
+        throw ApiError.notFound("Place not found");
+      }
     }
 
     // Hash password

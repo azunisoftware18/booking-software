@@ -29,7 +29,8 @@ class UserValidation {
 
       placeId: z
         .string()
-        .min(1, "Place is required"),
+        .min(1, "Place is required")
+        .optional(),
     });
   }
 

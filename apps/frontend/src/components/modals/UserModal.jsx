@@ -1,52 +1,51 @@
 // frontend/src/components/modals/UserModal.jsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X, UserPlus, Eye, EyeOff } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useRoles } from "@/lib/queries/useRole";
-import { usePlaces } from "@/lib/queries/usePlace";
 
 const defaultForm = {
   fullName: "",
   email: "",
   password: "",
   roleId: "",
-  placeId: "",
   isActive: true,
 };
 
-export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
-  const [formData, setFormData] = useState(defaultForm);
+const getInitialFormData = (defaultValues) =>
+  defaultValues
+    ? {
+        fullName: defaultValues.fullName || "",
+        email: defaultValues.email || "",
+        password: "",
+        roleId: defaultValues.roleId || defaultValues.role?.id || "",
+        isActive: defaultValues.isActive ?? true,
+      }
+    : defaultForm;
+
+export default function UserModal(props) {
+  if (!props.open) return null;
+
+  return (
+    <UserModalContent
+      key={props.defaultValues?.id || "new-user"}
+      {...props}
+    />
+  );
+}
+
+function UserModalContent({ onClose, onSubmit, defaultValues }) {
+  const [formData, setFormData] = useState(() =>
+    getInitialFormData(defaultValues),
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
   const isEdit = Boolean(defaultValues);
 
   const { data: roles = [], isLoading: rolesLoading } = useRoles();
-  const { data: places = [], isLoading: placesLoading } = usePlaces();
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (defaultValues) {
-      setFormData({
-        fullName: defaultValues.fullName || "",
-        email: defaultValues.email || "",
-        password: "",
-        roleId: defaultValues.roleId || defaultValues.role?.id || "",
-        placeId: defaultValues.placeId || defaultValues.place?.id || "",
-        isActive: defaultValues.isActive ?? true,
-      });
-    } else {
-      setFormData(defaultForm);
-    }
-
-    setErrors({});
-    setShowPassword(false);
-  }, [open, defaultValues]);
-
-  if (!open) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -73,7 +72,6 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
     }
 
     if (!formData.roleId) newErrors.roleId = "Role is required";
-    if (!formData.placeId) newErrors.placeId = "Place is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -88,7 +86,6 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
       fullName: formData.fullName.trim(),
       email: formData.email.trim().toLowerCase(),
       roleId: formData.roleId,
-      placeId: formData.placeId,
       isActive: formData.isActive,
     };
 
@@ -260,36 +257,6 @@ export default function UserModal({ open, onClose, onSubmit, defaultValues }) {
                 <option value="false">Inactive</option>
               </select>
             </div>
-          </div>
-
-          {/* Place - Dynamic from DB */}
-          <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Place <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="placeId"
-              value={formData.placeId}
-              onChange={handleChange}
-              disabled={placesLoading}
-              className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition ${errors.placeId
-                  ? "border-red-400"
-                  : "border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                }`}
-            >
-              <option value="">
-                {placesLoading ? "Loading places..." : "Select Place"}
-              </option>
-              {Array.isArray(places) &&
-                places.map((place) => (
-                  <option key={place.id} value={place.id}>
-                    {place.name || "Unnamed Place"}
-                  </option>
-                ))}
-            </select>
-            {errors.placeId && (
-              <p className="mt-1 text-xs text-red-500">{errors.placeId}</p>
-            )}
           </div>
 
           {/* Login Info */}

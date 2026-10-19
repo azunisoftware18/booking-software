@@ -47,10 +47,8 @@ export default function TicketCounter({
     const total = useMemo(() => {
         return availableTicketTypes.reduce((acc, t) => {
             const key = t._id || t.id;
-            const priceWithTax = Math.round(
-                Number(t.price) * (1 + Number(t.taxPercent || 0) / 100) * 100
-            ) / 100;
-            return acc + ((selectedCounts[key] || 0) * priceWithTax);
+            const inclusivePrice = Math.round(Number(t.price) * 100) / 100;
+            return acc + ((selectedCounts[key] || 0) * inclusivePrice);
         }, 0);
     }, [availableTicketTypes, selectedCounts]);
 
@@ -104,6 +102,15 @@ export default function TicketCounter({
                     ) : !isLoading && availableTicketTypes.map((t, index) => {
                         const uniqueKey = t._id || t.id || index;
                         const isSelected = (selectedCounts[uniqueKey] || 0) > 0;
+                        const taxPercent = Number(t.taxPercent || 0);
+                        const priceWithTax = Math.round(Number(t.price) * 100) / 100;
+                        const basePrice = taxPercent > 0
+                            ? Math.round((priceWithTax / (1 + taxPercent / 100)) * 100) / 100
+                            : priceWithTax;
+                        const taxAmount = Math.round((priceWithTax - basePrice) * 100) / 100;
+                        const cgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+                        const sgstAmount = Math.round((taxAmount - cgstAmount) * 100) / 100;
+
                         return (
                             <motion.div
                                 key={uniqueKey}
@@ -120,20 +127,16 @@ export default function TicketCounter({
                                 </div>
 
                                 <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-6 shrink-0">
-                                    <p className={`font-serif text-xl font-bold tracking-wide ${isSelected ? "text-gold drop-shadow-sm" : "text-royal-blue"}`}>
-                                        {Number(t.price) === 0 ? "Free" : `₹${(
-                                            Math.round(
-                                                Number(t.price) *
-                                                (1 + Number(t.taxPercent || 0) / 100) *
-                                                100
-                                            ) / 100
-                                        ).toFixed(2)}`}
-                                    </p>
-                                    {Number(t.taxPercent) > 0 && (
-                                        <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-slate-500"}`}>
-                                            incl. {t.taxPercent}% GST
+                                    <div>
+                                        <p className={`font-serif text-xl font-bold tracking-wide ${isSelected ? "text-gold drop-shadow-sm" : "text-royal-blue"}`}>
+                                            {Number(t.price) === 0 ? "Free" : `₹${priceWithTax.toFixed(2)}`}
                                         </p>
-                                    )}
+                                        {taxPercent > 0 && (
+                                            <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-slate-500"}`}>
+                                                GST included · Base ₹{basePrice.toFixed(2)} · CGST {taxPercent / 2}% ₹{cgstAmount.toFixed(2)} · SGST {taxPercent / 2}% ₹{sgstAmount.toFixed(2)}
+                                            </p>
+                                        )}
+                                    </div>
 
                                     <div className={`flex items-center gap-3 px-2 py-1.5 rounded-lg border transition-colors duration-300
                                         ${isSelected

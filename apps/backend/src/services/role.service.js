@@ -68,6 +68,11 @@ static async getAllRoles(currentUserId) {
     select: {
       parentId: true,
       roleId: true,
+      role: {
+        select: {
+          roleCode: true,
+        },
+      },
     },
   });
 
@@ -91,7 +96,48 @@ static async getAllRoles(currentUserId) {
     parentRoleId = parentUser?.roleId ?? null;
   }
 
-  // Super Admin, parent ka role aur current user ka role exclude karo
+  if (currentUser.role?.roleCode === "SUPER_ADMIN") {
+    return prisma.role.findMany({
+      where: {
+        roleCode: { not: "SUPER_ADMIN" },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  if (["ADMIN", "LOCATION_ADMIN"].includes(currentUser.role?.roleCode)) {
+    return prisma.role.findMany({
+      where: {
+        roleCode: { not: "SUPER_ADMIN" },
+        createdById: currentUserId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  // Other users see roles available within their hierarchy.
   const excludedRoleIds = [
     parentRoleId,
     currentUser.roleId,
@@ -135,7 +181,12 @@ static async getAllRoles(currentUserId) {
   // =========================================================
   // GET ROLE BY ID
   // =========================================================
-  static async getRoleById(id) {
+  static async getRoleById(id, currentUserId) {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { role: { select: { roleCode: true } } },
+    });
+
     const role = await prisma.role.findUnique({
       where: {
         id,
@@ -146,13 +197,20 @@ static async getAllRoles(currentUserId) {
       throw ApiError.notFound("Role not found");
     }
 
+    if (
+      ["ADMIN", "LOCATION_ADMIN"].includes(currentUser?.role?.roleCode) &&
+      role.createdById !== currentUserId
+    ) {
+      throw ApiError.notFound("Role not found");
+    }
+
     return role;
   }
 
   // =========================================================
   // UPDATE ROLE
   // =========================================================
-  static async updateRole(id, payload) {
+  static async updateRole(id, payload, currentUserId) {
     // =======================================================
     // FIND EXISTING ROLE
     // =======================================================
@@ -163,6 +221,18 @@ static async getAllRoles(currentUserId) {
     });
 
     if (!existing) {
+      throw ApiError.notFound("Role not found");
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { role: { select: { roleCode: true } } },
+    });
+
+    if (
+      ["ADMIN", "LOCATION_ADMIN"].includes(actor?.role?.roleCode) &&
+      existing.createdById !== currentUserId
+    ) {
       throw ApiError.notFound("Role not found");
     }
 
@@ -252,7 +322,7 @@ static async getAllRoles(currentUserId) {
   // =========================================================
   // DELETE ROLE
   // =========================================================
-  static async deleteRole(id) {
+  static async deleteRole(id, currentUserId) {
     // =======================================================
     // FIND ROLE
     // =======================================================
@@ -263,6 +333,18 @@ static async getAllRoles(currentUserId) {
     });
 
     if (!existing) {
+      throw ApiError.notFound("Role not found");
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { role: { select: { roleCode: true } } },
+    });
+
+    if (
+      ["ADMIN", "LOCATION_ADMIN"].includes(actor?.role?.roleCode) &&
+      existing.createdById !== currentUserId
+    ) {
       throw ApiError.notFound("Role not found");
     }
 

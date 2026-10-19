@@ -7,6 +7,42 @@ import { Download, CheckCheck } from 'lucide-react';
 import { useBookingById } from '@/hooks/useBooking';
 import api from '@/lib/api';
 
+function getTicketGstGroups(tickets = []) {
+	const groups = new Map();
+
+	for (const ticket of tickets) {
+		const type = ticket.type;
+		if (!type) continue;
+
+		const taxPercent = Number(type.taxPercent || 0);
+		const total = Math.round(Number(type.price) * 100) / 100;
+		const base =
+			taxPercent > 0
+				? Math.round((total / (1 + taxPercent / 100)) * 100) / 100
+				: total;
+		const tax = Math.round((total - base) * 100) / 100;
+		const cgst = Math.round((tax / 2) * 100) / 100;
+		const key = type.id || `${type.name}-${taxPercent}`;
+		const group = groups.get(key) || {
+			id: type.id,
+			name: type.name,
+			quantity: 0,
+			base: 0,
+			cgst: 0,
+			sgst: 0,
+			taxPercent,
+		};
+
+		group.quantity += 1;
+		group.base += base;
+		group.cgst += cgst;
+		group.sgst += Math.round((tax - cgst) * 100) / 100;
+		groups.set(key, group);
+	}
+
+	return Array.from(groups.values());
+}
+
 function SuccessContent() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -54,11 +90,19 @@ function SuccessContent() {
 				hour12: true,
 			})
 		: '-';
+	const ticketGstGroups = getTicketGstGroups(booking?.tickets).filter(
+	(group) => group.taxPercent > 0,
+	);
+	const formatAmount = (amount) =>
+		Number(amount).toLocaleString('en-IN', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		});
 
 	return (
-		<div className="h-screen w-full flex items-center justify-center px-4 py-3 bg-sandstone relative overflow-hidden select-none">
+		<div className="min-h-screen w-full flex items-center justify-center px-4 py-3 bg-sandstone relative overflow-y-auto select-none">
 			<div className="absolute inset-0 opacity-[0.05] bg-mandala pointer-events-none scale-105"></div>
-			<div className="w-full max-w-2xl text-center z-10 flex flex-col justify-center items-center space-y-3 sm:space-y-4 max-h-full">
+			<div className="w-full max-w-2xl text-center z-10 flex flex-col justify-center items-center space-y-3 sm:space-y-4">
 				<motion.div
 					initial={{ scale: 0.6, opacity: 0 }}
 					animate={{ scale: 1, opacity: 1 }}
@@ -184,6 +228,40 @@ function SuccessContent() {
 												<span className="shrink-0 font-bold text-jaipur-dark">
 													₹{Number(item.amount).toLocaleString('en-IN')}
 												</span>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+						{booking?.bookingType !== 'ANNEXURE' &&
+							ticketGstGroups.some((group) => group.taxPercent > 0) && (
+								<div className="mt-3 border-t border-gold/10 px-4 pt-3 text-left">
+									<p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+										GST breakup
+									</p>
+									<div className="space-y-2">
+										{ticketGstGroups.map((group) => (
+											<div
+												key={group.id || `${group.name}-${group.taxPercent}`}
+												className="text-xs text-royal-blue">
+												<div className="flex justify-between gap-3 font-semibold">
+													<span className="min-w-0 truncate">
+														{group.name} × {group.quantity}
+													</span>
+													<span className="shrink-0">
+														Base ₹{formatAmount(group.base)}
+													</span>
+												</div>
+												<div className="mt-1 flex justify-between gap-3 text-[11px] text-gray-500">
+													<span>
+														CGST {group.taxPercent / 2}% ₹
+														{formatAmount(group.cgst)}
+													</span>
+													<span>
+														SGST {group.taxPercent / 2}% ₹
+														{formatAmount(group.sgst)}
+													</span>
+												</div>
 											</div>
 										))}
 									</div>
