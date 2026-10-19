@@ -1,505 +1,15 @@
-// import prisma from "../db/db.js";
-// import PDFDocument from "pdfkit";
-// import QRCode from "qrcode";
-// import { ApiError } from "../utils/ApiError.js";
-
-// class TicketService {
-//   static async getAllTickets() {
-//     const tickets = await prisma.ticket.findMany({
-//       include: {
-//         booking: {
-//           select: {
-//             id: true,
-//             name: true,
-//             email: true,
-//             phone: true,
-//             status: true,
-//             totalAmount: true,
-//             slotDateTime: true,
-
-//             place: {
-//               select: {
-//                 id: true,
-//                 name: true,
-//                 location: true,
-//               },
-//             },
-//           },
-//         },
-
-//         type: {
-//           select: {
-//             id: true,
-//             name: true,
-//             price: true,
-//           },
-//         },
-//       },
-
-//       orderBy: {
-//         createdAt: "desc",
-//       },
-//     });
-
-//     return tickets;
-//   }
-//   // static async generatePDF(bookingId) {
-//   //   const booking = await prisma.booking.findUnique({
-//   //     where: {
-//   //       id: bookingId,
-//   //     },
-
-//   //     include: {
-//   //       place: true,
-
-//   //       tickets: {
-//   //         include: {
-//   //           type: true,
-//   //         },
-//   //       },
-//   //     },
-//   //   });
-
-//   //   if (!booking) {
-//   //     throw new Error("Booking not found");
-//   //   }
-
-//   //   const doc = new PDFDocument({
-//   //     margin: 50,
-//   //   });
-
-//   //   const buffers = [];
-
-//   //   doc.on("data", buffers.push.bind(buffers));
-
-//   //   const pdfPromise = new Promise((resolve) => {
-//   //     doc.on("end", () => {
-//   //       resolve(Buffer.concat(buffers));
-//   //     });
-//   //   });
-
-//   //   // 🔥 LOOP ALL TICKETS
-//   //   for (const [index, ticket] of booking.tickets.entries()) {
-//   //     // HEADER
-//   //     doc.fontSize(24).text("Ticket Booking", {
-//   //       align: "center",
-//   //     });
-
-//   //     doc.moveDown();
-
-//   //     // BOOKING DETAILS
-//   //     doc.fontSize(16).text(`Booking ID: ${booking.id}`);
-
-//   //     doc.text(`Customer: ${booking.name}`);
-
-//   //     doc.text(`Email: ${booking.email}`);
-
-//   //     doc.text(`Phone: ${booking.phone}`);
-
-//   //     doc.text(`Place: ${booking.place.name}`);
-
-//   //     doc.text(
-//   //       `Slot: ${new Date(booking.slotDateTime).toLocaleString("en-IN")}`
-//   //     );
-
-//   //     doc.text(`Status: ${booking.status}`);
-
-//   //     doc.text(`Total Amount: Rs${booking.totalAmount}`);
-
-//   //     doc.moveDown();
-
-//   //     // TICKET DETAILS
-//   //     doc.fontSize(18).text(`Ticket ${index + 1}`, {
-//   //       underline: true,
-//   //     });
-
-//   //     doc.moveDown();
-
-//   //     doc.fontSize(14).text(`Ticket ID: ${ticket.id}`);
-
-//   //     doc.text(`Type: ${ticket.type.name}`);
-
-//   //     doc.text(`Ticket Status: ${ticket.status}`);
-
-//   //     doc.moveDown();
-
-//   //     // 🔥 GENERATE QR IMAGE
-//   //     const qrImage = await QRCode.toDataURL(ticket.qrCode);
-
-//   //     // 🔥 SHOW QR IMAGE
-//   //     doc.image(qrImage, {
-//   //       fit: [180, 180],
-//   //       align: "center",
-//   //     });
-
-//   //     doc.moveDown(4);
-
-//   //     // 🔥 NEXT PAGE
-//   //     if (index !== booking.tickets.length - 1) {
-//   //       doc.addPage();
-//   //     }
-//   //   }
-
-//   //   doc.end();
-
-//   //   return pdfPromise;
-//   // }
-
-//   static async generatePDF(bookingId) {
-//   const booking = await prisma.booking.findUnique({
-//     where: { id: bookingId },
-//     include: {
-//       place: true,
-//       tickets: { include: { type: true } },
-//     },
-//   });
-
-//   if (!booking) throw new Error("Booking not found");
-
-//   const doc = new PDFDocument({ margin: 0, size: "A4" });
-//   const buffers = [];
-//   doc.on("data", buffers.push.bind(buffers));
-//   const pdfPromise = new Promise((resolve) =>
-//     doc.on("end", () => resolve(Buffer.concat(buffers)))
-//   );
-
-//   // Pre-generate all QR codes
-//   const qrImages = await Promise.all(
-//     booking.tickets.map((t) =>
-//       QRCode.toDataURL(t.qrCode, { width: 400, margin: 1 })
-//     )
-//   );
-
-//   const colors = {
-//     royalBlue: "#0b2149",
-//     gold: "#b8860b",
-//     jaipurDark: "#994113",
-//     sandstone: "#f5efe6",
-//     gray: "#8a8a8a",
-//   };
-
-//   const slot = new Date(booking.slotDateTime);
-//   const formattedDate = slot.toLocaleDateString("en-IN", {
-//     weekday: "long",
-//     day: "2-digit",
-//     month: "long",
-//     year: "numeric",
-//   });
-//   const formattedTime = slot.toLocaleTimeString("en-IN", {
-//     hour: "numeric",
-//     minute: "2-digit",
-//     hour12: true,
-//   });
-
-//   for (let i = 0; i < booking.tickets.length; i++) {
-//     if (i > 0) doc.addPage();
-
-//     TicketService._drawTicketPage(doc, {
-//       booking,
-//       ticket: booking.tickets[i],
-//       qrImage: qrImages[i],
-//       formattedDate,
-//       formattedTime,
-//       colors,
-//       index: i,
-//       total: booking.tickets.length,
-//     });
-//   }
-
-//   doc.end();
-//   return pdfPromise;
-// }
-
-// // 🔥 Helper: draws one beautiful ticket page
-// static _drawTicketPage(doc, { booking, ticket, qrImage, formattedDate, formattedTime, colors, index, total }) {
-//   const pageWidth = doc.page.width;
-//   const pageHeight = doc.page.height;
-//   const margin = 30;
-//   const cardX = margin;
-//   const cardY = margin;
-//   const cardW = pageWidth - margin * 2;
-//   const cardH = pageHeight - margin * 2;
-
-//   // Sandstone background
-//   doc.rect(0, 0, pageWidth, pageHeight).fill(colors.sandstone);
-
-//   // White card
-//   doc.roundedRect(cardX, cardY, cardW, cardH, 20).fill("#ffffff");
-
-//   // Gold outer border
-//   doc
-//     .roundedRect(cardX, cardY, cardW, cardH, 20)
-//     .lineWidth(1)
-//     .strokeColor(colors.gold)
-//     .stroke();
-
-//   // Inner dashed border
-//   doc
-//     .roundedRect(cardX + 10, cardY + 10, cardW - 20, cardH - 20, 14)
-//     .dash(3, { space: 3 })
-//     .lineWidth(0.5)
-//     .strokeColor(colors.gold)
-//     .stroke()
-//     .undash();
-
-//   const centerX = pageWidth / 2;
-//   let cursorY = cardY + 45;
-
-//   // ─── HEADER ───
-//   doc
-//     .fontSize(9)
-//     .fillColor(colors.jaipurDark)
-//     .font("Helvetica-Bold")
-//     .text("OFFICIAL BOOKING TICKET", 0, cursorY, {
-//       align: "center",
-//       characterSpacing: 4,
-//     });
-//   cursorY += 22;
-
-//   doc
-//     .fontSize(26)
-//     .fillColor(colors.royalBlue)
-//     .font("Times-Bold")
-//     .text(booking.place?.name || "Heritage Monument", 0, cursorY, {
-//       align: "center",
-//     });
-//   cursorY += 32;
-
-//   doc
-//     .fontSize(10)
-//     .fillColor(colors.gray)
-//     .font("Helvetica")
-//     .text(booking.place?.location || "Jaipur, Rajasthan", 0, cursorY, {
-//       align: "center",
-//     });
-//   cursorY += 22;
-
-//   // Ticket x of y badge
-//   doc
-//     .fontSize(9)
-//     .fillColor(colors.jaipurDark)
-//     .font("Helvetica-Bold")
-//     .text(`TICKET ${index + 1} OF ${total}`, 0, cursorY, {
-//       align: "center",
-//       characterSpacing: 2,
-//     });
-//   cursorY += 24;
-
-//   // Divider
-//   doc
-//     .moveTo(cardX + 50, cursorY)
-//     .lineTo(cardX + cardW - 50, cursorY)
-//     .dash(2, { space: 2 })
-//     .lineWidth(0.6)
-//     .strokeColor(colors.gold)
-//     .stroke()
-//     .undash();
-//   cursorY += 25;
-
-//   // ─── INFO GRID (2 columns) ───
-//   const leftX = cardX + 50;
-//   const rightX = cardX + cardW / 2 + 10;
-//   const colW = cardW / 2 - 60;
-
-//   const drawField = (x, y, label, value) => {
-//     doc
-//       .fontSize(8)
-//       .fillColor(colors.gray)
-//       .font("Helvetica-Bold")
-//       .text(label.toUpperCase(), x, y, { width: colW, characterSpacing: 1 });
-//     doc
-//       .fontSize(12)
-//       .fillColor(colors.royalBlue)
-//       .font("Times-Bold")
-//       .text(String(value ?? "-"), x, y + 12, { width: colW, ellipsis: true });
-//   };
-
-//   drawField(leftX, cursorY, "Booking ID", String(booking.id).slice(-12).toUpperCase());
-//   drawField(rightX, cursorY, "Customer", booking.name || "Guest");
-//   cursorY += 45;
-
-//   drawField(leftX, cursorY, "Email", booking.email || "-");
-//   drawField(rightX, cursorY, "Phone", booking.phone || "-");
-//   cursorY += 45;
-
-//   drawField(leftX, cursorY, "Date of Visit", formattedDate);
-//   drawField(rightX, cursorY, "Visiting Time", formattedTime);
-//   cursorY += 45;
-
-//   drawField(leftX, cursorY, "Ticket Type", ticket.type?.name || "Adult");
-//   drawField(rightX, cursorY, "Payment Mode", "Easebuzz");
-//   cursorY += 45;
-
-//   drawField(leftX, cursorY, "Ticket Type", ticket.type?.name || "Adult");
-//   drawField(rightX, cursorY, "Venue", "Springfield School Kiran Path, Sector-3, Mansarovar, Jaipur, Rajasthan - 302020");
-//   cursorY += 45;
-
-//   // ─── DASHED DIVIDER before QR ───
-//   doc
-//     .moveTo(cardX + 50, cursorY)
-//     .lineTo(cardX + cardW - 50, cursorY)
-//     .dash(4, { space: 4 })
-//     .lineWidth(0.6)
-//     .strokeColor(colors.gold)
-//     .stroke()
-//     .undash();
-//   cursorY += 30;
-
-//   // ─── QR CODE ───
-//   const qrSize = 170;
-//   const qrX = (pageWidth - qrSize) / 2;
-//   doc.image(qrImage, qrX, cursorY, { width: qrSize, height: qrSize });
-//   cursorY += qrSize + 10;
-
-//   doc
-//     .fontSize(9)
-//     .fillColor(colors.gray)
-//     .font("Helvetica")
-//     .text("Scan this QR at entry gate", 0, cursorY, { align: "center" });
-//   cursorY += 16;
-
-//   doc
-//     .fontSize(8)
-//     .fillColor(colors.gray)
-//     .font("Courier")
-//     .text(`Ticket ID: ${ticket.id}`, 0, cursorY, { align: "center" });
-//   cursorY += 16;
-
-//   // ─── STATUS PILL ───
-//   // const statusText = (ticket.status || "PENDING").toUpperCase();
-//   // const statusColor =
-//   //   statusText === "PAID" || statusText === "SCANNED" || statusText === "VALID"
-//   //     ? "#1b4332"
-//   //     : "#994113";
-//   // const pillW = 90;
-//   // const pillH = 20;
-//   // const pillX = (pageWidth - pillW) / 2;
-//   // doc
-//   //   .roundedRect(pillX, cursorY, pillW, pillH, 10)
-//   //   .fill(statusColor);
-//   // doc
-//   //   .fontSize(9)
-//   //   .fillColor("#ffffff")
-//   //   .font("Helvetica-Bold")
-//   //   .text(statusText, pillX, cursorY + 6, {
-//   //     width: pillW,
-//   //     align: "center",
-//   //     characterSpacing: 1,
-//   //   });
-
-//   // ─── FOOTER AMOUNT BAR ───
-//   const footerH = 80;
-//   const footerY = cardY + cardH - footerH - 10;
-
-//   // Divider above footer
-//   doc
-//     .moveTo(cardX + 20, footerY)
-//     .lineTo(cardX + cardW - 20, footerY)
-//     .dash(4, { space: 4 })
-//     .lineWidth(0.8)
-//     .strokeColor(colors.gold)
-//     .stroke()
-//     .undash();
-
-//   doc
-//     .fontSize(8)
-//     .fillColor(colors.gray)
-//     .font("Helvetica-Bold")
-//     .text("TOTAL FARE PAID", cardX + 50, footerY + 18, {
-//       characterSpacing: 1,
-//     });
-
-//   doc
-//     .fontSize(24)
-//     .fillColor(colors.royalBlue)
-//     .font("Times-Bold")
-//     .text(`Rs ${booking.totalAmount}`, cardX + 50, footerY + 30);
-
-//   const txnId = `#ET-${String(booking.id).slice(-6).toUpperCase()}`;
-//   doc
-//     .fontSize(10)
-//     .fillColor(colors.gray)
-//     .font("Courier-Bold")
-//     .text(txnId, cardX + cardW - 200, footerY + 40, {
-//       width: 150,
-//       align: "right",
-//     });
-
-//   // Bottom note
-//   doc
-//     .fontSize(8)
-//     .fillColor(colors.gray)
-//     .font("Helvetica-Oblique")
-//     .text(
-//       "Please carry a valid ID proof. This ticket is non-transferable.",
-//       0,
-//       cardY + cardH - 22,
-//       { align: "center" }
-//     );
-// }  static async scanTicket(payload) {
-
-//   const { qrCode } = payload;
-
-//   const ticket = await prisma.ticket.findFirst({
-//     where: {
-//       qrCode,
-//     },
-
-//     include: {
-//       booking: true,
-//       type: true,
-//       place: true,
-//       user: true,
-//     },
-//   });
-
-//   if (!ticket) {
-//     throw ApiError.notFound("Invalid Ticket");
-//   }
-
-//   // already scanned
-//   if (ticket.status === "SCANNED") {
-//     throw ApiError.badRequest("Ticket already scanned");
-//   }
-
-//   // booking unpaid
-//   if (ticket.booking.status !== "PAID") {
-//     throw ApiError.badRequest("Payment not completed");
-//   }
-
-//   // update status
-//   const updatedTicket = await prisma.ticket.update({
-//     where: {
-//       id: ticket.id,
-//     },
-
-//     data: {
-//       status: "SCANNED",
-//     },
-//   });
-
-//   // save logs
-//   await prisma.scanLog.create({
-//   data: {
-//     ticketId: ticket.id,
-//     type: "ENTRY",
-//   },
-// });
-
-//   return {
-//     ticket: updatedTicket,
-//     booking: ticket.booking,
-//     type: ticket.type,
-//   };
-// }
-// }
-
-// export default TicketService;
-
 import prisma from "../db/db.js";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { ApiError } from "../utils/ApiError.js";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const LOGO_PATH = path.resolve(__dirname, "../../uploads/ticklogo.png");
 
 class TicketService {
   static async getAllTickets() {
@@ -731,7 +241,6 @@ class TicketService {
       );
   }
 
-  // 🔥 Helper: draws one beautiful ticket page
   static _drawTicketPage(
     doc,
     {
@@ -748,179 +257,242 @@ class TicketService {
   ) {
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
+
     const margin = 30;
     const cardX = margin;
     const cardY = margin;
     const cardW = pageWidth - margin * 2;
     const cardH = pageHeight - margin * 2;
 
-    // Sandstone background
+    const leftX = cardX + 40;
+    const rightX = cardX + cardW / 2 + 10;
+    const colW = cardW / 2 - 60;
+
+    // Background
     doc.rect(0, 0, pageWidth, pageHeight).fill(colors.sandstone);
 
-    // White card
+    // Main white card
     doc.roundedRect(cardX, cardY, cardW, cardH, 20).fill("#ffffff");
 
-    // Gold outer border
     doc
       .roundedRect(cardX, cardY, cardW, cardH, 20)
-      .lineWidth(1)
+      .lineWidth(1.2)
       .strokeColor(colors.gold)
       .stroke();
 
-    // Inner dashed border
+    // Inner border
     doc
       .roundedRect(cardX + 10, cardY + 10, cardW - 20, cardH - 20, 14)
       .dash(3, { space: 3 })
-      .lineWidth(0.5)
-      .strokeColor(colors.gold)
-      .stroke()
-      .undash();
-
-    const centerX = pageWidth / 2;
-    let cursorY = cardY + 45;
-
-    // ─── HEADER ───
-    doc
-      .fontSize(9)
-      .fillColor(colors.jaipurDark)
-      .font("Helvetica-Bold")
-      .text("OFFICIAL BOOKING TICKET", 0, cursorY, {
-        align: "center",
-        characterSpacing: 4,
-      });
-    cursorY += 22;
-
-    doc
-      .fontSize(26)
-      .fillColor(colors.royalBlue)
-      .font("Times-Bold")
-      .text(booking.place?.name || "Heritage Monument", 0, cursorY, {
-        align: "center",
-      });
-    cursorY += 32;
-
-    doc
-      .fontSize(10)
-      .fillColor(colors.gray)
-      .font("Helvetica")
-      .text(booking.place?.location || "Jaipur, Rajasthan", 0, cursorY, {
-        align: "center",
-      });
-    cursorY += 22;
-
-    // Ticket x of y badge
-    doc
-      .fontSize(9)
-      .fillColor(colors.jaipurDark)
-      .font("Helvetica-Bold")
-      .text(`TICKET ${index + 1} OF ${total}`, 0, cursorY, {
-        align: "center",
-        characterSpacing: 2,
-      });
-    cursorY += 24;
-
-    // Divider
-    doc
-      .moveTo(cardX + 50, cursorY)
-      .lineTo(cardX + cardW - 50, cursorY)
-      .dash(2, { space: 2 })
       .lineWidth(0.6)
       .strokeColor(colors.gold)
       .stroke()
       .undash();
-    cursorY += 25;
 
-    // ─── INFO GRID (2 columns) ───
-    const leftX = cardX + 50;
-    const rightX = cardX + cardW / 2 + 10;
-    const colW = cardW / 2 - 60;
+    // ------------------------------------
+    // HEADER + LARGE LOGO
+    // ------------------------------------
+    const logoWidth = 165;
+    const logoHeight = 75;
+    const logoX = cardX + 28;
+    const logoY = cardY + 28;
 
-    // Modified drawField to accept custom width and allow text wrapping
+    // Logo is optional; a missing file won't break PDF generation.
+    if (fs.existsSync(LOGO_PATH)) {
+      doc.image(LOGO_PATH, logoX, logoY, {
+        fit: [logoWidth, logoHeight],
+        align: "left",
+        valign: "center",
+      });
+    }
+
+    // Centered title below the logo
+    let headerY = cardY + 120;
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor(colors.jaipurDark)
+      .text("OFFICIAL BOOKING TICKET", cardX + 20, headerY, {
+        width: cardW - 40,
+        align: "center",
+        characterSpacing: 2.5,
+      });
+
+    headerY += 27;
+
+    doc
+      .font("Times-Bold")
+      .fontSize(29)
+      .fillColor(colors.royalBlue)
+      .text(booking.place?.name || "Heritage Monument", cardX + 20, headerY, {
+        width: cardW - 40,
+        align: "center",
+      });
+
+    headerY += 37;
+
+    doc
+      .font("Helvetica")
+      .fontSize(11)
+      .fillColor(colors.gray)
+      .text(
+        booking.place?.location || "Jaipur, Rajasthan",
+        cardX + 20,
+        headerY,
+        {
+          width: cardW - 40,
+          align: "center",
+        }
+      );
+
+    headerY += 25;
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor(colors.jaipurDark)
+      .text(`TICKET ${index + 1} OF ${total}`, cardX + 20, headerY, {
+        width: cardW - 40,
+        align: "center",
+        characterSpacing: 2,
+      });
+
+    // Header divider
+    let cursorY = headerY + 28;
+
+    doc
+      .moveTo(cardX + 40, cursorY)
+      .lineTo(cardX + cardW - 40, cursorY)
+      .dash(2, { space: 3 })
+      .lineWidth(0.7)
+      .strokeColor(colors.gold)
+      .stroke()
+      .undash();
+
+    cursorY += 28;
+
+    // ------------------------------------
+    // BOOKING INFORMATION
+    // ------------------------------------
     const drawField = (x, y, label, value, width = colW) => {
       doc
-        .fontSize(8)
-        .fillColor(colors.gray)
         .font("Helvetica-Bold")
-        .text(label.toUpperCase(), x, y, { width, characterSpacing: 1 });
+        .fontSize(9)
+        .fillColor(colors.gray)
+        .text(label.toUpperCase(), x, y, {
+          width,
+          characterSpacing: 0.8,
+        });
+
       doc
+        .font("Times-Bold")
         .fontSize(12)
         .fillColor(colors.royalBlue)
-        .font("Times-Bold")
-        .text(String(value ?? "-"), x, y + 12, { width }); // Removed ellipsis: true to allow wrapping
+        .text(String(value ?? "-"), x, y + 14, {
+          width,
+          height: 30,
+          ellipsis: true,
+        });
     };
 
     drawField(
       leftX,
       cursorY,
       "Booking ID",
-      String(booking.id).slice(-12).toUpperCase()
+      String(booking.id || "")
+        .slice(-12)
+        .toUpperCase()
     );
+
     drawField(rightX, cursorY, "Customer", booking.name || "Guest");
-    cursorY += 45;
+
+    cursorY += 47;
 
     drawField(leftX, cursorY, "Email", booking.email || "-");
     drawField(rightX, cursorY, "Phone", booking.phone || "-");
-    cursorY += 45;
+
+    cursorY += 47;
 
     drawField(leftX, cursorY, "Date of Visit", formattedDate);
     drawField(rightX, cursorY, "Visiting Time", formattedTime);
-    cursorY += 45;
 
-    drawField(leftX, cursorY, "Ticket Type", ticket.type?.name || "Adult");
-    drawField(rightX, cursorY, "Payment Mode", booking.paymentMethod);
-    cursorY += 45;
+    cursorY += 47;
 
-    // ─── FIXED VENUE SECTION (Full Width) ───
-    drawField(
-      leftX,
-      cursorY,
-      "Venue",
-      "Science Department",
-      cardW - 100 // Full width
-    );
-    cursorY += 55; // Extra space for the longer address to wrap nicely
+    drawField(leftX, cursorY, "Ticket Type", ticket.type?.name || "-");
+    drawField(rightX, cursorY, "Payment Mode", booking.paymentMethod || "-");
 
-    // ─── DASHED DIVIDER before QR ───
+    cursorY += 48;
+
+    // ------------------------------------
+    // VENUE + PAYMENT ID
+    // ------------------------------------
+    const venueWidth = booking.paymentId ? cardW - 250 : cardW - 80;
+
+    drawField(leftX, cursorY, "Venue", "Science Department", venueWidth);
+
+    if (booking.paymentId) {
+      drawField(rightX, cursorY, "Payment ID", booking.paymentId);
+    }
+
+    cursorY += 55;
+
+    // Details divider
     doc
-      .moveTo(cardX + 50, cursorY)
-      .lineTo(cardX + cardW - 50, cursorY)
-      .dash(4, { space: 4 })
-      .lineWidth(0.6)
+      .moveTo(cardX + 40, cursorY)
+      .lineTo(cardX + cardW - 40, cursorY)
+      .dash(3, { space: 4 })
+      .lineWidth(0.7)
       .strokeColor(colors.gold)
       .stroke()
       .undash();
-    cursorY += 30;
 
-    // ─── QR CODE ───
-    const qrSize = 170;
+    // ------------------------------------
+    // FOOTER POSITION
+    // Reserve enough room so QR never overlaps the footer.
+    // ------------------------------------
+    const hasGst =
+      Number(gstBreakdown?.base || 0) > 0 ||
+      Number(gstBreakdown?.cgst || 0) > 0 ||
+      Number(gstBreakdown?.sgst || 0) > 0;
+
+    const footerH = hasGst ? 112 : 82;
+    const footerY = cardY + cardH - footerH - 18;
+    const footerBottom = footerY - 12;
+
+    // QR block fits in the available area above the footer.
+    const qrSize = Math.min(138, Math.max(90, footerBottom - cursorY - 42));
+
     const qrX = (pageWidth - qrSize) / 2;
-    doc.image(qrImage, qrX, cursorY, { width: qrSize, height: qrSize });
-    cursorY += qrSize + 10;
+    const qrY =
+      cursorY + Math.max(12, (footerBottom - cursorY - qrSize - 30) / 2);
+
+    // White quiet zone around QR helps scanning.
+    doc.rect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16).fill("#ffffff");
+
+    if (qrImage) {
+      doc.image(qrImage, qrX, qrY, {
+        width: qrSize,
+        height: qrSize,
+      });
+    }
 
     doc
+      .font("Helvetica")
       .fontSize(9)
       .fillColor(colors.gray)
-      .font("Helvetica")
-      .text("Scan this QR at entry gate", 0, cursorY, { align: "center" });
-    cursorY += 16;
+      .text("Scan this QR at entry gate", cardX + 20, qrY + qrSize + 10, {
+        width: cardW - 40,
+        align: "center",
+      });
 
+    // ------------------------------------
+    // FOOTER
+    // ------------------------------------
     doc
-      .fontSize(8)
-      .fillColor(colors.gray)
-      .font("Courier")
-      .text(`Ticket ID: ${ticket.id}`, 0, cursorY, { align: "center" });
-    cursorY += 16;
-
-    // ─── FOOTER AMOUNT BAR ───
-    const hasGst = Boolean(gstBreakdown.rates);
-    const footerH = hasGst ? 120 : 80;
-    const footerY = cardY + cardH - footerH - 10;
-
-    // Divider above footer
-    doc
-      .moveTo(cardX + 20, footerY)
-      .lineTo(cardX + cardW - 20, footerY)
-      .dash(4, { space: 4 })
+      .moveTo(cardX + 25, footerY)
+      .lineTo(cardX + cardW - 25, footerY)
+      .dash(3, { space: 4 })
       .lineWidth(0.8)
       .strokeColor(colors.gold)
       .stroke()
@@ -928,74 +500,68 @@ class TicketService {
 
     if (hasGst) {
       doc
+        .font("Helvetica-Bold")
         .fontSize(8)
         .fillColor(colors.gray)
-        .font("Helvetica-Bold")
         .text(
-          `Taxable amount: Rs ${gstBreakdown.base.toFixed(2)}`,
-          cardX + 50,
-          footerY + 8
-        );
-
-      doc
-        .fontSize(8)
-        .fillColor(colors.gray)
-        .font("Helvetica-Bold")
+          `Taxable amount: Rs ${Number(gstBreakdown.base || 0).toFixed(2)}`,
+          leftX,
+          footerY + 9
+        )
         .text(
-          `CGST (${gstBreakdown.rates}): Rs ${gstBreakdown.cgst.toFixed(2)}`,
-          cardX + 50,
-          footerY + 20
-        );
-
-      doc
-        .fontSize(8)
-        .fillColor(colors.gray)
-        .font("Helvetica-Bold")
+          `CGST (${gstBreakdown.rates || "0%"}): Rs ${Number(gstBreakdown.cgst || 0).toFixed(2)}`,
+          leftX,
+          footerY + 22
+        )
         .text(
-          `SGST (${gstBreakdown.rates}): Rs ${gstBreakdown.sgst.toFixed(2)}`,
-          cardX + 50,
-          footerY + 32
+          `SGST (${gstBreakdown.rates || "0%"}): Rs ${Number(gstBreakdown.sgst || 0).toFixed(2)}`,
+          leftX,
+          footerY + 35
         );
     }
 
-    doc
-      .fontSize(8)
-      .fillColor(colors.gray)
-      .font("Helvetica-Bold")
-      .text("TOTAL FARE PAID", cardX + 50, footerY + (hasGst ? 48 : 18), {
-        characterSpacing: 1,
-      });
+    const totalLabelY = footerY + (hasGst ? 52 : 15);
+    const totalAmountY = totalLabelY + 13;
 
     doc
-      .fontSize(24)
-      .fillColor(colors.royalBlue)
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor(colors.gray)
+      .text("TOTAL FARE PAID", leftX, totalLabelY);
+
+    doc
       .font("Times-Bold")
+      .fontSize(22)
+      .fillColor(colors.royalBlue)
       .text(
-        `Rs ${booking.totalAmount}`,
-        cardX + 50,
-        footerY + (hasGst ? 59 : 30)
+        `Rs ${Number(booking.totalAmount || 0).toFixed(2)}`,
+        leftX,
+        totalAmountY
       );
 
-    const txnId = `#ET-${String(booking.id).slice(-6).toUpperCase()}`;
+    // Ticket ID and payment ID are kept away from QR.
     doc
-      .fontSize(10)
+      .font("Courier")
+      .fontSize(7)
       .fillColor(colors.gray)
-      .font("Courier-Bold")
-      .text(txnId, cardX + cardW - 200, footerY + (hasGst ? 68 : 40), {
-        width: 150,
+      .text(`Ticket ID: ${ticket.id}`, cardX + 200, footerY + 15, {
+        width: cardW - 240,
         align: "right",
+        ellipsis: true,
       });
 
-    // Bottom note
     doc
+      .font("Helvetica-Oblique")
       .fontSize(8)
       .fillColor(colors.gray)
-      .font("Helvetica-Oblique")
       .text(
         "Please carry a valid ID proof. This ticket is non-transferable.",
-        0,
-        cardY + cardH - 22,
-        { align: "center" }
+        cardX + 20,
+        cardY + cardH - 25,
+        {
+          width: cardW - 40,
+          align: "center",
+        }
       );
   }
 

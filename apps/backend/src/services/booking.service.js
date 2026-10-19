@@ -145,7 +145,9 @@ class BookingService {
           });
 
           if (places.length !== placeIds.length) {
-            throw ApiError.badRequest("One or more Annexure options are invalid");
+            throw ApiError.badRequest(
+              "One or more Annexure options are invalid"
+            );
           }
 
           const requestedAnnexure = places[0]?.annexure;
@@ -196,10 +198,7 @@ class BookingService {
             }
 
             const itemSlotDate = new Date(item.slotDateTime);
-            if (
-              Number.isNaN(itemSlotDate.getTime()) ||
-              itemSlotDate <= now
-            ) {
+            if (Number.isNaN(itemSlotDate.getTime()) || itemSlotDate <= now) {
               throw ApiError.badRequest(
                 `Select a valid future slot for ${place.name}`
               );
@@ -225,10 +224,7 @@ class BookingService {
             const persons = Number(item.persons || 0);
             const students = Number(item.students || 0);
 
-            if (
-              place.rate4Hours !== null ||
-              place.rate8Hours !== null
-            ) {
+            if (place.rate4Hours !== null || place.rate8Hours !== null) {
               if (persons !== 0 || students !== 0) {
                 throw ApiError.badRequest(
                   `Headcount is not valid for ${place.name}`
@@ -311,7 +307,10 @@ class BookingService {
               }),
             ]);
             const usedSeats =
-              regularBookings.reduce((sum, booking) => sum + booking.totalSeats, 0) +
+              regularBookings.reduce(
+                (sum, booking) => sum + booking.totalSeats,
+                0
+              ) +
               annexureReservations.reduce(
                 (sum, reservation) => sum + reservation.seatCount,
                 0
@@ -334,9 +333,10 @@ class BookingService {
             });
           }
 
-          const totalAmount = Math.round(
-            normalizedItems.reduce((sum, item) => sum + item.amount, 0) * 100
-          ) / 100;
+          const totalAmount =
+            Math.round(
+              normalizedItems.reduce((sum, item) => sum + item.amount, 0) * 100
+            ) / 100;
           const totalSeats = normalizedItems.reduce(
             (sum, item) => sum + item.seatCount,
             0
@@ -526,9 +526,8 @@ class BookingService {
     // ============================================================
 
     if (paymentMethod === "ONLINE") {
-      const AtomPaymentService = (
-        await import("./atom-payment.service.js")
-      ).default;
+      const AtomPaymentService = (await import("./atom-payment.service.js"))
+        .default;
 
       try {
         const payment = await AtomPaymentService.initiatePayment({
@@ -574,7 +573,7 @@ class BookingService {
       throw ApiError.badRequest("Invalid ATOM payment signature");
     }
 
-  console.log("ATOM payment response:", response);
+    console.log("ATOM payment response:", response);
     const instrument = response.payInstrument;
     const { merchDetails, payDetails, responseDetails } = instrument;
     if (String(merchDetails.merchId) !== String(envConfig.ATOM_MERCHANT_ID)) {
@@ -716,6 +715,7 @@ class BookingService {
     if (!booking || booking.status !== "PAID") {
       throw ApiError.notFound("Paid booking not found");
     }
+    console.log(booking);
 
     return booking;
   }
@@ -871,8 +871,9 @@ class BookingService {
         return `• ${item.place.name} — ${date} — Rs ${item.amount}`;
       })
       .join("\n");
-    const message = booking.bookingType === "ANNEXURE"
-      ? `Dear ${booking.name},
+    const message =
+      booking.bookingType === "ANNEXURE"
+        ? `Dear ${booking.name},
 
 Your Annexure booking is confirmed.
 
@@ -882,7 +883,7 @@ Combined total: Rs ${booking.totalAmount}
 Payment Method: ${booking.paymentMethod}
 
 Please keep the attached booking confirmation for your visit.`
-      : `🎟️ *Dear ${booking.name},*
+        : `🎟️ *Dear ${booking.name},*
 
 Thank you for booking with *${booking.place.name}*! 🥳
 

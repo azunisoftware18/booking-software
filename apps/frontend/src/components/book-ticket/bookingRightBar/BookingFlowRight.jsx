@@ -220,11 +220,13 @@ export default function BookingFlowRight() {
 
   const startBookingForEntryFee = (selectedEntryFees) => {
     const firstEntryFee = selectedEntryFees[0];
-    const venue = selectedLocation?.venues?.find(
-      (item) => item.id === (firstEntryFee.venueId || firstEntryFee.placeId),
-    );
+    const venueId = firstEntryFee.venueId || firstEntryFee.placeId;
+    const venue =
+      selectedLocation?.venues?.find(
+        (item) => String(item.id || item._id) === String(venueId),
+      ) || firstEntryFee.place;
 
-    if (!venue) {
+    if (!venue || String(venue.id || venue._id) !== String(venueId)) {
       setBookingError("The venue for this entry fee could not be found.");
       return;
     }
