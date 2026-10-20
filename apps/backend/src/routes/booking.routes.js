@@ -47,6 +47,30 @@ router.post(
   asyncHandler(BookingController.cancelBooking)
 );
 
+router.get(
+  "/:id/refund-quote",
+  AuthMiddleware.isAuthenticated,
+  PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),
+  ValidateRequest.validate(BookingValidation.bookingIdParam),
+  asyncHandler(BookingController.getAnnexureRefundQuote),
+);
+
+router.post(
+  "/:id/refund",
+  AuthMiddleware.isAuthenticated,
+  PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),
+  ValidateRequest.validate(BookingValidation.annexureRefund),
+  asyncHandler(BookingController.processAnnexureRefund),
+);
+
+router.get(
+  "/:id/refund-receipt",
+  AuthMiddleware.isAuthenticated,
+  PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),
+  ValidateRequest.validate(BookingValidation.bookingIdParam),
+  asyncHandler(BookingController.downloadAnnexureRefundReceipt),
+);
+
 /**
  * Get all bookings
  * Requires BOOKING.READ permission

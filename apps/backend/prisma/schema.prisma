@@ -177,6 +177,11 @@ model Booking {
   ticketPdfUrl String? @map("ticket_pdf_url")
   ticketPdfKey String? @map("ticket_pdf_key")
 
+  refundAmount   Float?    @map("refund_amount")
+  refundDetails  Json?     @map("refund_details")
+  refundedAt     DateTime? @map("refunded_at")
+  refundedById   String?   @map("refunded_by_id")
+
   createdAt DateTime @default(now()) @map("created_at")
 
   tickets Ticket[]

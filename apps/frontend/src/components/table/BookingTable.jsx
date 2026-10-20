@@ -10,7 +10,7 @@ import {
 } from "./core";
 
 import ActionMenu from "../common/ActionMenu";
-import { Eye, XCircle, Filter } from "lucide-react";
+import { Eye, XCircle, Filter, RotateCcw } from "lucide-react";
 
 import { useState, useMemo, useEffect } from "react";
 
@@ -24,6 +24,7 @@ export default function BookingTable({
   ticketTypes = [],
   onView,
   onCancel,
+  onRefund,
   paginationProps,
   onFilteredDataChange,
 }) {
@@ -300,6 +301,19 @@ return (
                         icon: Eye,
                         onClick: () => onView?.(booking),
                       },
+                      ...(onRefund &&
+                      booking.bookingType === "ANNEXURE" &&
+                      booking.status === "PAID" &&
+                      !booking.refundedAt &&
+                      booking.refundAmount == null
+                        ? [
+                            {
+                              label: "Process Refund",
+                              icon: RotateCcw,
+                              onClick: () => onRefund(booking),
+                            },
+                          ]
+                        : []),
                       // {
                       //   label: "Cancel Booking",
                       //   icon: XCircle,

@@ -17,6 +17,9 @@ import {
   SECURITY_DEPOSIT_BY_OPTION,
 } from "./annexurePricing.js";
 
+const roundCurrency = (amount) =>
+  Math.round((Number(amount) + Number.EPSILON) * 100) / 100;
+
 class BookingService {
   // ============================================================
   // CREATE BOOKING
@@ -1095,6 +1098,193 @@ We can't wait to welcome you! 🎉`;
     }
 
     return null;
+  }
+
+  static assertAnnexureRefundable(booking) {
+    if (booking.bookingType !== "ANNEXURE") {
+      throw ApiError.badRequest("Refunds are only available for Annexure bookings");
+    }
+    if (booking.status !== "PAID") {
+      throw ApiError.badRequest("Only paid bookings can be refunded");
+    }
+    if (booking.refundedAt || booking.refundAmount !== null) {
+      throw ApiError.conflict("A refund has already been recorded for this booking");
+    }
+    if (!booking.annexureItems?.length) {
+      throw ApiError.badRequest("No Annexure booking items were found");
+    }
+  }
+
+  static buildAnnexureRefundGroups(booking) {
+    const groups = new Map();
+    for (const item of booking.annexureItems) {
+      const group = groups.get(item.placeId) || {
+        placeId: item.placeId,
+        placeName: item.place.name,
+        annexure: item.place.annexure,
+        annexureOption: item.place.annexureOption,
+        durationHours: item.durationHours,
+        persons: item.persons,
+        students: item.students,
+        dates: [],
+        venueCharges: 0,
+      };
+      group.dates.push(item.slotDateTime);
+      group.venueCharges += Number(item.amount || 0);
+      groups.set(item.placeId, group);
+    }
+
+    return [...groups.values()].map((group) => {
+      const days = group.dates.length;
+      const securityDepositHeld =
+        (SECURITY_DEPOSIT_BY_OPTION[group.annexureOption] || 0) * days;
+      const electricityHeld =
+        (ELECTRICITY_CHARGE_BY_OPTION[group.annexureOption]?.[
+          group.durationHours
+        ] || 0) * days;
+
+      return {
+        ...group,
+        days,
+        dates: group.dates
+          .sort((first, second) => new Date(first) - new Date(second))
+          .map((date) => date.toISOString()),
+        venueCharges: roundCurrency(group.venueCharges),
+        securityDepositHeld: roundCurrency(securityDepositHeld),
+        electricityHeld: roundCurrency(electricityHeld),
+      };
+    });
+  }
+
+  static async getAnnexureRefundQuote(id, currentUser) {
+    const booking = await this.getBookingById(id, currentUser);
+    this.assertAnnexureRefundable(booking);
+    return {
+      bookingId: booking.id,
+      customerName: booking.name,
+      customerEmail: booking.email,
+      totalAmount: booking.totalAmount,
+      paymentMethod: booking.paymentMethod,
+      groups: this.buildAnnexureRefundGroups(booking),
+    };
+  }
+
+  static async processAnnexureRefund(id, payload, currentUser) {
+    const booking = await this.getBookingById(id, currentUser);
+    this.assertAnnexureRefundable(booking);
+    const groups = this.buildAnnexureRefundGroups(booking);
+
+    if (
+      payload.externallyRefunded !== true ||
+      payload.items.length !== groups.length
+    ) {
+      throw ApiError.badRequest(
+        "Confirm the external refund and provide charges for every option",
+      );
+    }
+
+    const submittedItems = new Map();
+    for (const item of payload.items) {
+      if (submittedItems.has(item.placeId)) {
+        throw ApiError.badRequest(
+          "Each Annexure option can only be submitted once",
+        );
+      }
+      submittedItems.set(item.placeId, item);
+    }
+
+    const refundItems = groups.map((group) => {
+      const submitted = submittedItems.get(group.placeId);
+      if (!submitted) {
+        throw ApiError.badRequest(
+          "Refund charges are missing for an Annexure option",
+        );
+      }
+      if (
+        submitted.electricityCharge >
+          group.electricityHeld +
+            group.securityDepositHeld -
+            submitted.damageDeduction ||
+        submitted.damageDeduction > group.securityDepositHeld
+      ) {
+        throw ApiError.badRequest(
+          `Combined electricity and damage deductions cannot exceed the refundable amount for ${group.placeName}`,
+        );
+      }
+
+      const electricityCharge = roundCurrency(submitted.electricityCharge);
+      const damageDeduction = roundCurrency(submitted.damageDeduction);
+      const electricityRefund = roundCurrency(
+        Math.max(0, group.electricityHeld - electricityCharge),
+      );
+      const electricityOverage = roundCurrency(
+        Math.max(0, electricityCharge - group.electricityHeld),
+      );
+      const securityDepositRefund = roundCurrency(
+        Math.max(
+          0,
+          group.securityDepositHeld - damageDeduction - electricityOverage,
+        ),
+      );
+
+      return {
+        ...group,
+        electricityCharge,
+        electricityOverage,
+        damageDeduction,
+        electricityRefund,
+        securityDepositRefund,
+        refundAmount: roundCurrency(electricityRefund + securityDepositRefund),
+      };
+    });
+
+    if (submittedItems.size !== groups.length) {
+      throw ApiError.badRequest(
+        "Refund data contains an unknown Annexure option",
+      );
+    }
+
+    const refundAmount = roundCurrency(
+      refundItems.reduce((total, item) => total + item.refundAmount, 0),
+    );
+    const refundedAt = new Date();
+    const refundDetails = {
+      method: "MANUAL",
+      externallyRefunded: true,
+      originalAmount: Number(booking.totalAmount),
+      refundAmount,
+      items: refundItems,
+    };
+
+    const result = await prisma.booking.updateMany({
+      where: {
+        id: booking.id,
+        status: "PAID",
+        refundedAt: null,
+        refundAmount: null,
+      },
+      data: {
+        refundAmount,
+        refundDetails,
+        refundedAt,
+        refundedById: currentUser.id,
+      },
+    });
+
+    if (result.count !== 1) {
+      throw ApiError.conflict("This booking has already been refunded");
+    }
+
+    return {
+      booking: {
+        ...booking,
+        refundAmount,
+        refundDetails,
+        refundedAt,
+        refundedById: currentUser.id,
+      },
+      refundDetails,
+    };
   }
 
   static async getAllBookings(currentUser) {

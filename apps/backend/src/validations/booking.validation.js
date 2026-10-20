@@ -84,6 +84,28 @@ static get createBooking() {
       query: z.object({ receiptToken: z.string().min(1) }),
     };
   }
+
+  static get annexureRefund() {
+    return {
+      params: z.object({ id: z.string().uuid() }),
+      body: z.object({
+        externallyRefunded: z.literal(true),
+        items: z
+          .array(
+            z.object({
+              placeId: z.string().uuid(),
+              electricityCharge: z.number().min(0).max(10000000),
+              damageDeduction: z.number().min(0).max(10000000),
+            }),
+          )
+          .min(1),
+      }),
+    };
+  }
+
+  static get bookingIdParam() {
+    return { params: z.object({ id: z.string().uuid() }) };
+  }
 }
 
 export default BookingValidation;

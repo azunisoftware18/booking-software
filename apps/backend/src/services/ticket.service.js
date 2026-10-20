@@ -165,6 +165,205 @@ class TicketService {
     return pdfPromise;
   }
 
+  static async generateAnnexureRefundPDF(booking) {
+    if (!booking.refundDetails?.items?.length || !booking.refundedAt) {
+      throw ApiError.notFound("Refund receipt not found");
+    }
+
+    const doc = new PDFDocument({ margin: 0, size: "A4" });
+    const buffers = [];
+    doc.on("data", (buffer) => buffers.push(buffer));
+    const pdfPromise = new Promise((resolve) =>
+      doc.on("end", () => resolve(Buffer.concat(buffers))),
+    );
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const margin = 42;
+    const width = pageWidth - margin * 2;
+    const colors = {
+      navy: "#0b2149",
+      brown: "#994113",
+      muted: "#64748b",
+      text: "#333333",
+      border: "#e2e8f0",
+      background: "#f8fafc",
+      cream: "#f8f5ef",
+    };
+    let cursorY = 0;
+
+    const drawHeader = () => {
+      if (fs.existsSync(LOGO_PATH)) {
+        doc.image(LOGO_PATH, (pageWidth - 155) / 2, 12, {
+          fit: [155, 60],
+          align: "center",
+          valign: "center",
+        });
+      }
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(15)
+        .fillColor(colors.navy)
+        .text("Annexure Refund Receipt", margin, 72, {
+          width,
+          align: "center",
+        });
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor(colors.muted)
+        .text(
+          `Location: ${booking.location?.name || "—"} · Booking ID: ${booking.id}`,
+          margin,
+          98,
+          { width, align: "center" },
+        );
+      cursorY = 132;
+    };
+
+    drawHeader();
+    doc
+      .roundedRect(margin, cursorY, width, 94, 8)
+      .fillAndStroke(colors.background, colors.border);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .fillColor(colors.navy)
+      .text("Customer and refund details", margin + 14, cursorY + 12);
+
+    const detailRows = [
+      [`Customer: ${booking.name || "—"}`, `Email: ${booking.email || "—"}`],
+      [`Phone: ${booking.phone || "—"}`, `Payment method: ${booking.paymentMethod || "—"}`],
+      [
+        `Original payment: Rs ${Number(booking.totalAmount || 0).toFixed(2)}`,
+        `Refund date: ${new Date(booking.refundedAt).toLocaleString("en-IN")}`,
+      ],
+    ];
+    detailRows.forEach(([left, right], index) => {
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor(colors.text)
+        .text(left, margin + 14, cursorY + 34 + index * 17, {
+          width: width / 2 - 20,
+          ellipsis: true,
+        })
+        .text(right, margin + width / 2, cursorY + 34 + index * 17, {
+          width: width / 2 - 14,
+          ellipsis: true,
+        });
+    });
+    cursorY += 112;
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(12)
+      .fillColor(colors.navy)
+      .text("Refund calculation", margin, cursorY);
+    cursorY += 22;
+
+    for (const item of booking.refundDetails.items) {
+      const cardHeight = 160;
+      if (cursorY + cardHeight > pageHeight - margin) {
+        doc.addPage();
+        drawHeader();
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(12)
+          .fillColor(colors.navy)
+          .text("Refund calculation (continued)", margin, cursorY);
+        cursorY += 22;
+      }
+
+      doc
+        .roundedRect(margin, cursorY, width, cardHeight, 8)
+        .fillAndStroke(colors.cream, "#b8860b");
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .fillColor(colors.navy)
+        .text(
+          `${item.annexure || "Annexure"} - ${item.annexureOption || "Option"}: ${item.placeName}`,
+          margin + 12,
+          cursorY + 10,
+          { width: width - 24, ellipsis: true },
+        );
+      const firstDate = item.dates?.[0]
+        ? new Date(item.dates[0]).toLocaleDateString("en-IN")
+        : "—";
+      const lastDate = item.dates?.length
+        ? new Date(item.dates[item.dates.length - 1]).toLocaleDateString(
+            "en-IN",
+          )
+        : firstDate;
+      const bookingDetails =
+        item.durationHours != null
+          ? `${item.durationHours} hours · ${item.days} ${item.days === 1 ? "day" : "days"}`
+          : `${item.persons} persons · ${item.students} students · ${item.days} ${item.days === 1 ? "day" : "days"}`;
+      doc
+        .font("Helvetica")
+        .fontSize(7)
+        .fillColor(colors.muted)
+        .text(
+          `Dates: ${firstDate}${lastDate !== firstDate ? ` to ${lastDate}` : ""} · ${bookingDetails}`,
+          margin + 12,
+          cursorY + 27,
+          { width: width - 24, ellipsis: true },
+        );
+
+      const rows = [
+        ["Venue charges (not refunded)", item.venueCharges],
+        ["Security deposit held", item.securityDepositHeld],
+        ["Damage deduction", -item.damageDeduction],
+        ["Electricity overage deducted from deposit", -item.electricityOverage],
+        ["Security deposit refunded", item.securityDepositRefund],
+        ["Electricity held", item.electricityHeld],
+        ["Actual electricity charge", -item.electricityCharge],
+        ["Electricity refunded", item.electricityRefund],
+      ];
+      rows.forEach(([label, amount], index) => {
+        const y = cursorY + 39 + index * 14;
+        doc
+          .font("Helvetica")
+          .fontSize(8)
+          .fillColor(colors.text)
+          .text(label, margin + 12, y);
+        doc
+          .font("Helvetica")
+          .fontSize(8)
+          .fillColor(colors.text)
+          .text(`Rs ${Number(amount).toFixed(2)}`, margin + 12, y, {
+            width: width - 24,
+            align: "right",
+          });
+      });
+      cursorY += cardHeight + 10;
+    }
+
+    if (cursorY + 54 > pageHeight - margin) {
+      doc.addPage();
+      drawHeader();
+    }
+    doc
+      .roundedRect(margin, cursorY, width, 48, 8)
+      .fillAndStroke("#fff7ed", "#fed7aa");
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(13)
+      .fillColor(colors.brown)
+      .text(
+        `Total refund: Rs ${Number(booking.refundAmount).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`,
+        margin + 14,
+        cursorY + 16,
+        { width: width - 28, align: "right" },
+      );
+
+    doc.end();
+    return pdfPromise;
+  }
+
   static _drawAnnexureReceipt(doc, booking) {
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;

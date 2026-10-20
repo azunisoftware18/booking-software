@@ -12,6 +12,7 @@ import { Download, FileSpreadsheet, PlusCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
+import AnnexureRefundModal from "@/components/modals/AnnexureRefundModal";
 
 export default function Page() {
   const currentPlace = useSelector((state) => state.place.currentPlace);
@@ -33,6 +34,7 @@ export default function Page() {
   const [currentFilteredData, setCurrentFilteredData] = useState([]);
 
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
+  const [refundBooking, setRefundBooking] = useState(null);
 
   const totalBookings = bookings?.length || 0;
 
@@ -434,6 +436,7 @@ export default function Page() {
           onView={(booking) => {
             router.push(`/dashboard/booking/${booking.id}`);
           }}
+          onRefund={setRefundBooking}
           paginationProps={{
             page,
             totalPages,
@@ -449,6 +452,12 @@ export default function Page() {
           }}
         />
       </div>
+      {refundBooking && (
+        <AnnexureRefundModal
+          booking={refundBooking}
+          onClose={() => setRefundBooking(null)}
+        />
+      )}
     </div>
   );
 }

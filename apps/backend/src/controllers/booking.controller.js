@@ -1,6 +1,20 @@
 import BookingService from "../services/booking.service.js";
+import TicketService from "../services/ticket.service.js";
+import EmailService from "../services/Email.service.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { envConfig } from "../config/env.config.js";
+
+const escapeHtml = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (character) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character];
+  });
 
 class BookingController {
   // ============================================================
@@ -83,6 +97,68 @@ class BookingController {
     );
 
     return res.json(ApiResponse.success(data, "Payment receipt fetched"));
+  };
+
+  static getAnnexureRefundQuote = async (req, res) => {
+    const data = await BookingService.getAnnexureRefundQuote(
+      req.params.id,
+      req.user,
+    );
+
+    return res.json(ApiResponse.success(data, "Refund quote calculated"));
+  };
+
+  static processAnnexureRefund = async (req, res) => {
+    const { booking, refundDetails } =
+      await BookingService.processAnnexureRefund(
+        req.params.id,
+        req.body,
+        req.user,
+      );
+    let receiptEmailSent = false;
+    try {
+      const pdfBuffer = await TicketService.generateAnnexureRefundPDF(booking);
+      const emailInfo = await EmailService.sendMail({
+        to: booking.email,
+        subject: "Annexure booking refund receipt",
+        html: `<p>Dear ${escapeHtml(booking.name)},</p><p>Your Annexure booking refund of <strong>Rs ${Number(refundDetails.refundAmount).toFixed(2)}</strong> has been recorded. The refund calculation receipt is attached.</p>`,
+        attachments: [
+          {
+            filename: `refund-receipt-${booking.id}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
+      });
+      receiptEmailSent = Boolean(emailInfo);
+    } catch (error) {
+      console.error("Refund was recorded, but receipt email failed:", error);
+    }
+
+    return res.json(
+      ApiResponse.success(
+        {
+          refundAmount: refundDetails.refundAmount,
+          receiptEmailSent,
+        },
+        "Refund recorded and receipt generated",
+      ),
+    );
+  };
+
+  static downloadAnnexureRefundReceipt = async (req, res) => {
+    const booking = await BookingService.getBookingById(
+      req.params.id,
+      req.user,
+    );
+    const pdfBuffer = await TicketService.generateAnnexureRefundPDF(booking);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=refund-receipt-${booking.id}.pdf`,
+    );
+    return res.send(pdfBuffer);
   };
 
   // ============================================================
