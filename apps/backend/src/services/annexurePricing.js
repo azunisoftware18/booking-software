@@ -8,6 +8,8 @@ export const SECURITY_DEPOSIT_BY_OPTION = {
   A7: 12000,
 };
 
+export const ELECTRICITY_RATE_PER_UNIT = 15;
+
 export const ELECTRICITY_CHARGE_BY_OPTION = {
   A1: { 4: 1500, 8: 3000 },
   A2: { 4: 500, 8: 1000 },

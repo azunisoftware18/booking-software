@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { ApiError } from "../utils/ApiError.js";
 import {
   ELECTRICITY_CHARGE_BY_OPTION,
+  ELECTRICITY_RATE_PER_UNIT,
   SECURITY_DEPOSIT_BY_OPTION,
 } from "./annexurePricing.js";
 import fs from "node:fs";
@@ -262,7 +263,7 @@ class TicketService {
     cursorY += 22;
 
     for (const item of booking.refundDetails.items) {
-      const cardHeight = 160;
+      const cardHeight = 205;
       if (cursorY + cardHeight > pageHeight - margin) {
         doc.addPage();
         drawHeader();
@@ -310,14 +311,40 @@ class TicketService {
           { width: width - 24, ellipsis: true },
         );
 
+      const electricityRatePerUnit =
+        item.electricityRatePerUnit || ELECTRICITY_RATE_PER_UNIT;
+      const electricityUnits =
+        item.electricityUnits ?? item.electricityCharge / electricityRatePerUnit;
+      const damageCoveredByDeposit =
+        item.damageCoveredByDeposit ??
+        Math.min(item.securityDepositHeld, item.damageDeduction);
+      const damageCollection =
+        item.damageCollection ??
+        Math.max(0, item.damageDeduction - item.securityDepositHeld);
+      const depositAfterDamage = Math.max(
+        0,
+        item.securityDepositHeld - item.damageDeduction,
+      );
+      const electricityOverageFromDeposit =
+        item.electricityOverageFromDeposit ??
+        Math.min(depositAfterDamage, item.electricityOverage);
+      const electricityCollection =
+        item.electricityCollection ??
+        Math.max(0, item.electricityOverage - depositAfterDamage);
       const rows = [
         ["Venue charges (not refunded)", item.venueCharges],
         ["Security deposit held", item.securityDepositHeld],
-        ["Damage deduction", -item.damageDeduction],
-        ["Electricity overage deducted from deposit", -item.electricityOverage],
+        ["Damage assessed", item.damageDeduction],
+        ["Damage covered by security deposit", -damageCoveredByDeposit],
+        ["Damage amount to collect", damageCollection],
+        [
+          `Electricity consumed (${electricityUnits} units x Rs ${electricityRatePerUnit}/unit)`,
+          -item.electricityCharge,
+        ],
+        ["Electricity overage settled from deposit", -electricityOverageFromDeposit],
+        ["Electricity amount to collect", electricityCollection],
         ["Security deposit refunded", item.securityDepositRefund],
         ["Electricity held", item.electricityHeld],
-        ["Actual electricity charge", -item.electricityCharge],
         ["Electricity refunded", item.electricityRefund],
       ];
       rows.forEach(([label, amount], index) => {
@@ -339,16 +366,16 @@ class TicketService {
       cursorY += cardHeight + 10;
     }
 
-    if (cursorY + 54 > pageHeight - margin) {
+    if (cursorY + 72 > pageHeight - margin) {
       doc.addPage();
       drawHeader();
     }
     doc
-      .roundedRect(margin, cursorY, width, 48, 8)
+      .roundedRect(margin, cursorY, width, 68, 8)
       .fillAndStroke("#fff7ed", "#fed7aa");
     doc
       .font("Helvetica-Bold")
-      .fontSize(13)
+      .fontSize(12)
       .fillColor(colors.brown)
       .text(
         `Total refund: Rs ${Number(booking.refundAmount).toLocaleString("en-IN", {
@@ -356,7 +383,37 @@ class TicketService {
           maximumFractionDigits: 2,
         })}`,
         margin + 14,
-        cursorY + 16,
+        cursorY + 12,
+        { width: width - 28, align: "right" },
+      );
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(12)
+      .fillColor(colors.brown)
+      .text(
+        `Total amount to collect: Rs ${Number(
+          booking.refundDetails.collectionAmount ??
+            booking.refundDetails.items.reduce((total, item) => {
+              const damageCollection =
+                item.damageCollection ??
+                Math.max(0, item.damageDeduction - item.securityDepositHeld);
+              const depositAfterDamage = Math.max(
+                0,
+                item.securityDepositHeld - item.damageDeduction,
+              );
+              const electricityOverage = item.electricityOverage ??
+                Math.max(0, item.electricityCharge - item.electricityHeld);
+              const electricityCollection =
+                item.electricityCollection ??
+                Math.max(0, electricityOverage - depositAfterDamage);
+              return total + damageCollection + electricityCollection;
+            }, 0),
+        ).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`,
+        margin + 14,
+        cursorY + 38,
         { width: width - 28, align: "right" },
       );
 

@@ -11,6 +11,47 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 2,
   })}`;
 
+const calculateGroupAmounts = (group, values, electricityRatePerUnit) => {
+  const electricityUnits = Number(values.electricityUnits || 0);
+  const electricityCharge =
+    Math.round(electricityUnits * electricityRatePerUnit * 100) / 100;
+  const damageDeduction = Number(values.damageDeduction || 0);
+  const electricityRefund = Math.max(
+    0,
+    group.electricityHeld - electricityCharge,
+  );
+  const electricityOverage = Math.max(
+    0,
+    electricityCharge - group.electricityHeld,
+  );
+  const depositAfterDamage = Math.max(
+    0,
+    group.securityDepositHeld - damageDeduction,
+  );
+  const securityRefund = Math.max(0, depositAfterDamage - electricityOverage);
+  const damageCollection = Math.max(
+    0,
+    damageDeduction - group.securityDepositHeld,
+  );
+  const electricityCollection = Math.max(
+    0,
+    electricityOverage - depositAfterDamage,
+  );
+
+  return {
+    electricityUnits,
+    electricityCharge,
+    electricityRefund,
+    electricityOverage,
+    damageDeduction,
+    securityRefund,
+    damageCollection,
+    electricityCollection,
+    collectionAmount: damageCollection + electricityCollection,
+    refundAmount: electricityRefund + securityRefund,
+  };
+};
+
 export default function AnnexureRefundModal({ booking, onClose }) {
   const queryClient = useQueryClient();
   const isAlreadyRefunded =
@@ -40,7 +81,7 @@ export default function AnnexureRefundModal({ booking, onClose }) {
           Object.fromEntries(
             refundQuote.groups.map((group) => [
               group.placeId,
-              { electricityCharge: "0", damageDeduction: "0" },
+              { electricityUnits: "0", damageDeduction: "0" },
             ]),
           ),
         );
@@ -62,33 +103,24 @@ export default function AnnexureRefundModal({ booking, onClose }) {
     };
   }, [booking.id, isAlreadyRefunded]);
 
-  const refundAmount = useMemo(
-    () =>
-      (quote?.groups || []).reduce((total, group) => {
-        const values = charges[group.placeId] || {};
-        const electricityCharge = Number(values.electricityCharge || 0);
-        const damageDeduction = Number(values.damageDeduction || 0);
-        const electricityRefund = Math.max(
-          0,
-          group.electricityHeld - electricityCharge,
-        );
-        const electricityOverage = Math.max(
-          0,
-          electricityCharge - group.electricityHeld,
-        );
-        return (
-          total +
-          electricityRefund +
-          Math.max(
-            0,
-            group.securityDepositHeld -
-              damageDeduction -
-              electricityOverage,
-          )
-        );
-      }, 0),
-    [charges, quote],
-  );
+  const refundCalculations = useMemo(() => {
+    const items = (quote?.groups || []).map((group) => ({
+      group,
+      ...calculateGroupAmounts(
+        group,
+        charges[group.placeId] || {},
+        quote.electricityRatePerUnit,
+      ),
+    }));
+    return {
+      items,
+      refundAmount: items.reduce((total, item) => total + item.refundAmount, 0),
+      collectionAmount: items.reduce(
+        (total, item) => total + item.collectionAmount,
+        0,
+      ),
+    };
+  }, [charges, quote]);
 
   const updateCharge = (placeId, key, value) => {
     setCharges((current) => ({
@@ -134,8 +166,8 @@ export default function AnnexureRefundModal({ booking, onClose }) {
         externallyRefunded: true,
         items: quote.groups.map((group) => ({
           placeId: group.placeId,
-          electricityCharge: Number(
-            charges[group.placeId]?.electricityCharge || 0,
+          electricityUnits: Number(
+            charges[group.placeId]?.electricityUnits || 0,
           ),
           damageDeduction: Number(
             charges[group.placeId]?.damageDeduction || 0,
@@ -238,23 +270,18 @@ export default function AnnexureRefundModal({ booking, onClose }) {
               <div className="space-y-4">
                 {quote.groups.map((group) => {
                   const values = charges[group.placeId] || {};
-                  const electricityCharge = Number(
-                    values.electricityCharge || 0,
-                  );
-                  const damageDeduction = Number(values.damageDeduction || 0);
-                  const electricityRefund = Math.max(
-                    0,
-                    group.electricityHeld - electricityCharge,
-                  );
-                  const electricityOverage = Math.max(
-                    0,
-                    electricityCharge - group.electricityHeld,
-                  );
-                  const securityRefund = Math.max(
-                    0,
-                    group.securityDepositHeld -
-                      damageDeduction -
-                      electricityOverage,
+                  const {
+                    electricityCharge,
+                    electricityRefund,
+                    electricityOverage,
+                    damageDeduction,
+                    securityRefund,
+                    damageCollection,
+                    electricityCollection,
+                  } = calculateGroupAmounts(
+                    group,
+                    values,
+                    quote.electricityRatePerUnit,
                   );
 
                   return (
@@ -286,33 +313,27 @@ export default function AnnexureRefundModal({ booking, onClose }) {
                             Collected: {formatCurrency(group.electricityHeld)}
                           </p>
                           <label className="mt-3 block text-sm font-medium text-slate-700">
-                            Actual electricity charge
+                            Electricity units consumed
                             <input
                               type="number"
                               min="0"
-                              max={
-                                group.electricityHeld +
-                                group.securityDepositHeld -
-                                damageDeduction
-                              }
-                              step="0.01"
+                              step="any"
                               required
-                              disabled={
-                                group.electricityHeld +
-                                  group.securityDepositHeld ===
-                                0
-                              }
-                              value={values.electricityCharge ?? "0"}
+                              value={values.electricityUnits ?? "0"}
                               onChange={(event) =>
                                 updateCharge(
                                   group.placeId,
-                                  "electricityCharge",
+                                  "electricityUnits",
                                   event.target.value,
                                 )
                               }
                               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                             />
                           </label>
+                          <p className="mt-2 text-sm text-slate-700">
+                            Actual charge ({quote.electricityRatePerUnit} per
+                            unit): {formatCurrency(electricityCharge)}
+                          </p>
                           <p className="mt-2 text-sm font-semibold text-emerald-700">
                             Electricity refund:{" "}
                             {formatCurrency(electricityRefund)}
@@ -326,8 +347,14 @@ export default function AnnexureRefundModal({ booking, onClose }) {
                           {electricityOverage > 0 && (
                             <p className="mt-1 text-xs text-amber-700">
                               {formatCurrency(electricityOverage)} above the
-                              collected electricity amount will be deducted
-                              from the security deposit.
+                              collected electricity amount is settled from the
+                              remaining security deposit first.
+                            </p>
+                          )}
+                          {electricityCollection > 0 && (
+                            <p className="mt-1 text-sm font-semibold text-red-700">
+                              Electricity amount to collect:{" "}
+                              {formatCurrency(electricityCollection)}
                             </p>
                           )}
                         </div>
@@ -340,11 +367,10 @@ export default function AnnexureRefundModal({ booking, onClose }) {
                             Held: {formatCurrency(group.securityDepositHeld)}
                           </p>
                           <label className="mt-3 block text-sm font-medium text-slate-700">
-                            Damage deduction
+                            Damage amount
                             <input
                               type="number"
                               min="0"
-                              max={group.securityDepositHeld}
                               step="0.01"
                               required
                               value={values.damageDeduction ?? "0"}
@@ -358,6 +384,19 @@ export default function AnnexureRefundModal({ booking, onClose }) {
                               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                             />
                           </label>
+                          <p className="mt-2 text-sm text-slate-700">
+                            Covered by deposit:{" "}
+                            {formatCurrency(
+                              Math.min(
+                                group.securityDepositHeld,
+                                damageDeduction,
+                              ),
+                            )}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-red-700">
+                            Damage amount to collect:{" "}
+                            {formatCurrency(damageCollection)}
+                          </p>
                           <p className="mt-2 text-sm font-semibold text-emerald-700">
                             Security deposit refund:{" "}
                             {formatCurrency(securityRefund)}
@@ -371,7 +410,15 @@ export default function AnnexureRefundModal({ booking, onClose }) {
 
               <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3 font-semibold text-emerald-900">
                 <span>Total refund</span>
-                <span className="text-lg">{formatCurrency(refundAmount)}</span>
+                <span className="text-lg">
+                  {formatCurrency(refundCalculations.refundAmount)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-amber-50 px-4 py-3 font-semibold text-amber-950">
+                <span>Total amount to collect from customer</span>
+                <span className="text-lg">
+                  {formatCurrency(refundCalculations.collectionAmount)}
+                </span>
               </div>
 
               {refundResult ? (
@@ -414,10 +461,16 @@ export default function AnnexureRefundModal({ booking, onClose }) {
                       className="mt-1 h-4 w-4 accent-amber-700"
                     />
                     <span>
-                      I have processed this refund of{" "}
-                      <strong>{formatCurrency(refundAmount)}</strong> outside
-                      this app. I understand this action records the refund and
-                      cannot be undone.
+                      I have collected{" "}
+                      <strong>
+                        {formatCurrency(refundCalculations.collectionAmount)}
+                      </strong>{" "}
+                      from the customer and processed the refund of{" "}
+                      <strong>
+                        {formatCurrency(refundCalculations.refundAmount)}
+                      </strong>{" "}
+                      outside this app. I understand this action records the
+                      settlement and cannot be undone.
                     </span>
                   </label>
                   <div className="flex justify-end">

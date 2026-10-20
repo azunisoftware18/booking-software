@@ -1139,7 +1139,7 @@ export default function BookingFlowRight() {
               <div className="space-y-1 text-sm text-slate-600">
                 <p>Venue charges: ₹{annexureRentalTotal.toFixed(2)}</p>
                 <p>Security deposit: ₹{annexureSecurityDepositTotal.toFixed(2)}</p>
-                <p>Electricity: ₹{annexureElectricityTotal.toFixed(2)}</p>
+                <p>Electricity Charges Deposit: ₹{annexureElectricityTotal.toFixed(2)}</p>
               </div>
             )}
 

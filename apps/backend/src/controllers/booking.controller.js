@@ -121,7 +121,7 @@ class BookingController {
       const emailInfo = await EmailService.sendMail({
         to: booking.email,
         subject: "Annexure booking refund receipt",
-        html: `<p>Dear ${escapeHtml(booking.name)},</p><p>Your Annexure booking refund of <strong>Rs ${Number(refundDetails.refundAmount).toFixed(2)}</strong> has been recorded. The refund calculation receipt is attached.</p>`,
+        html: `<p>Dear ${escapeHtml(booking.name)},</p><p>Your Annexure booking settlement has been recorded. Refund amount: <strong>Rs ${Number(refundDetails.refundAmount).toFixed(2)}</strong>. Amount to collect: <strong>Rs ${Number(refundDetails.collectionAmount).toFixed(2)}</strong>. The itemized calculation receipt is attached.</p>`,
         attachments: [
           {
             filename: `refund-receipt-${booking.id}.pdf`,
@@ -139,6 +139,7 @@ class BookingController {
       ApiResponse.success(
         {
           refundAmount: refundDetails.refundAmount,
+          collectionAmount: refundDetails.collectionAmount,
           receiptEmailSent,
         },
         "Refund recorded and receipt generated",

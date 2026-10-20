@@ -14,6 +14,7 @@ import WhatsappService from "./whatsapp.service.js";
 import EmailService from "./Email.service.js";
 import {
   ELECTRICITY_CHARGE_BY_OPTION,
+  ELECTRICITY_RATE_PER_UNIT,
   SECURITY_DEPOSIT_BY_OPTION,
 } from "./annexurePricing.js";
 
@@ -1165,6 +1166,7 @@ We can't wait to welcome you! 🎉`;
       customerEmail: booking.email,
       totalAmount: booking.totalAmount,
       paymentMethod: booking.paymentMethod,
+      electricityRatePerUnit: ELECTRICITY_RATE_PER_UNIT,
       groups: this.buildAnnexureRefundGroups(booking),
     };
   }
@@ -1200,19 +1202,10 @@ We can't wait to welcome you! 🎉`;
           "Refund charges are missing for an Annexure option",
         );
       }
-      if (
-        submitted.electricityCharge >
-          group.electricityHeld +
-            group.securityDepositHeld -
-            submitted.damageDeduction ||
-        submitted.damageDeduction > group.securityDepositHeld
-      ) {
-        throw ApiError.badRequest(
-          `Combined electricity and damage deductions cannot exceed the refundable amount for ${group.placeName}`,
-        );
-      }
-
-      const electricityCharge = roundCurrency(submitted.electricityCharge);
+      const electricityUnits = submitted.electricityUnits;
+      const electricityCharge = roundCurrency(
+        electricityUnits * ELECTRICITY_RATE_PER_UNIT,
+      );
       const damageDeduction = roundCurrency(submitted.damageDeduction);
       const electricityRefund = roundCurrency(
         Math.max(0, group.electricityHeld - electricityCharge),
@@ -1220,18 +1213,41 @@ We can't wait to welcome you! 🎉`;
       const electricityOverage = roundCurrency(
         Math.max(0, electricityCharge - group.electricityHeld),
       );
+      const depositAfterDamage = Math.max(
+        0,
+        group.securityDepositHeld - damageDeduction,
+      );
+      const damageCoveredByDeposit = roundCurrency(
+        Math.min(group.securityDepositHeld, damageDeduction),
+      );
+      const damageCollection = roundCurrency(
+        Math.max(0, damageDeduction - group.securityDepositHeld),
+      );
+      const electricityOverageFromDeposit = roundCurrency(
+        Math.min(depositAfterDamage, electricityOverage),
+      );
+      const electricityCollection = roundCurrency(
+        Math.max(0, electricityOverage - depositAfterDamage),
+      );
       const securityDepositRefund = roundCurrency(
-        Math.max(
-          0,
-          group.securityDepositHeld - damageDeduction - electricityOverage,
-        ),
+        Math.max(0, depositAfterDamage - electricityOverage),
+      );
+      const collectionAmount = roundCurrency(
+        damageCollection + electricityCollection,
       );
 
       return {
         ...group,
+        electricityUnits,
+        electricityRatePerUnit: ELECTRICITY_RATE_PER_UNIT,
         electricityCharge,
         electricityOverage,
         damageDeduction,
+        damageCoveredByDeposit,
+        damageCollection,
+        electricityOverageFromDeposit,
+        electricityCollection,
+        collectionAmount,
         electricityRefund,
         securityDepositRefund,
         refundAmount: roundCurrency(electricityRefund + securityDepositRefund),
@@ -1247,12 +1263,16 @@ We can't wait to welcome you! 🎉`;
     const refundAmount = roundCurrency(
       refundItems.reduce((total, item) => total + item.refundAmount, 0),
     );
+    const collectionAmount = roundCurrency(
+      refundItems.reduce((total, item) => total + item.collectionAmount, 0),
+    );
     const refundedAt = new Date();
     const refundDetails = {
       method: "MANUAL",
       externallyRefunded: true,
       originalAmount: Number(booking.totalAmount),
       refundAmount,
+      collectionAmount,
       items: refundItems,
     };
 

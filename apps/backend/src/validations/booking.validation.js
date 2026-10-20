@@ -94,7 +94,7 @@ static get createBooking() {
           .array(
             z.object({
               placeId: z.string().uuid(),
-              electricityCharge: z.number().min(0).max(10000000),
+              electricityUnits: z.number().min(0).max(10000000),
               damageDeduction: z.number().min(0).max(10000000),
             }),
           )
