@@ -465,7 +465,7 @@ class TicketService {
     const summaryRows = [
       ["Venue charges", venueChargesTotal],
       ["Security deposit", securityDepositTotal],
-      ["Electricity", electricityTotal],
+      ["Electricity (Rs.15 per unit)", electricityTotal],
     ];
     summaryRows.forEach(([label, amount], index) => {
       doc
