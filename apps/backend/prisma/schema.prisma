@@ -217,6 +217,8 @@ model Location {
   address     String?
   city        String?
   state       String?
+  email       String?
+  contactNumber String? @map("contact_number")
   imageUrl    String?
   imageKey    String?
 

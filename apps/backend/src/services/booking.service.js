@@ -12,26 +12,10 @@ import path from "path";
 import { upload } from "../utils/s3Service.js";
 import WhatsappService from "./whatsapp.service.js";
 import EmailService from "./Email.service.js";
-
-const SECURITY_DEPOSIT_BY_OPTION = {
-  A1: 10000,
-  A2: 2500,
-  A3: 4000,
-  A4: 3000,
-  A5: 4000,
-  A6: 5500,
-  A7: 12000,
-};
-
-const ELECTRICITY_CHARGE_BY_OPTION = {
-  A1: { 4: 1500, 8: 3000 },
-  A2: { 4: 500, 8: 1000 },
-  A3: { 4: 200, 8: 400 },
-  A4: { 4: 200, 8: 400 },
-  A5: { 4: 100, 8: 200 },
-  A6: { 4: 1000, 8: 2000 },
-  A7: { 4: 1500, 8: 3000 },
-};
+import {
+  ELECTRICITY_CHARGE_BY_OPTION,
+  SECURITY_DEPOSIT_BY_OPTION,
+} from "./annexurePricing.js";
 
 class BookingService {
   // ============================================================

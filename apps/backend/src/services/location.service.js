@@ -8,6 +8,8 @@ const locationSelect = {
   address: true,
   city: true,
   state: true,
+  email: true,
+  contactNumber: true,
   imageUrl: true,
   status: true,
   createdAt: true,

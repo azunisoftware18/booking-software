@@ -2,6 +2,10 @@ import prisma from "../db/db.js";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { ApiError } from "../utils/ApiError.js";
+import {
+  ELECTRICITY_CHARGE_BY_OPTION,
+  SECURITY_DEPOSIT_BY_OPTION,
+} from "./annexurePricing.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +22,8 @@ class TicketService {
         booking: {
           select: {
             id: true,
+            txnId: true,
+            paymentId: true,
             name: true,
             email: true,
             phone: true,
@@ -54,6 +60,14 @@ class TicketService {
       where: { id: bookingId },
       include: {
         place: true,
+        location: {
+          select: {
+            name: true,
+            address: true,
+            city: true,
+            state: true,
+          },
+        },
         tickets: { include: { type: true } },
         annexureItems: { include: { place: true } },
       },
@@ -153,29 +167,139 @@ class TicketService {
 
   static _drawAnnexureReceipt(doc, booking) {
     const pageWidth = doc.page.width;
-    const margin = 48;
-    let cursorY = 50;
+    const pageHeight = doc.page.height;
+    const margin = 42;
+    const contentWidth = pageWidth - margin * 2;
+    const colors = {
+      navy: "#0b2149",
+      brown: "#994113",
+      gold: "#b8860b",
+      text: "#333333",
+      muted: "#64748b",
+      border: "#e2e8f0",
+      background: "#f8fafc",
+      cream: "#f8f5ef",
+    };
+    const venueNames = [
+      ...new Set(
+        (booking.annexureItems || [])
+          .map((item) => item.place?.name)
+          .filter(Boolean),
+      ),
+    ];
+    const receiptTitle =
+      venueNames.join(", ") || booking.place?.name || "Annexure Booking";
+    let cursorY = 0;
+
+    const drawHeader = () => {
+      doc.rect(0, 0, pageWidth, 100).fill(colors.navy);
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(16)
+        .fillColor("#ffffff")
+        .text(receiptTitle, margin, 14, {
+          width: contentWidth,
+          height: 42,
+          align: "center",
+          ellipsis: true,
+        });
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor("#dbeafe")
+        .text(`Booking ID: ${booking.id}`, margin, 54, {
+          width: contentWidth,
+          align: "center",
+        });
+      cursorY = 118;
+    };
+
+    const drawField = (label, value, x, y, width) => {
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .fillColor(colors.muted)
+        .text(label.toUpperCase(), x, y, { width });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .fillColor(colors.text)
+        .text(String(value || "—"), x, y + 12, {
+          width,
+          height: 14,
+          lineBreak: false,
+          ellipsis: true,
+        });
+    };
+
+    drawHeader();
+
+    const locationDetails = [
+      booking.location?.name,
+      booking.location?.city,
+      booking.location?.state,
+      booking.location?.address,
+    ].filter(Boolean);
+    const columnGap = 18;
+    const columnWidth = (contentWidth - columnGap) / 2;
+    const rightColumnX = margin + columnWidth + columnGap;
+
+    doc
+      .roundedRect(margin, cursorY, contentWidth, 234, 8)
+      .fillAndStroke(colors.background, colors.border);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .fillColor(colors.navy)
+      .text("Customer and payment details", margin + 14, cursorY + 12);
+    drawField("Customer", booking.name, margin + 14, cursorY + 34, columnWidth - 14);
+    drawField("Email", booking.email, rightColumnX, cursorY + 34, columnWidth - 14);
+    drawField("Contact number", booking.phone, margin + 14, cursorY + 64, columnWidth - 14);
+    drawField(
+      "Payment method",
+      booking.paymentMethod,
+      rightColumnX,
+      cursorY + 64,
+      columnWidth - 14,
+    );
+    drawField(
+      "Selected location",
+      locationDetails.join(", "),
+      margin + 14,
+      cursorY + 94,
+      contentWidth - 28,
+    );
+    drawField(
+      "Payment status",
+      booking.status,
+      margin + 14,
+      cursorY + 124,
+      contentWidth - 28,
+    );
+
+    drawField(
+      "Transaction ID",
+      booking.txnId,
+      margin + 14,
+      cursorY + 154,
+      contentWidth - 28,
+    );
+
+    drawField(
+      "Payment ID",
+      booking.paymentId,
+      margin + 14,
+      cursorY + 184,
+      contentWidth - 28,
+    );
+    cursorY += 252;
 
     doc
       .font("Helvetica-Bold")
-      .fontSize(22)
-      .fillColor("#0b2149")
-      .text("Annexure Booking Confirmation", margin, cursorY, {
-        width: pageWidth - margin * 2,
-        align: "center",
-      });
-    cursorY += 42;
-
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .fillColor("#333333")
-      .text(`Booking ID: ${booking.id}`, margin, cursorY);
-    cursorY += 18;
-    doc.text(`Customer: ${booking.name}`, margin, cursorY);
-    cursorY += 18;
-    doc.text(`Payment status: ${booking.status}`, margin, cursorY);
-    cursorY += 30;
+      .fontSize(13)
+      .fillColor(colors.navy)
+      .text("Selected annexure options", margin, cursorY);
+    cursorY += 22;
 
     const groupedItems = new Map();
     for (const item of booking.annexureItems || []) {
@@ -208,10 +332,21 @@ class TicketService {
       };
     });
 
+    let venueChargesTotal = 0;
+    let securityDepositTotal = 0;
+    let electricityTotal = 0;
+
     for (const item of sortedGroups) {
-      if (cursorY > doc.page.height - 170) {
+      const cardHeight = 158;
+      if (cursorY + cardHeight > pageHeight - margin) {
         doc.addPage();
-        cursorY = 50;
+        drawHeader();
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(13)
+          .fillColor(colors.navy)
+          .text("Selected annexure options", margin, cursorY);
+        cursorY += 22;
       }
 
       const dateOptions = {
@@ -236,50 +371,132 @@ class TicketService {
         hour12: true,
       });
       const dayCount = item.slotDates.length;
-      const attendance =
+      const bookingDetails =
         item.durationHours != null
-          ? `Duration: ${item.durationHours} hours × ${dayCount} ${dayCount === 1 ? "day" : "days"}`
-          : `Persons: ${item.persons}; Students: ${item.students}`;
+          ? `Duration: ${item.durationHours} hours · ${dayCount} ${dayCount === 1 ? "day" : "days"}`
+          : `Persons: ${item.persons} · Students: ${item.students}`;
+      const option = item.place.annexureOption;
+      const venueCharges = Number(item.amount || 0);
+      const securityDeposit =
+        (SECURITY_DEPOSIT_BY_OPTION[option] || 0) * dayCount;
+      const electricity =
+        (ELECTRICITY_CHARGE_BY_OPTION[option]?.[item.durationHours] || 0) *
+        dayCount;
+      const itemTotal = venueCharges + securityDeposit + electricity;
+
+      venueChargesTotal += venueCharges;
+      securityDepositTotal += securityDeposit;
+      electricityTotal += electricity;
 
       doc
-        .roundedRect(margin, cursorY, pageWidth - margin * 2, 112, 10)
-        .fillAndStroke("#f8f5ef", "#b8860b");
+        .roundedRect(margin, cursorY, contentWidth, cardHeight, 8)
+        .fillAndStroke(colors.cream, colors.gold);
       doc
         .font("Helvetica-Bold")
-        .fontSize(12)
-        .fillColor("#0b2149")
+        .fontSize(11)
+        .fillColor(colors.navy)
         .text(
-          `${item.place.annexure || ""}${item.place.annexureOption ? ` - ${item.place.annexureOption}` : ""}`,
+          `${item.place.annexure || "Annexure"}${option ? ` - ${option}` : ""}`,
           margin + 14,
-          cursorY + 12,
-          { width: pageWidth - margin * 2 - 28 }
+          cursorY + 10,
+          { width: contentWidth - 28 },
         );
       doc
         .font("Helvetica")
-        .fontSize(10)
-        .fillColor("#333333")
-        .text(item.place.name, margin + 14, cursorY + 31, {
-          width: pageWidth - margin * 2 - 28,
+        .fontSize(9)
+        .fillColor(colors.text)
+        .text(`Venue: ${item.place.name}`, margin + 14, cursorY + 29, {
+          width: contentWidth - 28,
+          height: 14,
         })
-        .text(`Date${dayCount > 1 ? " range" : ""}: ${dateRange}, ${time}`, margin + 14, cursorY + 54)
-        .text(attendance, margin + 14, cursorY + 70)
         .text(
-          `Amount: Rs ${Number(item.amount).toFixed(2)}`,
+          `Visit: ${dateRange} · ${time} · ${dayCount} ${dayCount === 1 ? "day" : "days"}`,
           margin + 14,
-          cursorY + 86
-        );
-      cursorY += 128;
+          cursorY + 47,
+          { width: contentWidth - 28, height: 14 },
+        )
+        .text(bookingDetails, margin + 14, cursorY + 65, {
+          width: contentWidth - 28,
+          height: 14,
+        });
+
+      const priceColumnWidth = (contentWidth - 42) / 2;
+      const priceRightX = margin + 14 + priceColumnWidth + 14;
+      drawField(
+        "Venue charges",
+        `Rs ${venueCharges.toFixed(2)}`,
+        margin + 14,
+        cursorY + 87,
+        priceColumnWidth,
+      );
+      drawField(
+        "Security deposit",
+        `Rs ${securityDeposit.toFixed(2)}`,
+        priceRightX,
+        cursorY + 87,
+        priceColumnWidth,
+      );
+      drawField(
+        "Electricity",
+        `Rs ${electricity.toFixed(2)}`,
+        margin + 14,
+        cursorY + 112,
+        priceColumnWidth,
+      );
+      drawField(
+        "Option total",
+        `Rs ${itemTotal.toFixed(2)}`,
+        priceRightX,
+        cursorY + 112,
+        priceColumnWidth,
+      );
+      cursorY += cardHeight + 10;
+    }
+
+    const totalSummaryHeight = 105;
+    if (cursorY + totalSummaryHeight > pageHeight - margin) {
+      doc.addPage();
+      drawHeader();
     }
 
     doc
+      .roundedRect(margin, cursorY, contentWidth, totalSummaryHeight, 8)
+      .fillAndStroke("#fff7ed", "#fed7aa");
+    const summaryRows = [
+      ["Venue charges", venueChargesTotal],
+      ["Security deposit", securityDepositTotal],
+      ["Electricity", electricityTotal],
+    ];
+    summaryRows.forEach(([label, amount], index) => {
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor(colors.text)
+        .text(label, margin + 14, cursorY + 13 + index * 19);
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor(colors.text)
+        .text(
+          `Rs ${Number(amount).toFixed(2)}`,
+          margin + 14,
+          cursorY + 13 + index * 19,
+          { width: contentWidth - 28, align: "right" },
+        );
+    });
+
+    doc
       .font("Helvetica-Bold")
-      .fontSize(14)
-      .fillColor("#994113")
+      .fontSize(13)
+      .fillColor(colors.brown)
       .text(
-        `Combined total: Rs ${Number(booking.totalAmount).toFixed(2)}`,
-        margin,
-        cursorY + 2,
-        { width: pageWidth - margin * 2, align: "right" }
+        `Combined total: Rs ${Number(booking.totalAmount).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`,
+        margin + 14,
+        cursorY + 73,
+        { width: contentWidth - 28, align: "right" },
       );
   }
 

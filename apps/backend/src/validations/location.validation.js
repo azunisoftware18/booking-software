@@ -7,6 +7,14 @@ export const createLocationSchema = z.object({
   address: z.string().trim().max(255).optional().nullable(),
   city: z.string().trim().max(100).optional().nullable(),
   state: z.string().trim().max(100).optional().nullable(),
+  email: z
+    .union([
+      z.string().trim().email("Enter a valid email address").max(191),
+      z.literal(""),
+    ])
+    .optional()
+    .nullable(),
+  contactNumber: z.string().trim().max(10).optional().nullable(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 });
 
