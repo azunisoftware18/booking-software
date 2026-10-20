@@ -841,7 +841,11 @@ export default function BookingFlowRight() {
 
                 <div
                   className={`mt-5 grid gap-5 ${
-                    entryFeeId ? "grid-cols-1" : "md:grid-cols-2"
+                    entryFeeId
+                      ? "grid-cols-1"
+                      : isJaipurLocation && !entryFeeIds.length
+                        ? "md:grid-cols-3"
+                        : "md:grid-cols-2"
                   }`}
                 >
                   {!entryFeeId && isJaipurLocation && (
@@ -909,7 +913,7 @@ export default function BookingFlowRight() {
                       <Ticket size={16} className="text-[#994113]" />
                       Entry fees
                     </h3>
-                    {entryFeeGroups.length || (isJaipurLocation && !entryFeeIds.length) ? (
+                    {entryFeeGroups.length ? (
                       <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
                         {entryFeeGroups.map((group) => (
                           <button
@@ -958,44 +962,6 @@ export default function BookingFlowRight() {
                             </span>
                           </button>
                         ))}
-                        {isJaipurLocation && !entryFeeIds.length && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAnnexureDraftItems({});
-                              setShowDepositForm(false);
-                              setSelectedAnnexure({
-                                annexure: "C",
-                                venues: planetariumPlaces,
-                              });
-                            }}
-                            className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
-                          >
-                            <span className="flex items-start justify-between gap-3">
-                              <span className="flex min-w-0 items-start gap-3">
-                                <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
-                                  <Ticket size={18} />
-                                </span>
-                                <span className="min-w-0">
-                                  <span className="block font-bold text-slate-800">Planetarium</span>
-                                  <span className="mt-1 block text-xs text-slate-600">
-                                    7D Theater, 3D Film, Taramandal, I.T. Gallery and more
-                                  </span>
-                                  <span className="mt-1 block text-xs text-slate-500">
-                                    ₹10–₹20 per person · ₹5–₹10 per student
-                                  </span>
-                                </span>
-                              </span>
-                              <ArrowRight size={16} className="mt-1 shrink-0 text-slate-400" />
-                            </span>
-                            <span className="mt-4 flex items-center justify-between text-xs font-bold text-[#994113]">
-                              <span>Browse ticket types</span>
-                              <span className="text-slate-500">
-                                {configuredPlanetariumCount}/{ANNEXURE_OPTIONS.C.length} configured
-                              </span>
-                            </span>
-                          </button>
-                        )}
                       </div>
                     ) : (
                       <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
@@ -1003,6 +969,51 @@ export default function BookingFlowRight() {
                       </p>
                     )}
                   </section>
+
+                  {!entryFeeId && isJaipurLocation && !entryFeeIds.length && (
+                    <section className="min-w-0">
+                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <Ticket size={16} className="text-[#994113]" />
+                        Planetarium
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnnexureDraftItems({});
+                          setShowDepositForm(false);
+                          setSelectedAnnexure({
+                            annexure: "C",
+                            venues: planetariumPlaces,
+                          });
+                        }}
+                        className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                      >
+                        <span className="flex items-start justify-between gap-3">
+                          <span className="flex min-w-0 items-start gap-3">
+                            <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
+                              <Ticket size={18} />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block font-bold text-slate-800">Planetarium</span>
+                              <span className="mt-1 block text-xs text-slate-600">
+                                7D Theater, 3D Film, Taramandal, I.T. Gallery and more
+                              </span>
+                              <span className="mt-1 block text-xs text-slate-500">
+                                ₹10–₹20 per person · ₹5–₹10 per student
+                              </span>
+                            </span>
+                          </span>
+                          <ArrowRight size={16} className="mt-1 shrink-0 text-slate-400" />
+                        </span>
+                        <span className="mt-4 flex items-center justify-between text-xs font-bold text-[#994113]">
+                          <span>Browse ticket types</span>
+                          <span className="text-slate-500">
+                            {configuredPlanetariumCount}/{ANNEXURE_OPTIONS.C.length} configured
+                          </span>
+                        </span>
+                      </button>
+                    </section>
+                  )}
                 </div>
 
                 {!entryFeeId && (
