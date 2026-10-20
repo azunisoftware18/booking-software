@@ -1,13 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import {
-  MapPin,
-  Plus,
-  X,
-  Building2,
-  ChevronDown,
-} from "lucide-react";
+import { MapPin, Plus, X, Building2, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../ui/Button";
 import InputField from "../ui/InputField";
@@ -294,7 +288,6 @@ export default function AddPlaceForm({
       setAnnexureError("");
       setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
       setSlotError("");
-
     } catch (error) {
       console.error("Place form submit error:", error);
     }
@@ -353,7 +346,7 @@ export default function AddPlaceForm({
               onChange={handleAnnexureChange}
               className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-3 pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
-              <option value="">Choose an annexure</option>
+              <option value="">Choose an Venue</option>
               <option value="A">Event Venue</option>
               <option value="B">Security money deposit</option>
               <option value="C">Planetarium </option>
