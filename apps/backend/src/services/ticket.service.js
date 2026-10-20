@@ -192,26 +192,31 @@ class TicketService {
     let cursorY = 0;
 
     const drawHeader = () => {
-      doc.rect(0, 0, pageWidth, 100).fill(colors.navy);
+      if (fs.existsSync(LOGO_PATH))
+        doc.image(LOGO_PATH, (pageWidth - 155) / 2, 12, {
+          fit: [155, 60],
+          align: "center",
+          valign: "center",
+        });
       doc
         .font("Helvetica-Bold")
-        .fontSize(16)
-        .fillColor("#ffffff")
-        .text(receiptTitle, margin, 14, {
+        .fontSize(14)
+        .fillColor(colors.navy)
+        .text(receiptTitle, margin, 72, {
           width: contentWidth,
-          height: 42,
+          height: 20,
           align: "center",
           ellipsis: true,
         });
       doc
         .font("Helvetica")
         .fontSize(9)
-        .fillColor("#dbeafe")
-        .text(`Booking ID: ${booking.id}`, margin, 54, {
+        .fillColor(colors.muted)
+        .text(`Location: ${booking.location?.name || "—"}`, margin, 98, {
           width: contentWidth,
           align: "center",
         });
-      cursorY = 118;
+      cursorY = 132;
     };
 
     const drawField = (label, value, x, y, width) => {
