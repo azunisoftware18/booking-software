@@ -12,6 +12,7 @@ import userRoute from "./user.routes.js";
 import permissionRoute from "./permission.routes.js";
 import locationRoute from "./location.routes.js"
 import adminRoutes from "./admin.routes.js"
+import reportRoute from "./report.routes.js";
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use("/user", userRoute);
 router.use("/permission", permissionRoute);
 router.use("/location", locationRoute)
 router.use("/admin", adminRoutes)
+router.use("/report", reportRoute)
 
 
 

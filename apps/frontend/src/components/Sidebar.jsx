@@ -34,6 +34,7 @@ const menuItems = [
   // { icon: User, label: "Entry Fee", href: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
   { icon: Calendar, label: "Slots", href: "/dashboard/slots", permission: "SLOT.READ" },
   { icon: BookCheck, label: "Booking", href: "/dashboard/booking", permission: "BOOKING.READ" },
+  { icon: Star, label: "Reports", href: "/dashboard/reports", permission: "BOOKING.READ" },
   { icon: Scan, label: "Ticket Scanner", href: "/dashboard/ticket-scanner", permission: "TICKET.SCAN" },
   { icon: Users, label: "Employee Management", href: "/dashboard/users-management", permission: "USER.READ" },
   { icon: User, label: "Employee Role Management", href: "/dashboard/role-management", permission: "ROLE.READ" },

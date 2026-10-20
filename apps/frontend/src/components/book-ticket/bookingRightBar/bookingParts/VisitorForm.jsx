@@ -259,6 +259,7 @@ export default function VisitorForm({
               )}
             </div>
           )}
+
           {formData.paymentMethod === "ONLINE" && (
             <p
               role="alert"

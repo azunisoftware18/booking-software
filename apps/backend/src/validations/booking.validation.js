@@ -15,6 +15,7 @@ static get createBooking() {
     email: z.string().email(),
     phone: z.string().min(10),
 
+
     paymentMethod: z.enum(["CASH", "UPI", "ONLINE"]).optional(),
 
     tickets: z.array(
