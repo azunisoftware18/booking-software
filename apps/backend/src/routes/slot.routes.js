@@ -49,9 +49,10 @@ router.get(
 router.put(
   "/template/:id",
   AuthMiddleware.isAuthenticated,
-  PermissionMiddleware.hasPermission(
-    PermissionsRegistry.SLOT.UPDATE
-  ),
+  PermissionMiddleware.hasAnyPermission([
+    PermissionsRegistry.SLOT.UPDATE,
+    PermissionsRegistry.PLACE.UPDATE,
+  ]),
   ValidateRequest.validate(SlotValidation.updateSlot),
   asyncHandler(SlotTemplateController.update)
 );

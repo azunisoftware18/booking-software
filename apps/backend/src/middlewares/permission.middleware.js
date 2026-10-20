@@ -83,6 +83,43 @@ class PermissionMiddleware {
       }
     };
   };
+
+  static hasAnyPermission = (permissions = []) => {
+    return async (req, res, next) => {
+      try {
+        if (!req.user) {
+          throw ApiError.unauthorized("User not authenticated");
+        }
+
+        if (!permissions.length) {
+          throw ApiError.forbidden("Permission is required");
+        }
+
+        if (req.user.role?.roleCode === "SUPER_ADMIN") {
+          return next();
+        }
+
+        const assignedPermission = await prisma.assignedPermission.findFirst({
+          where: {
+            permission: {
+              resource: { in: permissions.map((permission) => permission.split(".")[0]) },
+              action: { in: permissions.map((permission) => permission.split(".")[1]) },
+              isActive: true,
+            },
+            OR: [{ roleId: req.user.roleId }, { userId: req.user.id }],
+          },
+        });
+
+        if (!assignedPermission) {
+          throw ApiError.forbidden(`Permission denied: ${permissions.join(" or ")}`);
+        }
+
+        return next();
+      } catch (error) {
+        return next(error);
+      }
+    };
+  };
 }
 
 export default PermissionMiddleware;

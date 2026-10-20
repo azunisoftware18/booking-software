@@ -4,8 +4,6 @@ import { useForm } from "react-hook-form";
 import {
   MapPin,
   Plus,
-  ImageIcon,
-  Upload,
   X,
   Building2,
   ChevronDown,
@@ -36,8 +34,6 @@ export default function AddPlaceForm({
   canDeleteSlots = false,
   assignedLocation = "",
 }) {
-  const [preview, setPreview] = useState(null);
-  const [imageError, setImageError] = useState("");
   const [annexureError, setAnnexureError] = useState("");
   const [slotTemplates, setSlotTemplates] = useState([
     { startTime: "", endTime: "", capacity: "" },
@@ -61,7 +57,6 @@ export default function AddPlaceForm({
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
     reset,
@@ -75,35 +70,9 @@ export default function AddPlaceForm({
       description: "",
       latitude: "",
       longitude: "",
-      image: "",
       ...defaultValues,
     },
   });
-
-  const selectedImage = watch("image");
-
-  // =========================================================
-  // IMAGE PREVIEW
-  // =========================================================
-  useEffect(() => {
-    if (!selectedImage) {
-      setPreview(null);
-      return;
-    }
-
-    if (typeof selectedImage === "string") {
-      setPreview(selectedImage);
-      return;
-    }
-
-    if (typeof File !== "undefined" && selectedImage instanceof File) {
-      const url = URL.createObjectURL(selectedImage);
-
-      setPreview(url);
-
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [selectedImage]);
 
   // =========================================================
   // EDIT DEFAULT VALUES
@@ -122,7 +91,6 @@ export default function AddPlaceForm({
       longitude: defaultValues?.longitude ?? "",
       shortDescription: defaultValues?.shortDescription || "",
       description: defaultValues?.description || "",
-      image: defaultValues?.image || defaultValues?.imageUrl || "",
     });
 
     setSelectedAnnexure(annexure);
@@ -130,7 +98,6 @@ export default function AddPlaceForm({
     setPendingAnnexure("");
     setPendingOption("");
     setShowAnnexurePopup(false);
-    setImageError("");
     setAnnexureError("");
     setSlotTemplates(
       defaultValues?.id
@@ -231,53 +198,6 @@ export default function AddPlaceForm({
   };
 
   // =========================================================
-  // IMAGE VALIDATION
-  // =========================================================
-  const handleImageChange = (event) => {
-    const file = event.target.files?.[0];
-
-    setImageError("");
-
-    if (!file) return;
-
-    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
-
-    if (!allowedTypes.includes(file.type)) {
-      setImageError("Please select a PNG, JPG, JPEG or WEBP image.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("Image size must be less than 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    setValue("image", file, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
-
-  // =========================================================
-  // REMOVE IMAGE
-  // =========================================================
-  const removeImage = () => {
-    setValue("image", "", {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-
-    setPreview(null);
-    setImageError("");
-
-    const input = document.getElementById("place-image");
-
-    if (input) input.value = "";
-  };
-
-  // =========================================================
   // FORM SUBMIT
   // =========================================================
   const handleFormSubmit = async (data) => {
@@ -294,7 +214,7 @@ export default function AddPlaceForm({
         return;
       }
 
-      const canEditSlotTemplates = Boolean(defaultValues?.id) && canUpdateSlots;
+      const canEditSlotTemplates = Boolean(defaultValues?.id);
       const configuredSlots =
         canCreateSlots || canEditSlotTemplates
           ? slotTemplates.map((slot) => ({
@@ -347,11 +267,10 @@ export default function AddPlaceForm({
         ratePerPerson: selectedOptionObj?.ratePerPerson ?? null,
         ratePerStudent: selectedOptionObj?.ratePerStudent ?? null,
         slotTemplates: configuredSlots,
-        name: getAnnexureOptionLabel(selectedAnnexure, selectedAnnexureOption),
+        name: data.name.trim(),
         location: (data.location || assignedLocation).trim(),
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
-        image: data.image || null,
       };
 
       await onSubmit?.(payload);
@@ -365,7 +284,6 @@ export default function AddPlaceForm({
         description: "",
         latitude: "",
         longitude: "",
-        image: "",
       });
 
       setSelectedAnnexure("");
@@ -373,14 +291,10 @@ export default function AddPlaceForm({
       setPendingAnnexure("");
       setPendingOption("");
       setShowAnnexurePopup(false);
-      setPreview(null);
-      setImageError("");
       setAnnexureError("");
       setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
       setSlotError("");
 
-      const input = document.getElementById("place-image");
-      if (input) input.value = "";
     } catch (error) {
       console.error("Place form submit error:", error);
     }
@@ -709,7 +623,6 @@ export default function AddPlaceForm({
                       <input
                         type="time"
                         value={slot.startTime}
-                        disabled={Boolean(defaultValues?.id) && !canUpdateSlots}
                         onChange={(event) => {
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
@@ -728,7 +641,6 @@ export default function AddPlaceForm({
                       <input
                         type="time"
                         value={slot.endTime}
-                        disabled={Boolean(defaultValues?.id) && !canUpdateSlots}
                         onChange={(event) => {
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
@@ -749,7 +661,6 @@ export default function AddPlaceForm({
                         min="1"
                         step="1"
                         value={slot.capacity}
-                        disabled={Boolean(defaultValues?.id) && !canUpdateSlots}
                         onChange={(event) => {
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
@@ -819,7 +730,6 @@ export default function AddPlaceForm({
           <InputField
             label="Venue / Place Name"
             icon={MapPin}
-            readOnly
             error={errors.name?.message}
             {...register("name", {
               required: "Venue name is required",
@@ -895,80 +805,6 @@ export default function AddPlaceForm({
         </div> */}
 
         {/* =====================================================
-            IMAGE UPLOAD
-        ===================================================== */}
-        <div className="space-y-3">
-          <label className="text-sm font-semibold text-slate-700">
-            Venue Image
-          </label>
-
-          <div className="rounded-xl border-2 border-dashed border-slate-300 p-4 transition-colors hover:border-slate-400">
-            {!preview ? (
-              <label
-                htmlFor="place-image"
-                className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-lg transition-colors hover:bg-slate-50"
-              >
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                  <ImageIcon className="h-6 w-6 text-slate-500" />
-                </div>
-
-                <p className="text-sm font-semibold text-slate-700">
-                  Upload Venue Image
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  PNG, JPG, JPEG or WEBP
-                </p>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Maximum size: 5 MB
-                </p>
-
-                <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
-                  <Upload className="h-4 w-4" />
-                  Choose Image
-                </div>
-              </label>
-            ) : (
-              <div className="relative">
-                <img
-                  src={preview || undefined}
-                  alt="Venue preview"
-                  className="h-64 w-full rounded-lg border border-slate-200 object-cover"
-                />
-
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white shadow-md hover:bg-red-50"
-                  title="Remove image"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
-
-                <label
-                  htmlFor="place-image"
-                  className="absolute bottom-3 right-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-md hover:bg-slate-50"
-                >
-                  <Upload className="h-4 w-4" />
-                  Change Image
-                </label>
-              </div>
-            )}
-
-            <input
-              id="place-image"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={handleImageChange}
-            />
-          </div>
-
-          {imageError && <p className="text-sm text-red-600">{imageError}</p>}
-        </div>
-
-        {/* =====================================================
             SHORT DESCRIPTION
         ===================================================== */}
         {/* <TextareaField
@@ -982,7 +818,7 @@ export default function AddPlaceForm({
             FULL DESCRIPTION
         ===================================================== */}
         <TextareaField
-          label="Full Description"
+          label="Full Description (Optional)"
           placeholder="Enter full description..."
           error={errors.description?.message}
           {...register("description")}

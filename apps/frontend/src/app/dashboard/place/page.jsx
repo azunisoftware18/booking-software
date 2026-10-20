@@ -104,7 +104,7 @@ export default function PlacePage() {
           submittedTemplates.map((template) => template.id).filter(Boolean),
         );
 
-        if (canUpdateSlots) {
+        if (editData) {
           for (const template of submittedTemplates) {
             if (!template.id) continue;
 
@@ -241,12 +241,14 @@ export default function PlacePage() {
       permission.action === "CREATE" &&
       permission.isActive,
   );
-  const canUpdateSlots = permissions.some(
-    (permission) =>
-      permission.resource === "SLOT" &&
-      permission.action === "UPDATE" &&
-      permission.isActive,
-  );
+  const canUpdateSlots =
+    isSuperAdmin ||
+    permissions.some(
+      (permission) =>
+        ((permission.resource === "SLOT" && permission.action === "UPDATE") ||
+          (permission.resource === "PLACE" && permission.action === "UPDATE")) &&
+        permission.isActive,
+    );
   const canDeleteSlots = permissions.some(
     (permission) =>
       permission.resource === "SLOT" &&
