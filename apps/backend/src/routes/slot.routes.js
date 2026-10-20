@@ -80,10 +80,9 @@ router.post(
 // GET SLOTS BY PLACE AND DATE
 router.get(
   "/slots/:placeId/:date",
-  AuthMiddleware.isAuthenticated,
-  PermissionMiddleware.hasPermission(
-    PermissionsRegistry.SLOT.READ
-  ),
+  // Slot availability is needed by the public booking flow before a guest
+  // has an access token. Keep template/override management protected below.
+  AuthMiddleware.optionalAuthentication,
   asyncHandler(SlotController.getByDate)
 );
 
