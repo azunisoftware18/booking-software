@@ -13,6 +13,8 @@ const formatCurrency = (value) =>
 
 export default function AnnexureRefundModal({ booking, onClose }) {
   const queryClient = useQueryClient();
+  const isAlreadyRefunded =
+    Boolean(booking.refundedAt) || booking.refundAmount != null;
   const [quote, setQuote] = useState(null);
   const [charges, setCharges] = useState({});
   const [confirmed, setConfirmed] = useState(false);
@@ -23,6 +25,10 @@ export default function AnnexureRefundModal({ booking, onClose }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (isAlreadyRefunded) {
+      return undefined;
+    }
+
     let isActive = true;
     api
       .get(`/booking/${booking.id}/refund-quote`)
@@ -54,7 +60,7 @@ export default function AnnexureRefundModal({ booking, onClose }) {
     return () => {
       isActive = false;
     };
-  }, [booking.id]);
+  }, [booking.id, isAlreadyRefunded]);
 
   const refundAmount = useMemo(
     () =>
@@ -178,7 +184,46 @@ export default function AnnexureRefundModal({ booking, onClose }) {
         </div>
 
         <form onSubmit={submitRefund} className="space-y-5 p-6">
-          {isLoading ? (
+          {isAlreadyRefunded ? (
+            <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div>
+                <p className="font-semibold text-amber-950">
+                  Refund already collected
+                </p>
+                <p className="mt-1 text-sm text-amber-900">
+                  This booking has already been refunded. You can download the
+                  refund receipt below.
+                </p>
+                {booking.refundAmount != null && (
+                  <p className="mt-2 text-sm font-semibold text-amber-950">
+                    Refund amount: {formatCurrency(booking.refundAmount)}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={downloadReceipt}
+                  disabled={isDownloading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+                >
+                  {isDownloading ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Download refund receipt
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-slate-600">
               <LoaderCircle className="h-5 w-5 animate-spin" />
               Calculating refund...

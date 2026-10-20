@@ -303,9 +303,7 @@ return (
                       },
                       ...(onRefund &&
                       booking.bookingType === "ANNEXURE" &&
-                      booking.status === "PAID" &&
-                      !booking.refundedAt &&
-                      booking.refundAmount == null
+                      booking.status === "PAID"
                         ? [
                             {
                               label: "Process Refund",
