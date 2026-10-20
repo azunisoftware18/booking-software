@@ -335,13 +335,19 @@ export default function Home() {
                     <Link href={`/book-tickets/${id}`} className="block">
                       {/* Image */}
                       <div className="relative h-64 w-full overflow-hidden">
-                        <Image
-                          src={place.imageUrl}
-                          alt={place?.name || "Place"}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 340px"
-                          className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                        />
+                        {place?.imageUrl ? (
+                          <Image
+                            src={place.imageUrl}
+                            alt={place?.name || "Place"}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 340px"
+                            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
+                            No image available
+                          </div>
+                        )}
                         {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 

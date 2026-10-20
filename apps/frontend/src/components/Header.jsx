@@ -33,7 +33,7 @@ const Header = () => {
             src={
               setting?.logo
                 ? `${process.env.NEXT_PUBLIC_IMAGE_URL}${setting.logo}`
-                : "/logo.png"
+                : "/logo.jpg"
             }
             alt="Logo"
             className="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-jaipur-pink object-cover shadow-lg shadow-jaipur-pink/20 transition-all duration-500 group-hover:scale-105"

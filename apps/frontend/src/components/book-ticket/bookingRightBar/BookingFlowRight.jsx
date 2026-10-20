@@ -216,18 +216,16 @@ export default function BookingFlowRight() {
         ANNEXURE_OPTIONS.A,
         "A",
         selectedLocation?.venues,
-      )
+      ).filter((venue) => venue.isConfigured)
     : [];
   const planetariumPlaces = isJaipurLocation
     ? mapStaticAnnexurePlaces(
         ANNEXURE_OPTIONS.C,
         "C",
         selectedLocation?.venues,
-      )
+      ).filter((venue) => venue.isConfigured)
     : [];
-  const configuredPlanetariumCount = planetariumPlaces.filter(
-    (venue) => venue.isConfigured,
-  ).length;
+  const configuredPlanetariumCount = planetariumPlaces.length;
   const bookingLocationId = selectedLocationId || directEntryFeeLocation?.id;
   const isDirectEntryFeeUnavailable =
     entryFeeIds.length > 0 &&
@@ -970,7 +968,10 @@ export default function BookingFlowRight() {
                     )}
                   </section>
 
-                  {!entryFeeId && isJaipurLocation && !entryFeeIds.length && (
+                  {!entryFeeId &&
+                    isJaipurLocation &&
+                    !entryFeeIds.length &&
+                    planetariumPlaces.length > 0 && (
                     <section className="min-w-0">
                       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
                         <Ticket size={16} className="text-[#994113]" />

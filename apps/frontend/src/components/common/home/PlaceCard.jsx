@@ -11,11 +11,17 @@ export default function PlaceCard({ place }) {
             className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-gray-100 flex flex-col h-full select-none text-left"
         >
             <div className="relative h-[220px] overflow-hidden bg-gray-50">
-                <img
-                    src={place?.images?.[0] || place?.image}
-                    alt={place?.name}
-                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                />
+                {place?.images?.[0] || place?.image ? (
+                    <img
+                        src={place.images?.[0] || place.image}
+                        alt={place?.name || "Place"}
+                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                    />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
+                        No image available
+                    </div>
+                )}
                 <span className="absolute top-4 left-4 bg-jaipur-blue text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-sm">
                     {place?.location || "Jaipur"}
                 </span>

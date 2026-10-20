@@ -116,9 +116,7 @@ export default function AddPlaceForm({
       annexure,
       annexureOption: option,
       name:
-        getAnnexureOptionLabel(annexure, option) ||
-        defaultValues?.name ||
-        "",
+        getAnnexureOptionLabel(annexure, option) || defaultValues?.name || "",
       location: defaultValues?.location || assignedLocation,
       latitude: defaultValues?.latitude ?? "",
       longitude: defaultValues?.longitude ?? "",
@@ -216,11 +214,10 @@ export default function AddPlaceForm({
       shouldValidate: true,
     });
 
-    setValue(
-      "name",
-      getAnnexureOptionLabel(pendingAnnexure, pendingOption),
-      { shouldDirty: true, shouldValidate: true },
-    );
+    setValue("name", getAnnexureOptionLabel(pendingAnnexure, pendingOption), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
 
     setPendingAnnexure("");
     setPendingOption("");
@@ -297,14 +294,14 @@ export default function AddPlaceForm({
         return;
       }
 
-      const canEditSlotTemplates =
-        Boolean(defaultValues?.id) && canUpdateSlots;
-      const configuredSlots = canCreateSlots || canEditSlotTemplates
-        ? slotTemplates.map((slot) => ({
-            ...slot,
-            capacity: Number(slot.capacity),
-          }))
-        : [];
+      const canEditSlotTemplates = Boolean(defaultValues?.id) && canUpdateSlots;
+      const configuredSlots =
+        canCreateSlots || canEditSlotTemplates
+          ? slotTemplates.map((slot) => ({
+              ...slot,
+              capacity: Number(slot.capacity),
+            }))
+          : [];
 
       if (canCreateSlots || canEditSlotTemplates) {
         if (
@@ -316,14 +313,16 @@ export default function AddPlaceForm({
               slot.capacity < 1,
           )
         ) {
-          setSlotError("Enter a start time, end time and capacity for every slot.");
+          setSlotError(
+            "Enter a start time, end time and capacity for every slot.",
+          );
           return;
         }
 
-        if (
-          configuredSlots.some((slot) => slot.startTime >= slot.endTime)
-        ) {
-          setSlotError("Each slot's end time must be later than its start time.");
+        if (configuredSlots.some((slot) => slot.startTime >= slot.endTime)) {
+          setSlotError(
+            "Each slot's end time must be later than its start time.",
+          );
           return;
         }
 
@@ -342,15 +341,13 @@ export default function AddPlaceForm({
         ...data,
         annexure: selectedAnnexure,
         annexureOption: selectedAnnexureOption,
+        securityAmount: selectedOptionObj?.securityAmount,
         rate4Hours: selectedOptionObj?.rate4Hours ?? null,
         rate8Hours: selectedOptionObj?.rate8Hours ?? null,
         ratePerPerson: selectedOptionObj?.ratePerPerson ?? null,
         ratePerStudent: selectedOptionObj?.ratePerStudent ?? null,
         slotTemplates: configuredSlots,
-        name: getAnnexureOptionLabel(
-          selectedAnnexure,
-          selectedAnnexureOption,
-        ),
+        name: getAnnexureOptionLabel(selectedAnnexure, selectedAnnexureOption),
         location: (data.location || assignedLocation).trim(),
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
@@ -429,7 +426,7 @@ export default function AddPlaceForm({
             htmlFor="annexure-select"
             className="text-sm font-semibold text-slate-700"
           >
-            Select Annexure
+            Select Venue
             <span className="ml-1 text-red-500">*</span>
           </label>
 
@@ -443,9 +440,9 @@ export default function AddPlaceForm({
               className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-3 pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="">Choose an annexure</option>
-              <option value="A">Annexure A</option>
-              <option value="B">Annexure B</option>
-              <option value="C">Annexure C</option>
+              <option value="A">Event Venue</option>
+              <option value="B">Security money deposit</option>
+              <option value="C">Planetarium </option>
               {/* <option value="D">Annexure D</option> */}
             </select>
 
@@ -470,6 +467,15 @@ export default function AddPlaceForm({
               {/* SELECTED RATES */}
               {selectedOptionObj && (
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedOptionObj.securityAmount != null && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                      4/8 Hours: ₹
+                      {Number(selectedOptionObj.securityAmount).toLocaleString(
+                        "en-IN",
+                      )}
+                    </span>
+                  )}
+
                   {selectedOptionObj.rate4Hours != null && (
                     <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                       4 Hours: ₹
@@ -544,7 +550,8 @@ export default function AddPlaceForm({
                     id="annexure-dialog-title"
                     className="text-lg font-semibold text-slate-900"
                   >
-                    Select Annexure {pendingAnnexure}
+                    Select Venue
+                    {pendingAnnexure}
                   </h3>
 
                   <p className="mt-1 text-sm text-slate-500">
@@ -590,6 +597,15 @@ export default function AddPlaceForm({
                       </p>
 
                       <div className="flex flex-wrap gap-2">
+                        {option.securityAmount != null && (
+                          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                            4/8 Hours: ₹
+                            {Number(option.securityAmount).toLocaleString(
+                              "en-IN",
+                            )}
+                          </span>
+                        )}
+
                         {option.rate4Hours != null && (
                           <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                             4 Hours: ₹
@@ -665,9 +681,10 @@ export default function AddPlaceForm({
                 Booking Slots
               </h3>
               <p className="mt-1 text-xs text-slate-500">
-                Slots added here will be linked to Annexure {selectedAnnexure || "option"}{" "}
-                {selectedAnnexureOption ? `(${selectedAnnexureOption})` : ""} and
-                shown for this place during booking.
+                Slots added here will be linked to Annexure{" "}
+                {selectedAnnexure || "option"}{" "}
+                {selectedAnnexureOption ? `(${selectedAnnexureOption})` : ""}{" "}
+                and shown for this place during booking.
               </p>
             </div>
 
@@ -748,9 +765,7 @@ export default function AddPlaceForm({
                     </label>
                     <button
                       type="button"
-                      disabled={
-                        Boolean(slot.id) && !canDeleteSlots
-                      }
+                      disabled={Boolean(slot.id) && !canDeleteSlots}
                       onClick={() => {
                         setSlotTemplates((current) =>
                           current.filter((_, itemIndex) => itemIndex !== index),
@@ -790,7 +805,8 @@ export default function AddPlaceForm({
             )}
             {defaultValues?.id && !canUpdateSlots && canDeleteSlots && (
               <p className="text-xs text-slate-500">
-                Slot timing and capacity can’t be changed with your current permissions.
+                Slot timing and capacity can’t be changed with your current
+                permissions.
               </p>
             )}
           </section>
@@ -916,7 +932,7 @@ export default function AddPlaceForm({
             ) : (
               <div className="relative">
                 <img
-                  src={preview}
+                  src={preview || undefined}
                   alt="Venue preview"
                   className="h-64 w-full rounded-lg border border-slate-200 object-cover"
                 />
