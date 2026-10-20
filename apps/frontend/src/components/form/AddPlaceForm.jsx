@@ -446,7 +446,7 @@ export default function AddPlaceForm({
               <option value="A">Annexure A</option>
               <option value="B">Annexure B</option>
               <option value="C">Annexure C</option>
-              <option value="D">Annexure D</option>
+              {/* <option value="D">Annexure D</option> */}
             </select>
 
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
