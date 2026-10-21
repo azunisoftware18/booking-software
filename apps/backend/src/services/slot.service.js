@@ -37,7 +37,7 @@ class SlotTemplateService {
 
     if (sameStartTemplates.some((template) => template.capacity !== capacity)) {
       throw ApiError.conflict(
-        "Slots with the same start time must have the same capacity",
+        "Slots with the same start time must have the same capacity"
       );
     }
 
@@ -64,7 +64,9 @@ class SlotTemplateService {
     await assertPlaceAccess(existing.placeId, currentUser);
 
     if (payload.placeId && payload.placeId !== existing.placeId) {
-      throw ApiError.forbidden("A slot template cannot be moved to another place");
+      throw ApiError.forbidden(
+        "A slot template cannot be moved to another place"
+      );
     }
 
     const startTime = payload.startTime ?? existing.startTime;
@@ -99,7 +101,7 @@ class SlotTemplateService {
       sameStartTemplates.some((template) => template.capacity !== capacity)
     ) {
       throw ApiError.conflict(
-        "Slots with the same start time must have the same capacity",
+        "Slots with the same start time must have the same capacity"
       );
     }
 
@@ -198,12 +200,14 @@ const formatTime12Hour = (time) => {
     hour12: true,
   });
 };
+
 class SlotService {
   static async getSlotsByDate(placeId, date, currentUser) {
     await assertPlaceAccess(placeId, currentUser);
 
     const templates = await prisma.slotTemplate.findMany({
       where: { placeId },
+      orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
     });
 
     const start = new Date(`${date}T00:00:00.000Z`);
@@ -212,14 +216,40 @@ class SlotService {
     const overrides = await prisma.slotOverride.findMany({
       where: {
         placeId,
-        date: {
-          gte: start,
-          lte: end,
-        },
+        date: { gte: start, lte: end },
       },
     });
 
     const now = new Date();
+
+    // Get current date and time in India timezone.
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+
+    const getPart = (type) =>
+      parts.find((part) => part.type === type)?.value;
+
+    const today =
+      `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+
+    const currentTime =
+      `${getPart("hour")}:${getPart("minute")}`;
+
+    const isPastSlot = (slotDate, slotTime) => {
+      if (slotDate < today) return true;
+      if (slotDate > today) return false;
+
+      // Expire the slot when its start time is reached.
+      return slotTime <= currentTime;
+    };
+
     const activeBookingFilter = {
       OR: [
         { status: "PAID" },
@@ -229,13 +259,14 @@ class SlotService {
         },
       ],
     };
+
     const [bookings, annexureBookings] = await Promise.all([
       prisma.booking.findMany({
         where: {
           placeId,
           slotDateTime: {
-            gte: new Date(`${date}T00:00:00.000Z`),
-            lt: new Date(`${date}T23:59:59.999Z`),
+            gte: start,
+            lt: end,
           },
           bookingType: { not: "ANNEXURE" },
           ...activeBookingFilter,
@@ -245,14 +276,17 @@ class SlotService {
           totalSeats: true,
         },
       }),
+
       prisma.bookingAnnexureItem.findMany({
         where: {
           placeId,
           slotDateTime: {
-            gte: new Date(`${date}T00:00:00.000Z`),
-            lt: new Date(`${date}T23:59:59.999Z`),
+            gte: start,
+            lt: end,
           },
-          booking: { is: activeBookingFilter },
+          booking: {
+            is: activeBookingFilter,
+          },
         },
         select: {
           slotDateTime: true,
@@ -262,35 +296,48 @@ class SlotService {
     ]);
 
     return templates.map((t) => {
-      const override = overrides.find((o) => o.startTime === t.startTime);
+      const override = overrides.find(
+        (o) => o.startTime === t.startTime,
+      );
 
       const capacity = override?.capacity ?? t.capacity;
 
-      const slotDateTime = new Date(`${date}T${t.startTime}:00`);
+      const bookedRegularSeats = bookings.reduce(
+        (total, booking) => {
+          const bookingTime = new Date(booking.slotDateTime)
+            .toISOString()
+            .slice(11, 16);
 
-      const bookedRegularSeats = bookings.reduce((total, booking) => {
-        const bookingTime = new Date(booking.slotDateTime)
-          .toISOString()
-          .slice(11, 16);
+          return bookingTime === t.startTime
+            ? total + booking.totalSeats
+            : total;
+        },
+        0,
+      );
 
-        return bookingTime === t.startTime ? total + booking.totalSeats : total;
-      }, 0);
-      const bookedAnnexureSeats = annexureBookings.reduce((total, booking) => {
-        const bookingTime = new Date(booking.slotDateTime)
-          .toISOString()
-          .slice(11, 16);
+      const bookedAnnexureSeats = annexureBookings.reduce(
+        (total, booking) => {
+          const bookingTime = new Date(booking.slotDateTime)
+            .toISOString()
+            .slice(11, 16);
 
-        return bookingTime === t.startTime ? total + booking.seatCount : total;
-      }, 0);
+          return bookingTime === t.startTime
+            ? total + booking.seatCount
+            : total;
+        },
+        0,
+      );
+
       const booked = bookedRegularSeats + bookedAnnexureSeats;
-
       const available = Math.max(capacity - booked, 0);
 
       let status = "available";
 
-      if (override?.isClosed) status = "unavailable";
-      else if (slotDateTime < now) status = "unavailable";
-      else if (available === 0) status = "Slot full";
+      if (override?.isClosed || isPastSlot(date, t.startTime)) {
+        status = "unavailable";
+      } else if (available === 0) {
+        status = "Slot full";
+      }
 
       return {
         time: t.startTime,
@@ -304,5 +351,6 @@ class SlotService {
     });
   }
 }
+
 
 export { SlotTemplateService, SlotOverrideService, SlotService };

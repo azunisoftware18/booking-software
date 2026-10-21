@@ -1094,7 +1094,7 @@ export default function BookingFlowRight() {
                             {securityDeposit.toLocaleString("en-IN")}
                           </p>
                           <p className="text-sm font-semibold text-[#994113]">
-                            Electricity ({item.durationHours || 0} hours × {days}{" "}
+                            Electricity Charges Deposits ({item.durationHours || 0} hours × {days}{" "}
                             {days === 1 ? "day" : "days"}): ₹
                             {electricity.toLocaleString("en-IN")}
                           </p>
@@ -1137,7 +1137,7 @@ export default function BookingFlowRight() {
 
             {showDepositForm && (
               <div className="space-y-1 text-sm text-slate-600">
-                <p>Venue charges: ₹{annexureRentalTotal.toFixed(2)}</p>
+                <p>Venue charges (18 % GST Included): ₹{annexureRentalTotal.toFixed(2)}</p>
                 <p>Security deposit: ₹{annexureSecurityDepositTotal.toFixed(2)}</p>
                 <p>Electricity Charges Deposit: ₹{annexureElectricityTotal.toFixed(2)}</p>
               </div>
