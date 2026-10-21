@@ -175,7 +175,7 @@ class TicketService {
     const buffers = [];
     doc.on("data", (buffer) => buffers.push(buffer));
     const pdfPromise = new Promise((resolve) =>
-      doc.on("end", () => resolve(Buffer.concat(buffers))),
+      doc.on("end", () => resolve(Buffer.concat(buffers)))
     );
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
@@ -212,12 +212,10 @@ class TicketService {
         .font("Helvetica")
         .fontSize(9)
         .fillColor(colors.muted)
-        .text(
-          `Location: ${booking.location?.name || "—"}`,
-          margin,
-          98,
-          { width, align: "center" },
-        );
+        .text(`Location: ${booking.location?.name || "—"}`, margin, 98, {
+          width,
+          align: "center",
+        });
       cursorY = 132;
     };
 
@@ -233,7 +231,10 @@ class TicketService {
 
     const detailRows = [
       [`Customer: ${booking.name || "—"}`, `Email: ${booking.email || "—"}`],
-      [`Phone: ${booking.phone || "—"}`, `Payment method: ${booking.paymentMethod || "—"}`],
+      [
+        `Phone: ${booking.phone || "—"}`,
+        `Payment method: ${booking.paymentMethod || "—"}`,
+      ],
       [
         `Original payment: Rs ${Number(booking.totalAmount || 0).toFixed(2)}`,
         `Refund date: ${new Date(booking.refundedAt).toLocaleString("en-IN")}`,
@@ -286,14 +287,14 @@ class TicketService {
           `${item.annexure || "Annexure"} - ${item.annexureOption || "Option"}: ${item.placeName}`,
           margin + 12,
           cursorY + 10,
-          { width: width - 24, ellipsis: true },
+          { width: width - 24, ellipsis: true }
         );
       const firstDate = item.dates?.[0]
         ? new Date(item.dates[0]).toLocaleDateString("en-IN")
         : "—";
       const lastDate = item.dates?.length
         ? new Date(item.dates[item.dates.length - 1]).toLocaleDateString(
-            "en-IN",
+            "en-IN"
           )
         : firstDate;
       const bookingDetails =
@@ -308,13 +309,14 @@ class TicketService {
           `Dates: ${firstDate}${lastDate !== firstDate ? ` to ${lastDate}` : ""} · ${bookingDetails}`,
           margin + 12,
           cursorY + 27,
-          { width: width - 24, ellipsis: true },
+          { width: width - 24, ellipsis: true }
         );
 
       const electricityRatePerUnit =
         item.electricityRatePerUnit || ELECTRICITY_RATE_PER_UNIT;
       const electricityUnits =
-        item.electricityUnits ?? item.electricityCharge / electricityRatePerUnit;
+        item.electricityUnits ??
+        item.electricityCharge / electricityRatePerUnit;
       const damageCoveredByDeposit =
         item.damageCoveredByDeposit ??
         Math.min(item.securityDepositHeld, item.damageDeduction);
@@ -323,7 +325,7 @@ class TicketService {
         Math.max(0, item.damageDeduction - item.securityDepositHeld);
       const depositAfterDamage = Math.max(
         0,
-        item.securityDepositHeld - item.damageDeduction,
+        item.securityDepositHeld - item.damageDeduction
       );
       const electricityOverageFromDeposit =
         item.electricityOverageFromDeposit ??
@@ -341,7 +343,10 @@ class TicketService {
           `Electricity consumed (${electricityUnits} units x Rs ${electricityRatePerUnit}/unit)`,
           -item.electricityCharge,
         ],
-        ["Electricity overage settled from deposit", -electricityOverageFromDeposit],
+        [
+          "Electricity overage settled from deposit",
+          -electricityOverageFromDeposit,
+        ],
         ["Electricity amount to collect", electricityCollection],
         ["Security deposit refunded", item.securityDepositRefund],
         ["Electricity held", item.electricityHeld],
@@ -378,13 +383,16 @@ class TicketService {
       .fontSize(12)
       .fillColor(colors.brown)
       .text(
-        `Total refund: Rs ${Number(booking.refundAmount).toLocaleString("en-IN", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`,
+        `Total refund: Rs ${Number(booking.refundAmount).toLocaleString(
+          "en-IN",
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }
+        )}`,
         margin + 14,
         cursorY + 12,
-        { width: width - 28, align: "right" },
+        { width: width - 28, align: "right" }
       );
     doc
       .font("Helvetica-Bold")
@@ -399,22 +407,23 @@ class TicketService {
                 Math.max(0, item.damageDeduction - item.securityDepositHeld);
               const depositAfterDamage = Math.max(
                 0,
-                item.securityDepositHeld - item.damageDeduction,
+                item.securityDepositHeld - item.damageDeduction
               );
-              const electricityOverage = item.electricityOverage ??
+              const electricityOverage =
+                item.electricityOverage ??
                 Math.max(0, item.electricityCharge - item.electricityHeld);
               const electricityCollection =
                 item.electricityCollection ??
                 Math.max(0, electricityOverage - depositAfterDamage);
               return total + damageCollection + electricityCollection;
-            }, 0),
+            }, 0)
         ).toLocaleString("en-IN", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}`,
         margin + 14,
         cursorY + 38,
-        { width: width - 28, align: "right" },
+        { width: width - 28, align: "right" }
       );
 
     doc.end();
@@ -440,11 +449,11 @@ class TicketService {
       ...new Set(
         (booking.annexureItems || [])
           .map((item) => item.place?.name)
-          .filter(Boolean),
+          .filter(Boolean)
       ),
     ];
     const receiptTitle =
-      venueNames.join(", ") || booking.place?.name || "Annexure Booking";
+      venueNames.join(", ") || booking.place?.name || "Venue Booking";
     let cursorY = 0;
 
     const drawHeader = () => {
@@ -513,29 +522,47 @@ class TicketService {
       .fontSize(11)
       .fillColor(colors.navy)
       .text("Customer and payment details", margin + 14, cursorY + 12);
-    drawField("Customer", booking.name, margin + 14, cursorY + 34, columnWidth - 14);
-    drawField("Email", booking.email, rightColumnX, cursorY + 34, columnWidth - 14);
-    drawField("Contact number", booking.phone, margin + 14, cursorY + 64, columnWidth - 14);
+    drawField(
+      "Customer",
+      booking.name,
+      margin + 14,
+      cursorY + 34,
+      columnWidth - 14
+    );
+    drawField(
+      "Email",
+      booking.email,
+      rightColumnX,
+      cursorY + 34,
+      columnWidth - 14
+    );
+    drawField(
+      "Contact number",
+      booking.phone,
+      margin + 14,
+      cursorY + 64,
+      columnWidth - 14
+    );
     drawField(
       "Payment method",
       booking.paymentMethod,
       rightColumnX,
       cursorY + 64,
-      columnWidth - 14,
+      columnWidth - 14
     );
     drawField(
       "Selected location",
       locationDetails.join(", "),
       margin + 14,
       cursorY + 94,
-      contentWidth - 28,
+      contentWidth - 28
     );
     drawField(
       "Payment status",
       booking.status,
       margin + 14,
       cursorY + 124,
-      contentWidth - 28,
+      contentWidth - 28
     );
 
     drawField(
@@ -543,7 +570,7 @@ class TicketService {
       booking.txnId,
       margin + 14,
       cursorY + 154,
-      contentWidth - 28,
+      contentWidth - 28
     );
 
     drawField(
@@ -551,7 +578,7 @@ class TicketService {
       booking.paymentId,
       margin + 14,
       cursorY + 184,
-      contentWidth - 28,
+      contentWidth - 28
     );
     cursorY += 252;
 
@@ -584,7 +611,7 @@ class TicketService {
 
     const sortedGroups = Array.from(groupedItems.values()).map((item) => {
       const sortedDates = item.slotDates.sort(
-        (first, second) => new Date(first) - new Date(second),
+        (first, second) => new Date(first) - new Date(second)
       );
       return {
         ...item,
@@ -617,11 +644,11 @@ class TicketService {
       };
       const startDate = new Date(item.firstSlotDateTime).toLocaleDateString(
         "en-IN",
-        dateOptions,
+        dateOptions
       );
       const endDate = new Date(item.lastSlotDateTime).toLocaleDateString(
         "en-IN",
-        dateOptions,
+        dateOptions
       );
       const dateRange =
         startDate === endDate ? startDate : `${startDate} to ${endDate}`;
@@ -660,7 +687,7 @@ class TicketService {
           `${item.place.annexure || "Annexure"}${option ? ` - ${option}` : ""}`,
           margin + 14,
           cursorY + 10,
-          { width: contentWidth - 28 },
+          { width: contentWidth - 28 }
         );
       doc
         .font("Helvetica")
@@ -674,7 +701,7 @@ class TicketService {
           `Visit: ${dateRange} · ${time} · ${dayCount} ${dayCount === 1 ? "day" : "days"}`,
           margin + 14,
           cursorY + 47,
-          { width: contentWidth - 28, height: 14 },
+          { width: contentWidth - 28, height: 14 }
         )
         .text(bookingDetails, margin + 14, cursorY + 65, {
           width: contentWidth - 28,
@@ -688,28 +715,28 @@ class TicketService {
         `Rs ${venueCharges.toFixed(2)}`,
         margin + 14,
         cursorY + 87,
-        priceColumnWidth,
+        priceColumnWidth
       );
       drawField(
         "Security deposit",
         `Rs ${securityDeposit.toFixed(2)}`,
         priceRightX,
         cursorY + 87,
-        priceColumnWidth,
+        priceColumnWidth
       );
       drawField(
         "Electricity",
         `Rs ${electricity.toFixed(2)}`,
         margin + 14,
         cursorY + 112,
-        priceColumnWidth,
+        priceColumnWidth
       );
       drawField(
         "Option total",
         `Rs ${itemTotal.toFixed(2)}`,
         priceRightX,
         cursorY + 112,
-        priceColumnWidth,
+        priceColumnWidth
       );
       cursorY += cardHeight + 10;
     }
@@ -742,7 +769,7 @@ class TicketService {
           `Rs ${Number(amount).toFixed(2)}`,
           margin + 14,
           cursorY + 13 + index * 19,
-          { width: contentWidth - 28, align: "right" },
+          { width: contentWidth - 28, align: "right" }
         );
     });
 
@@ -751,13 +778,16 @@ class TicketService {
       .fontSize(13)
       .fillColor(colors.brown)
       .text(
-        `Combined total: Rs ${Number(booking.totalAmount).toLocaleString("en-IN", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`,
+        `Combined total: Rs ${Number(booking.totalAmount).toLocaleString(
+          "en-IN",
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }
+        )}`,
         margin + 14,
         cursorY + 73,
-        { width: contentWidth - 28, align: "right" },
+        { width: contentWidth - 28, align: "right" }
       );
   }
 

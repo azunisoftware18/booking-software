@@ -930,7 +930,7 @@ class BookingService {
       booking.bookingType === "ANNEXURE"
         ? `Dear ${booking.name},
 
-Your Annexure booking is confirmed.
+Your Venue booking is confirmed.
 
 ${annexureDetails}
 
@@ -1098,7 +1098,7 @@ We can't wait to welcome you! 🎉`;
   static assertAnnexureRefundable(booking) {
     if (booking.bookingType !== "ANNEXURE") {
       throw ApiError.badRequest(
-        "Refunds are only available for Annexure bookings"
+        "Refunds are only available for Venue bookings"
       );
     }
     if (booking.status !== "PAID") {
@@ -1110,7 +1110,7 @@ We can't wait to welcome you! 🎉`;
       );
     }
     if (!booking.annexureItems?.length) {
-      throw ApiError.badRequest("No Annexure booking items were found");
+      throw ApiError.badRequest("No Venue booking items were found");
     }
   }
 
