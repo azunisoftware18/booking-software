@@ -1357,7 +1357,13 @@ function AnnexureOptionRow({ venue, value, onChange }) {
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
   const date = value?.date || today;
-  const hasDurationRates = venue.rate4Hours != null || venue.rate8Hours != null;
+  const durationAnnexures = new Set(["A", "B"]);
+  const canUseDurationRates = durationAnnexures.has(
+    String(venue.annexure || "").trim().toUpperCase(),
+  );
+  const hasDurationRates =
+    canUseDurationRates &&
+    (venue.rate4Hours != null || venue.rate8Hours != null);
   const hasHeadcountRates =
     venue.ratePerPerson != null || venue.ratePerStudent != null;
   const rateMode = hasDurationRates
@@ -1497,12 +1503,12 @@ function AnnexureOptionRow({ venue, value, onChange }) {
             </span>
           )}
           <span className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-emerald-700">
-            {venue.rate4Hours != null && (
+            {canUseDurationRates && venue.rate4Hours != null && (
               <span className="rounded-full bg-emerald-100 px-2.5 py-1">
                 4 hours: ₹{Number(venue.rate4Hours).toLocaleString("en-IN")}
               </span>
             )}
-            {venue.rate8Hours != null && (
+            {canUseDurationRates && venue.rate8Hours != null && (
               <span className="rounded-full bg-orange-100 px-2.5 py-1 text-orange-800">
                 8 hours: ₹{Number(venue.rate8Hours).toLocaleString("en-IN")}
               </span>
