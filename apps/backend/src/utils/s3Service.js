@@ -20,7 +20,7 @@ const s3 = new S3Client({
 });
 
 // ================= CONSTANTS =================
-const MAIN_FOLDER = "ticket-booking-govt";
+const MAIN_FOLDER = "ticket-booking";
 const bucket = process.env.S3_BUCKET;
 
 // ================= VALIDATION =================
