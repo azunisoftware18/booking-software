@@ -78,4 +78,8 @@ export const PermissionsRegistry = {
   DASHBOARD: {
     READ: "DASHBOARD.READ",
   },
+
+  REPORT: {
+    READ: "REPORT.READ",
+  },
 };
