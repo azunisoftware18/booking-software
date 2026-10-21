@@ -310,7 +310,8 @@ model Setting {
   logo    String? // S3 URL
   logoKey String? // S3 Key
 
-  socialLinks Json?
+  favicon    String?
+  faviconKey String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

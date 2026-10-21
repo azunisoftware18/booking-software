@@ -8,17 +8,40 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLogout } from "@/lib/mutations/useLogout";
 import { hasPermission } from "@/lib/dashboardPermissions";
+import { useGetSetting } from "@/lib/queries/useSetting";
+import { getUploadedAssetUrl } from "@/lib/assetUrl";
+
+function BrandLogo({ logo, alt, size = "w-10 h-10", iconSize = 20 }) {
+  return (
+    <div
+      style={{ backgroundColor: "var(--primary)" }}
+      className={`${size} rounded-xl flex items-center justify-center overflow-hidden shadow-sm shadow-black/5`}
+    >
+      {logo ? (
+        <img src={logo} alt={alt} className="h-full w-full object-cover" />
+      ) : (
+        <User style={{ color: "var(--primary-foreground)" }} size={iconSize} />
+      )}
+    </div>
+  );
+}
 
 export default function DashboardNavbar() {
   const { user } = useSelector((state) => state.auth);
   const pathname = usePathname();
   const router = useRouter();
   const { mutate: logoutUser, isPending } = useLogout();
+  const { data: settingData } = useGetSetting();
+  const setting = settingData?.data ?? settingData;
+  const websiteLogo = getUploadedAssetUrl(setting?.logo);
+  const locationName = user?.location?.name || user?.location?.city;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const getPageTitle = (pathname) => {
-    if (pathname === "/dashboard") return "Dashboard";
+    if (pathname === "/dashboard") {
+      return locationName || setting?.companyName || "Dashboard";
+    }
     if (pathname === "/dashboard/place") return "Place Management";
     if (pathname === "/dashboard/slots") return "Slots Management";
     if (pathname === "/dashboard/ticket") return "Entry Fees";
@@ -110,12 +133,10 @@ export default function DashboardNavbar() {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-3 pl-2 pr-4 py-2 rounded-2xl border cursor-pointer hover:opacity-90 transition-all shadow-sm"
           >
-            <div 
-              style={{ backgroundColor: "var(--primary)" }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm shadow-black/5"
-            >
-              <User style={{ color: "var(--primary-foreground)" }} size={20} />
-            </div>
+            <BrandLogo
+              logo={websiteLogo}
+              alt={setting?.companyName || "Website logo"}
+            />
 
             <div className="hidden lg:block text-left">
               <p 
@@ -158,12 +179,12 @@ export default function DashboardNavbar() {
                 {/* User Info Header */}
                 <div className="p-4 border-b" style={{ borderColor: "var(--border)" }}>
                   <div className="flex items-center gap-3">
-                    <div 
-                      style={{ backgroundColor: "var(--primary)" }}
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
-                    >
-                      <User style={{ color: "var(--primary-foreground)" }} size={24} />
-                    </div>
+                    <BrandLogo
+                      logo={websiteLogo}
+                      alt={setting?.companyName || "Website logo"}
+                      size="w-12 h-12"
+                      iconSize={24}
+                    />
                     <div className="flex-1">
                       <p className="font-bold text-sm" style={{ color: "var(--foreground)" }}>
                         {user?.fullName || "Admin User"}

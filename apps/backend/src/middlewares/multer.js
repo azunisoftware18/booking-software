@@ -16,12 +16,17 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
 
-    cb(null, `logo-${Date.now()}${ext}`);
+    cb(null, `${file.fieldname}-${Date.now()}${ext}`);
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+  const imageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+  const faviconTypes = ["image/x-icon", "image/vnd.microsoft.icon"];
+  const allowed =
+    file.fieldname === "favicon"
+      ? [...imageTypes, ...faviconTypes]
+      : imageTypes;
 
   if (allowed.includes(file.mimetype)) {
     cb(null, true);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePlaces } from "@/hooks/usePlace";
 import BookNowBtn from "./ui/BookNowBtn";
 import { useGetSetting } from "@/lib/queries/useSetting";
+import { getUploadedAssetUrl } from "@/lib/assetUrl";
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const { data: places = [] } = usePlaces();
@@ -32,7 +33,7 @@ const Header = () => {
           <img
             src={
               setting?.logo
-                ? `${process.env.NEXT_PUBLIC_IMAGE_URL}${setting.logo}`
+                ? getUploadedAssetUrl(setting.logo)
                 : "/logo.jpg"
             }
             alt="Logo"

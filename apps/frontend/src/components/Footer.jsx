@@ -9,13 +9,7 @@ import {
     FaArrowRight, 
     FaShieldHalved, 
     FaFileLines, 
-    FaCircleQuestion, 
-    FaGlobe,
-    FaFacebook, 
-    FaInstagram, 
-    FaXTwitter, 
-    FaYoutube, 
-    FaLinkedin 
+    FaCircleQuestion
 } from "react-icons/fa6";
 
 import BookNowBtn from "./ui/BookNowBtn";
@@ -54,7 +48,7 @@ export default function Footer() {
                     <span className="text-gold italic font-serif font-medium">Royalty?</span>
                 </p>
                 <p className="mt-4 max-w-xl text-sandstone/70 text-sm sm:text-base leading-relaxed font-sans font-light">
-                    Secure your premium gate pass access to Jaipur's most iconic heritage landmarks and protected ecological trails. Experience timeless history.
+                    Secure your premium gate pass access to Jaipur&apos;s most iconic heritage landmarks and protected ecological trails. Experience timeless history.
                 </p>
 
                 <Link href={bookingLink} className="mt-8 group">
@@ -73,7 +67,7 @@ export default function Footer() {
                 transition={{ duration: 0.7, delay: 0.1 }}
                 className="relative z-30 mt-20 mx-auto max-w-7xl rounded-t-[40px] md:rounded-t-[60px] bg-white border-t border-gold/20 px-6 sm:px-12 py-14 shadow-[0_-25px_60px_rgba(0,0,0,0.15)]"
             >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-royal-blue pb-10 border-b border-gold/10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 text-royal-blue pb-10 border-b border-gold/10">
 
                     {/* Section 1: Contact Hub */}
                     <div className="space-y-4">
@@ -129,41 +123,6 @@ export default function Footer() {
                                 <FaCircleQuestion size={13} className="text-gold" /> FAQs
                                 <FaArrowRight size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                             </Link>
-                        </div>
-                    </div>
-
-                    {/* Section 4: Social Links */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 border-b border-gold/20 pb-2 w-fit">
-                            <FaGlobe size={18} className="text-jaipur-dark" />
-                            <h3 className="font-serif font-bold text-xl tracking-wide">Connect</h3>
-                        </div>
-                        <div className="flex flex-col gap-3 font-sans font-bold text-xs tracking-wider uppercase text-royal-blue/80 pl-1">
-                            {setting?.socialLinks?.facebook && (
-                                <a href={setting.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-jaipur-dark group transition-colors w-fit">
-                                    <FaFacebook size={14} className="text-gold" /> Facebook
-                                </a>
-                            )}
-                            {setting?.socialLinks?.instagram && (
-                                <a href={setting.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-jaipur-dark group transition-colors w-fit">
-                                    <FaInstagram size={14} className="text-gold" /> Instagram
-                                </a>
-                            )}
-                            {setting?.socialLinks?.twitter && (
-                                <a href={setting.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-jaipur-dark group transition-colors w-fit">
-                                    <FaXTwitter size={14} className="text-gold" /> Twitter
-                                </a>
-                            )}
-                            {setting?.socialLinks?.youtube && (
-                                <a href={setting.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-jaipur-dark group transition-colors w-fit">
-                                    <FaYoutube size={14} className="text-gold" /> Youtube
-                                </a>
-                            )}
-                            {setting?.socialLinks?.linkedin && (
-                                <a href={setting.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-jaipur-dark group transition-colors w-fit">
-                                    <FaLinkedin size={14} className="text-gold" /> Linkedin
-                                </a>
-                            )}
                         </div>
                     </div>
 

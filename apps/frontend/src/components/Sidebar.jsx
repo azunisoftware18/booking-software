@@ -25,6 +25,8 @@ import Link from "next/link";
 import { useLogout } from "@/lib/mutations/useLogout";
 import { useSelector } from "react-redux";
 import { hasPermission } from "@/lib/dashboardPermissions";
+import { useGetSetting } from "@/lib/queries/useSetting";
+import { getUploadedAssetUrl } from "@/lib/assetUrl";
 
 const menuItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", permission: "DASHBOARD.READ" },
@@ -47,6 +49,9 @@ export default function Sidebar() {
   const { mutate: logoutUser, isPending } = useLogout();
   const router = useRouter();
   const user = useSelector((state) => state.auth.user);
+  const { data: settingData } = useGetSetting();
+  const setting = settingData?.data ?? settingData;
+  const websiteLogo = getUploadedAssetUrl(setting?.logo);
   const accessibleMenuItems = menuItems.filter((item) =>
     hasPermission(user, item.permission)
   );
@@ -86,15 +91,22 @@ export default function Sidebar() {
                   exit={{ opacity: 0, x: -10 }}
                   className="flex items-center gap-3 origin-left"
                 >
-                  {/* Logo using your --sidebar-primary */}
                   <div
                     style={{ backgroundColor: "var(--sidebar-primary)" }}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden"
                   >
-                    <User
-                      style={{ color: "var(--sidebar-primary-foreground)" }}
-                      size={22}
-                    />
+                    {websiteLogo ? (
+                      <img
+                        src={websiteLogo}
+                        alt={setting?.companyName || "Website logo"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User
+                        style={{ color: "var(--sidebar-primary-foreground)" }}
+                        size={22}
+                      />
+                    )}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="font-bold text-sm truncate">

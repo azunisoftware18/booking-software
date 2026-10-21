@@ -2,6 +2,25 @@
 
 import prisma from "../db/db.js";
 import fs from "fs";
+import path from "path";
+
+const settingsUploadDirectory = path.resolve("uploads/settings");
+
+const deleteStoredFile = (storedPath) => {
+  if (!storedPath) return;
+
+  const filePath = path.resolve(storedPath.replace(/^\/+/, ""));
+
+  if (
+    filePath.startsWith(`${settingsUploadDirectory}${path.sep}`) &&
+    fs.existsSync(filePath)
+  ) {
+    fs.unlinkSync(filePath);
+  }
+};
+
+const getUploadedFilePath = (file) =>
+  file ? `/uploads/settings/${file.filename}` : null;
 
 // ================= GET SETTINGS =================
 
@@ -31,11 +50,6 @@ export const updateSetting = async (req, res, next) => {
       email,
       phone,
       address,
-      facebook,
-      instagram,
-      twitter,
-      youtube,
-      linkedin,
     } = req.body;
 
     const existingSetting = await prisma.setting.findUnique({
@@ -44,29 +58,27 @@ export const updateSetting = async (req, res, next) => {
       },
     });
 
+    const logoFile = req.files?.logo?.[0];
+    const faviconFile = req.files?.favicon?.[0];
+
     let logo = existingSetting?.logo || null;
+    let logoKey = existingSetting?.logoKey || null;
+    let favicon = existingSetting?.favicon || null;
+    let faviconKey = existingSetting?.faviconKey || null;
 
     // Upload new logo
-    if (req.file) {
-      // Delete old logo
-      if (existingSetting?.logo) {
-        const oldFile = existingSetting.logo.replace(/^\/+/, "");
-
-        if (fs.existsSync(oldFile)) {
-          fs.unlinkSync(oldFile);
-        }
-      }
-
-      logo = `/uploads/settings/${req.file.filename}`;
+    if (logoFile) {
+      deleteStoredFile(existingSetting?.logo);
+      logo = getUploadedFilePath(logoFile);
+      logoKey = logo;
     }
 
-    const socialLinks = {
-      facebook,
-      instagram,
-      twitter,
-      youtube,
-      linkedin,
-    };
+    // Upload new favicon
+    if (faviconFile) {
+      deleteStoredFile(existingSetting?.favicon);
+      favicon = getUploadedFilePath(faviconFile);
+      faviconKey = favicon;
+    }
 
     const setting = await prisma.setting.upsert({
       where: {
@@ -79,7 +91,9 @@ export const updateSetting = async (req, res, next) => {
         phone,
         address,
         logo,
-        socialLinks,
+        logoKey,
+        favicon,
+        faviconKey,
       },
 
       create: {
@@ -89,7 +103,9 @@ export const updateSetting = async (req, res, next) => {
         phone,
         address,
         logo,
-        socialLinks,
+        logoKey,
+        favicon,
+        faviconKey,
       },
     });
 

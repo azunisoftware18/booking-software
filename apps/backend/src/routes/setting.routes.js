@@ -22,7 +22,10 @@ router.put(
   PermissionMiddleware.hasPermission(
     PermissionsRegistry.SETTING.UPDATE
   ),
-  settingUpload.single("logo"),
+  settingUpload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "favicon", maxCount: 1 },
+  ]),
   updateSetting
 );
 
