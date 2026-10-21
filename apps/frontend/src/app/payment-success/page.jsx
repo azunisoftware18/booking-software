@@ -202,6 +202,12 @@ function SuccessContent() {
               <p className="text-[11px] sm:text-xs font-sans text-gray-400 font-semibold tracking-wide">
                 {booking?.place?.location || "Jaipur, Rajasthan"}
               </p>
+              <p className="mt-1 text-[10px] sm:text-xs font-sans text-gray-500">
+                Contact: {booking?.location?.contactNumber || booking?.phone || "-"}
+                {booking?.location?.email || booking?.email
+                  ? ` · ${booking?.location?.email || booking?.email}`
+                  : ""}
+              </p>
             </div>
 
             <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-gold/30 to-transparent mx-auto" />
@@ -249,6 +255,16 @@ function SuccessContent() {
               <div className="text-right">
                 {/* <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-sans font-medium">Payment Mode</span> */}
                 {/* <span className="text-xs sm:text-base font-serif font-bold text-royal-blue tracking-wide block">Easebuzz</span> */}
+              </div>
+            </div>
+            <div className="mt-4 border-t border-gold/10 px-4 pt-3 text-left">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                Booking contact
+              </p>
+              <div className="grid grid-cols-1 gap-1 text-xs text-royal-blue sm:grid-cols-3 sm:gap-3">
+                <span className="truncate">{booking?.name || "-"}</span>
+                <span className="truncate">{booking?.phone || "-"}</span>
+                <span className="truncate">{booking?.email || "-"}</span>
               </div>
             </div>
             {booking?.bookingType === "ANNEXURE" &&

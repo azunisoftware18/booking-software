@@ -728,12 +728,25 @@ class BookingService {
         totalSeats: true,
         txnId: true,
         paymentId: true,
+        name: true,
+        email: true,
+        phone: true,
         slotDateTime: true,
         ticketPdfUrl: true,
         place: {
           select: {
             name: true,
             location: true,
+          },
+        },
+        location: {
+          select: {
+            name: true,
+            address: true,
+            city: true,
+            state: true,
+            email: true,
+            contactNumber: true,
           },
         },
         tickets: {
@@ -1313,6 +1326,16 @@ We can't wait to welcome you! 🎉`;
       where: scope,
       include: {
         place: true,
+        location: {
+          select: {
+            name: true,
+            address: true,
+            city: true,
+            state: true,
+            email: true,
+            contactNumber: true,
+          },
+        },
         user: true,
         annexureItems: { include: { place: true } },
         tickets: {
