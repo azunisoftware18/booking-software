@@ -1620,19 +1620,23 @@ function AnnexureOptionRow({ venue, value, onChange }) {
             />
           </label>
 
-          <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
-            End date (optional)
-            <input
-              type="date"
-              min={value.date || availabilityDate}
-              value={value.endDate || ""}
-              onChange={(event) => updateValue({ endDate: event.target.value })}
-              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            />
-            <span className="mt-1 block font-normal text-slate-500">
-              Leave blank for a one-day booking.
-            </span>
-          </label>
+          {venue.annexure !== "C" && (
+            <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+              End date (optional)
+              <input
+                type="date"
+                min={value.date || availabilityDate}
+                value={value.endDate || ""}
+                onChange={(event) =>
+                  updateValue({ endDate: event.target.value })
+                }
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              />
+              <span className="mt-1 block font-normal text-slate-500">
+                Leave blank for a one-day booking.
+              </span>
+            </label>
+          )}
 
           <div className="sm:col-span-2">
             <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-600">

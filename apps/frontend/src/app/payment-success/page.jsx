@@ -146,7 +146,6 @@ function SuccessContent() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4 py-3 bg-sandstone relative overflow-y-auto select-none">
-      <div className="absolute inset-0 opacity-[0.05] bg-mandala pointer-events-none scale-105"></div>
       <div className="w-full max-w-2xl text-center z-10 flex flex-col justify-center items-center space-y-3 sm:space-y-4">
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}

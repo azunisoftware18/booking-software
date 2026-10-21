@@ -396,11 +396,11 @@ export default function AddPlaceForm({
           {selectedAnnexure && selectedAnnexureOption && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
               <p className="text-xs font-medium text-blue-600">
-                Selected Annexure
+                Selected Venue
               </p>
 
               <p className="mt-1 text-sm font-semibold text-slate-800">
-                Annexure {selectedAnnexure}
+                Venue {selectedAnnexure}
               </p>
 
               <p className="mt-1 text-sm text-slate-600">

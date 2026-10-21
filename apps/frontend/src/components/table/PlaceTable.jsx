@@ -120,7 +120,7 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
                   key={place.id}
                   className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow relative group overflow-hidden"
                 >
-                {place.imageUrl || place.image || place.images?.[0] ? (
+                {/* {place.imageUrl || place.image || place.images?.[0] ? (
                   <img
                     src={place.imageUrl || place.image || place.images?.[0]}
                     alt={`${place.name} venue`}
@@ -130,7 +130,7 @@ export default function PlaceCards({ data = [], loading, onEdit, onDelete }) {
                   <div className="flex h-48 w-full items-center justify-center bg-slate-100 text-slate-400">
                     <Image className="h-10 w-10" aria-hidden="true" />
                   </div>
-                )}
+                )} */}
 
                 <div className="p-5">
                   {/* Top Row: Name & Action Menu */}
