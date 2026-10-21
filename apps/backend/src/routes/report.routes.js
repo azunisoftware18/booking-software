@@ -10,7 +10,7 @@ const router = Router();
 router.get(
   "/analytics",
   AuthMiddleware.isAuthenticated,
-  PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),
+  PermissionMiddleware.hasPermission(PermissionsRegistry.REPORT.READ),
   asyncHandler(ReportController.analytics),
 );
 
