@@ -67,6 +67,8 @@ class TicketService {
             address: true,
             city: true,
             state: true,
+            email: true,
+            contactNumber: true,
           },
         },
         tickets: { include: { type: true } },
@@ -190,6 +192,13 @@ class TicketService {
       background: "#f8fafc",
       cream: "#f8f5ef",
     };
+    const refundVenueNames = [
+      ...new Set(
+        (booking.refundDetails.items || [])
+          .map((item) => item.placeName)
+          .filter(Boolean)
+      ),
+    ];
     let cursorY = 0;
 
     const drawHeader = () => {
@@ -221,7 +230,7 @@ class TicketService {
 
     drawHeader();
     doc
-      .roundedRect(margin, cursorY, width, 94, 8)
+      .roundedRect(margin, cursorY, width, 112, 8)
       .fillAndStroke(colors.background, colors.border);
     doc
       .font("Helvetica-Bold")
@@ -239,6 +248,10 @@ class TicketService {
         `Original payment: Rs ${Number(booking.totalAmount || 0).toFixed(2)}`,
         `Refund date: ${new Date(booking.refundedAt).toLocaleString("en-IN")}`,
       ],
+      [
+        `Venue: ${refundVenueNames.join(", ") || "—"}`,
+        `Venue contact: ${booking.location?.contactNumber || booking.location?.email || "—"}`,
+      ],
     ];
     detailRows.forEach(([left, right], index) => {
       doc
@@ -254,7 +267,7 @@ class TicketService {
           ellipsis: true,
         });
     });
-    cursorY += 112;
+    cursorY += 130;
 
     doc
       .font("Helvetica-Bold")
@@ -515,7 +528,7 @@ class TicketService {
     const rightColumnX = margin + columnWidth + columnGap;
 
     doc
-      .roundedRect(margin, cursorY, contentWidth, 234, 8)
+      .roundedRect(margin, cursorY, contentWidth, 264, 8)
       .fillAndStroke(colors.background, colors.border);
     doc
       .font("Helvetica-Bold")
@@ -580,7 +593,16 @@ class TicketService {
       cursorY + 184,
       contentWidth - 28
     );
-    cursorY += 252;
+    drawField(
+      "Venue contact",
+      [booking.location?.contactNumber, booking.location?.email]
+        .filter(Boolean)
+        .join(" · "),
+      margin + 14,
+      cursorY + 214,
+      contentWidth - 28
+    );
+    cursorY += 282;
 
     doc
       .font("Helvetica-Bold")
@@ -895,8 +917,24 @@ class TicketService {
           align: "center",
         }
       );
+    const venueContact = [
+      booking.location?.contactNumber,
+      booking.location?.email,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    if (venueContact) {
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .fillColor(colors.gray)
+        .text(`Contact: ${venueContact}`, cardX + 20, headerY + 15, {
+          width: cardW - 40,
+          align: "center",
+        });
+    }
 
-    headerY += 25;
+    headerY += venueContact ? 42 : 25;
 
     doc
       .font("Helvetica-Bold")
@@ -974,12 +1012,28 @@ class TicketService {
 
     cursorY += 48;
 
+    drawField(
+      leftX,
+      cursorY,
+      "Entry Fee",
+      `Rs ${Number(ticket.type?.price || 0).toFixed(2)}`
+    );
+    drawField(rightX, cursorY, "Venue", booking.place?.name || "-");
+
+    cursorY += 48;
+
     // ------------------------------------
     // VENUE + PAYMENT ID
     // ------------------------------------
     const venueWidth = booking.paymentId ? cardW - 250 : cardW - 80;
 
-    drawField(leftX, cursorY, "Venue", "Science Department", venueWidth);
+    drawField(
+      leftX,
+      cursorY,
+      "Venue location",
+      booking.place?.location || "-",
+      venueWidth
+    );
 
     if (booking.paymentId) {
       drawField(rightX, cursorY, "Payment ID", booking.paymentId);
@@ -1006,16 +1060,14 @@ class TicketService {
       Number(gstBreakdown?.cgst || 0) > 0 ||
       Number(gstBreakdown?.sgst || 0) > 0;
 
-    const footerH = hasGst ? 112 : 82;
+    const footerH = hasGst ? 95 : 75;
     const footerY = cardY + cardH - footerH - 18;
-    const footerBottom = footerY - 12;
 
-    // QR block fits in the available area above the footer.
-    const qrSize = Math.min(138, Math.max(90, footerBottom - cursorY - 42));
+    // Start below the details divider and keep the QR block above the footer.
+    const qrSize = Math.min(138, Math.max(70, footerY - cursorY - 34));
 
     const qrX = (pageWidth - qrSize) / 2;
-    const qrY =
-      cursorY + Math.max(12, (footerBottom - cursorY - qrSize - 30) / 2);
+    const qrY = cursorY + 12;
 
     // White quiet zone around QR helps scanning.
     doc.rect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16).fill("#ffffff");
