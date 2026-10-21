@@ -7,7 +7,10 @@ class SlotValidation {
       placeId: z.string().uuid(),
       startTime: z.string().regex(timeRegex, "Invalid time format (HH:mm)"),
       endTime: z.string().regex(timeRegex, "Invalid time format (HH:mm)"),
-      capacity: z.number().min(1),
+      capacity: z.number().int().min(1),
+    }).refine((slot) => slot.startTime < slot.endTime, {
+      message: "End time must be later than start time",
+      path: ["endTime"],
     });
   }
 
@@ -15,8 +18,17 @@ class SlotValidation {
     return z.object({
       startTime: z.string().optional(),
       endTime: z.string().optional(),
-      capacity: z.number().min(1).optional(),
-    });
+      capacity: z.number().int().min(1).optional(),
+    }).refine(
+      (slot) =>
+        slot.startTime === undefined ||
+        slot.endTime === undefined ||
+        slot.startTime < slot.endTime,
+      {
+        message: "End time must be later than start time",
+        path: ["endTime"],
+      },
+    );
   }
 }
 

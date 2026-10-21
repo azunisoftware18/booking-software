@@ -33,6 +33,7 @@ export default function AddPlaceForm({
     { startTime: "", endTime: "", capacity: "" },
   ]);
   const [slotError, setSlotError] = useState("");
+  const [formError, setFormError] = useState("");
 
   const [selectedAnnexure, setSelectedAnnexure] = useState(
     defaultValues?.annexure || "",
@@ -196,6 +197,8 @@ export default function AddPlaceForm({
   // =========================================================
   const handleFormSubmit = async (data) => {
     try {
+      setFormError("");
+
       if (
         !selectedAnnexure ||
         !ANNEXURE_OPTIONS[selectedAnnexure]?.some(
@@ -240,12 +243,27 @@ export default function AddPlaceForm({
           return;
         }
 
-        if (
-          new Set(configuredSlots.map((slot) => slot.startTime)).size !==
-          configuredSlots.length
-        ) {
-          setSlotError("Each slot must have a different start time.");
+        const slotRanges = configuredSlots.map(
+          (slot) => `${slot.startTime}-${slot.endTime}`,
+        );
+        if (new Set(slotRanges).size !== configuredSlots.length) {
+          setSlotError("Each slot must have a different time range.");
           return;
+        }
+
+        const capacitiesByStartTime = new Map();
+        for (const slot of configuredSlots) {
+          const sharedCapacity = capacitiesByStartTime.get(slot.startTime);
+          if (
+            sharedCapacity !== undefined &&
+            sharedCapacity !== slot.capacity
+          ) {
+            setSlotError(
+              "Slots with the same start time must have the same capacity.",
+            );
+            return;
+          }
+          capacitiesByStartTime.set(slot.startTime, slot.capacity);
         }
       }
 
@@ -293,6 +311,13 @@ export default function AddPlaceForm({
     }
   };
 
+  const handleInvalidSubmit = (formErrors) => {
+    const firstError = Object.values(formErrors)[0];
+    setFormError(
+      firstError?.message || "Please review the required venue details.",
+    );
+  };
+
   // =========================================================
   // CANCEL
   // =========================================================
@@ -324,7 +349,18 @@ export default function AddPlaceForm({
 
   return (
     <div className="w-full bg-white p-6">
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+      <form
+        onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+        className="space-y-5"
+      >
+        {formError && (
+          <p
+            className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert"
+          >
+            {formError}
+          </p>
+        )}
         {/* =====================================================
             ANNEXURE DROPDOWN
         ===================================================== */}
@@ -592,6 +628,7 @@ export default function AddPlaceForm({
                 {selectedAnnexure || "option"}{" "}
                 {selectedAnnexureOption ? `(${selectedAnnexureOption})` : ""}{" "}
                 and shown for this place during booking.
+                Slots with the same start time share capacity.
               </p>
             </div>
 
@@ -617,13 +654,30 @@ export default function AddPlaceForm({
                         type="time"
                         value={slot.startTime}
                         onChange={(event) => {
-                          setSlotTemplates((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, startTime: event.target.value }
-                                : item,
-                            ),
-                          );
+                          const startTime = event.target.value;
+                          setSlotTemplates((current) => {
+                            const matchingSlot = startTime
+                              ? current.find(
+                                  (candidate, candidateIndex) =>
+                                    candidateIndex !== index &&
+                                    candidate.startTime === startTime,
+                                )
+                              : null;
+
+                            return current.map((item, itemIndex) => {
+                              if (itemIndex === index) {
+                                return {
+                                  ...item,
+                                  startTime,
+                                  ...(matchingSlot
+                                    ? { capacity: matchingSlot.capacity }
+                                    : {}),
+                                };
+                              }
+
+                              return item;
+                            });
+                          });
                           setSlotError("");
                         }}
                         className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
@@ -655,10 +709,11 @@ export default function AddPlaceForm({
                         step="1"
                         value={slot.capacity}
                         onChange={(event) => {
+                          const capacity = event.target.value;
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, capacity: event.target.value }
+                              item.startTime === slot.startTime
+                                ? { ...item, capacity }
                                 : item,
                             ),
                           );
@@ -730,14 +785,26 @@ export default function AddPlaceForm({
                 value.trim().length > 0 || "Venue name is required",
             })}
           />
-          <input
-            type="hidden"
-            {...register("location", {
-              required: "Location is required",
-              validate: (value) =>
-                value.trim().length > 0 || "Location is required",
-            })}
-          />
+          {assignedLocation || defaultValues?.location ? (
+            <input
+              type="hidden"
+              {...register("location", {
+                required: "Location is required",
+                validate: (value) =>
+                  value.trim().length > 0 || "Location is required",
+              })}
+            />
+          ) : (
+            <InputField
+              label="Location"
+              error={errors.location?.message}
+              {...register("location", {
+                required: "Location is required",
+                validate: (value) =>
+                  value.trim().length > 0 || "Location is required",
+              })}
+            />
+          )}
         </div>
 
         {/* =====================================================

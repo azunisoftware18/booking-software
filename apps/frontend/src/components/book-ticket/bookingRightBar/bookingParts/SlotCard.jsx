@@ -31,7 +31,9 @@ export default function SlotCard({ slots, selectedSlot, onSelect }) {
                             {filteredSlots.map((slot, index) => {
                                 const isFull = slot.available === 0;
                                 const isDisabled = !slot.isAvailable || isFull;
-                                const isSelected = selectedSlot?.time === slot.time;
+                                const isSelected =
+                                    selectedSlot?.time === slot.time &&
+                                    selectedSlot?.endTime === slot.endTime;
 
                                 const getStatusText = () => {
                                     if (!slot.isAvailable && !isFull) return "⏳ EXPIRED";
@@ -41,7 +43,7 @@ export default function SlotCard({ slots, selectedSlot, onSelect }) {
 
                                 return (
                                     <motion.button
-                                        key={slot.time || index}
+                                        key={`${slot.time}-${slot.endTime || index}`}
                                         whileHover={!isDisabled ? { scale: 1.02, translateY: -2 } : {}}
                                         whileTap={!isDisabled ? { scale: 0.98 } : {}}
                                         disabled={isDisabled}

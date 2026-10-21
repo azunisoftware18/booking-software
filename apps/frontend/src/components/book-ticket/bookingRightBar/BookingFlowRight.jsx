@@ -1660,11 +1660,13 @@ function AnnexureOptionRow({ venue, value, onChange }) {
                 {availabilitySlots
                   .filter((slot) => slot.status === "available")
                   .map((slot) => {
-                    const isSelected = value.slot?.time === slot.time;
+                    const isSelected =
+                      value.slot?.time === slot.time &&
+                      value.slot?.endTime === slot.endTime;
 
                     return (
                       <button
-                        key={slot.time}
+                        key={`${slot.time}-${slot.endTime}`}
                         type="button"
                         onClick={() =>
                           updateValue({

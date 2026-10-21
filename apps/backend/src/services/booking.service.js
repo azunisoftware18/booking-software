@@ -248,13 +248,8 @@ class BookingService {
             }
 
             const startTime = itemSlotDate.toISOString().slice(11, 16);
-            const template = await tx.slotTemplate.findUnique({
-              where: {
-                placeId_startTime: {
-                  placeId: place.id,
-                  startTime,
-                },
-              },
+            const template = await tx.slotTemplate.findFirst({
+              where: { placeId: place.id, startTime },
             });
             if (!template) {
               throw ApiError.badRequest(

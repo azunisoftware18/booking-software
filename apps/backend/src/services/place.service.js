@@ -33,7 +33,7 @@ const publicPlaceSelect = {
       endTime: true,
       capacity: true,
     },
-    orderBy: { startTime: "asc" },
+    orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
   },
 };
 
@@ -46,7 +46,7 @@ const placeListInclude = {
     },
   },
   slotTemplates: {
-    orderBy: { startTime: "asc" },
+    orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
   },
 };
 

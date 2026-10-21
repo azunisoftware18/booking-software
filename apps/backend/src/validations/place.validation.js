@@ -15,7 +15,8 @@ const slotTemplatesSchema = z.preprocess((value) => {
     return value;
   }
 }, z.array(slotTemplateSchema).superRefine((slots, context) => {
-  const startTimes = new Set();
+  const slotRanges = new Set();
+  const capacitiesByStartTime = new Map();
 
   slots.forEach((slot, index) => {
     if (slot.startTime >= slot.endTime) {
@@ -26,15 +27,29 @@ const slotTemplatesSchema = z.preprocess((value) => {
       });
     }
 
-    if (startTimes.has(slot.startTime)) {
+    const range = `${slot.startTime}-${slot.endTime}`;
+    if (slotRanges.has(range)) {
       context.addIssue({
         code: "custom",
         path: [index, "startTime"],
-        message: "Slot start times must be unique",
+        message: "Slot time ranges must be unique",
       });
     }
 
-    startTimes.add(slot.startTime);
+    const sharedCapacity = capacitiesByStartTime.get(slot.startTime);
+    if (
+      sharedCapacity !== undefined &&
+      sharedCapacity !== slot.capacity
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: [index, "capacity"],
+        message: "Slots with the same start time must have the same capacity",
+      });
+    }
+
+    slotRanges.add(range);
+    capacitiesByStartTime.set(slot.startTime, slot.capacity);
   });
 }).optional());
 

@@ -103,7 +103,7 @@ model SlotTemplate {
 
   place Place @relation(fields: [placeId], references: [id])
 
-  @@unique([placeId, startTime])
+  @@unique([placeId, startTime, endTime])
   @@map("slot_templates")
 }
 

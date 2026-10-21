@@ -21,17 +21,24 @@ class SlotTemplateService {
 
     if (!place) throw ApiError.notFound("Place not found");
 
-    const existingTemplate = await prisma.slotTemplate.findUnique({
-      where: {
-        placeId_startTime: {
-          placeId,
-          startTime,
-        },
-      },
-    });
+    const [existingTemplate, sameStartTemplates] = await Promise.all([
+      prisma.slotTemplate.findFirst({
+        where: { placeId, startTime, endTime },
+      }),
+      prisma.slotTemplate.findMany({
+        where: { placeId, startTime },
+        select: { capacity: true },
+      }),
+    ]);
 
     if (existingTemplate) {
       throw ApiError.conflict("Slot template already exists");
+    }
+
+    if (sameStartTemplates.some((template) => template.capacity !== capacity)) {
+      throw ApiError.conflict(
+        "Slots with the same start time must have the same capacity",
+      );
     }
 
     return prisma.slotTemplate.create({
@@ -44,14 +51,13 @@ class SlotTemplateService {
 
     return prisma.slotTemplate.findMany({
       where: { placeId },
-      orderBy: { startTime: "asc" },
+      orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
     });
   }
 
   static async update(id, payload, currentUser) {
     const existing = await prisma.slotTemplate.findUnique({
       where: { id },
-      select: { placeId: true },
     });
 
     if (!existing) throw ApiError.notFound("Slot template not found");
@@ -61,9 +67,54 @@ class SlotTemplateService {
       throw ApiError.forbidden("A slot template cannot be moved to another place");
     }
 
-    return prisma.slotTemplate.update({
-      where: { id },
-      data: { ...payload, placeId: existing.placeId },
+    const startTime = payload.startTime ?? existing.startTime;
+    const endTime = payload.endTime ?? existing.endTime;
+    const capacity = payload.capacity ?? existing.capacity;
+
+    if (startTime >= endTime) {
+      throw ApiError.badRequest("End time must be later than start time");
+    }
+
+    const [duplicateTemplate, sameStartTemplates] = await Promise.all([
+      prisma.slotTemplate.findFirst({
+        where: {
+          placeId: existing.placeId,
+          startTime,
+          endTime,
+          id: { not: id },
+        },
+      }),
+      prisma.slotTemplate.findMany({
+        where: { placeId: existing.placeId, startTime, id: { not: id } },
+        select: { capacity: true },
+      }),
+    ]);
+
+    if (duplicateTemplate) {
+      throw ApiError.conflict("Slot template already exists");
+    }
+
+    if (
+      payload.capacity === undefined &&
+      sameStartTemplates.some((template) => template.capacity !== capacity)
+    ) {
+      throw ApiError.conflict(
+        "Slots with the same start time must have the same capacity",
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      if (payload.capacity !== undefined && sameStartTemplates.length) {
+        await tx.slotTemplate.updateMany({
+          where: { placeId: existing.placeId, startTime },
+          data: { capacity },
+        });
+      }
+
+      return tx.slotTemplate.update({
+        where: { id },
+        data: { ...payload, placeId: existing.placeId },
+      });
     });
   }
 
