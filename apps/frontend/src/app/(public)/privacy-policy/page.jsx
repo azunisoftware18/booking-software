@@ -40,7 +40,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-xl font-serif font-bold tracking-wide">1. Overview & Information We Collect</h2>
             </div>
             <p className="text-sm leading-[1.8] text-gray-600 font-sans font-normal pl-7">
-              Welcome to the official Heritage & Nature Trail reservation gateway. We respect your confidentiality and are committed to safeguarding your personal data. When you reserve gate passes through our portal, we collect basic administrative information required for booking confirmation, including your <strong>Full Name</strong>, <strong>Email Address</strong>, and <strong>Mobile Number</strong>.
+              Welcome to the official Science Park reservation portal. We respect your confidentiality and are committed to safeguarding your personal data. When you reserve tickets through our portal, we collect basic information required for booking confirmation, including your <strong>Full Name</strong>, <strong>Email Address</strong>, and <strong>Mobile Number</strong>.
             </p>
           </div>
           <div className="space-y-3">
@@ -83,7 +83,7 @@ export default function PrivacyPolicy() {
           </div>
         </motion.div>
         <div className="text-center font-serif italic text-xs text-royal-blue/50 select-none">
-          © 2026 Jaipur Heritage Reserves Portal. All Rights Reserved.
+          © 2026 Science Park. All Rights Reserved.
         </div>
       </div>
     </div>

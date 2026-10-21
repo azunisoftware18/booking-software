@@ -73,7 +73,7 @@ export default function TermsAndConditions() {
                             <h2 className="text-xl font-serif font-bold tracking-wide">4. Park & Monument Code of Conduct</h2>
                         </div>
                         <p className="text-sm leading-[1.8] text-gray-600 font-sans font-normal pl-7">
-                            Visitors must adhere strictly to environmental preservation codes while present at the heritage reserves or Kishan Bagh eco-tracks. Littering, damaging natural sand structures, harming native vegetation, or stepping outside designated elevated walkways is strictly prohibited and can invite penalty actions from forest authorities.
+                            Visitors must follow Science Park safety instructions, respect exhibits, avoid touching restricted equipment, and supervise children at all times. Littering, damaging installations, or entering staff-only areas is strictly prohibited.
                         </p>
                     </div>
 
@@ -86,7 +86,7 @@ export default function TermsAndConditions() {
                 </motion.div>
 
                 <div className="text-center font-serif italic text-xs text-royal-blue/50 select-none">
-                    © 2026 Jaipur Heritage Reserves Portal. All Rights Reserved.
+                    © 2026 Science Park. All Rights Reserved.
                 </div>
             </div>
         </div>

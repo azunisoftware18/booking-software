@@ -264,9 +264,22 @@ export const locationService = {
   },
 
   async delete(id) {
-    return prisma.location.delete({
+    const existing = await prisma.location.findUnique({
+      where: { id },
+      select: { imageKey: true },
+    });
+
+    const location = await prisma.location.delete({
       where: { id },
       select: locationSelect,
     });
+
+    if (existing?.imageKey) {
+      await deleteByKey(existing.imageKey).catch((error) =>
+        console.error("Failed to delete location image:", error),
+      );
+    }
+
+    return location;
   },
 };

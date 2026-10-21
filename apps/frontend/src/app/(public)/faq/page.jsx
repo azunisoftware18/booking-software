@@ -8,7 +8,7 @@ const faqData = {
     en: {
         title: "Frequently Asked Questions",
         subtitle: "Support Center",
-        legalLabel: "© 2026 Jaipur Heritage Reserves Portal. All Rights Reserved.",
+        legalLabel: "© 2026 Science Park. All Rights Reserved.",
         questions: [
             {
                 q: "Do I need to print the physical ticket after booking?",

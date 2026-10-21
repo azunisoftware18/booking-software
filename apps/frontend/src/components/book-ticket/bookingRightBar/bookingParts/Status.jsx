@@ -34,7 +34,7 @@ export default function Status({ status, data, onRetry }) {
                             </div>
 
                             <div className="border-t border-gray-100 pt-4">
-                                <h3 className="font-bold text-xl text-orange-800">Jaipur Experience</h3>
+                                <h3 className="font-bold text-xl text-orange-800">Science Park Visit</h3>
                                 <div className="grid grid-cols-2 gap-4 mt-3">
                                     <div>
                                         <p className="text-xs text-gray-500 italic">Date</p>

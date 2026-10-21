@@ -25,7 +25,7 @@ export default function Footer() {
     const setting = settingData?.data || settingData;
 
     return (
-        <footer className="relative overflow-hidden bg-[#001f14] pt-24 md:pt-32 select-none">
+        <footer id="footer" className="relative overflow-hidden bg-[#123b45] pt-20 md:pt-24 select-none">
             {/* Background Pattern */}
             <div
                 className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-center bg-repeat"
@@ -44,17 +44,17 @@ export default function Footer() {
                 className="relative z-20 flex flex-col items-center px-4 text-center max-w-4xl mx-auto"
             >
                 <p className="text-4xl sm:text-5xl md:text-6xl font-serif text-white leading-tight font-normal">
-                    Ready to Explore{" "}
-                    <span className="text-gold italic font-serif font-medium">Royalty?</span>
+                    Ready to discover{" "}
+                    <span className="text-[#f3b562] italic font-serif font-medium">something new?</span>
                 </p>
                 <p className="mt-4 max-w-xl text-sandstone/70 text-sm sm:text-base leading-relaxed font-sans font-light">
-                    Secure your premium gate pass access to Jaipur&apos;s most iconic heritage landmarks and protected ecological trails. Experience timeless history.
+                    Reserve your visit to an interactive space built for curious minds, creative questions and shared learning.
                 </p>
 
                 <Link href={bookingLink} className="mt-8 group">
                     <BookNowBtn
-                        title="Book Your Ticket Now"
-                        addClass="bg-gradient-to-r from-jaipur-dark to-[#994113] text-white border-none hover:from-jaipur-dark hover:to-[#b24d18] hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_25px_rgba(153,65,19,0.3)] transition-all duration-300 text-xs tracking-[2px] uppercase font-serif font-bold rounded-xl px-10 py-5"
+                        title="Book your visit"
+                        addClass="bg-[#e85d3f] text-white border-none hover:bg-[#f06f51] hover:scale-[1.02] active:scale-[0.98] shadow-lg transition-all duration-300 text-xs tracking-[2px] uppercase font-serif font-bold rounded-xl px-10 py-5"
                     />
                 </Link>
             </motion.div>
