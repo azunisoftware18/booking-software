@@ -595,7 +595,6 @@ class BookingService {
           phone: booking.phone,
           userId: booking.userId || "",
         });
-        console.log("Atom payment initiated:", payment);
 
         return {
           booking,
@@ -629,7 +628,6 @@ class BookingService {
       throw ApiError.badRequest("Invalid ATOM payment signature");
     }
 
-    console.log("ATOM payment response:", response);
     const instrument = response.payInstrument;
     const { merchDetails, payDetails, responseDetails } = instrument;
     if (String(merchDetails.merchId) !== String(envConfig.ATOM_MERCHANT_ID)) {
@@ -773,7 +771,6 @@ class BookingService {
     if (!booking || booking.status !== "PAID") {
       throw ApiError.notFound("Paid booking not found");
     }
-    console.log(booking);
 
     return booking;
   }
