@@ -107,9 +107,6 @@ function SuccessContent() {
       </div>
     );
   }
-  {
-    console.log(booking);
-  }
   const annexureGroups = getAnnexureGroups(booking?.annexureItems);
   const annexureDates = (booking?.annexureItems || [])
     .map((item) => new Date(item.slotDateTime))
@@ -273,7 +270,9 @@ function SuccessContent() {
                             {item.place?.name}
                           </span>
                           <span className="block text-gray-500">
-                            {new Date(item.firstSlotDateTime).toLocaleDateString("en-IN")}
+                            {new Date(
+                              item.firstSlotDateTime,
+                            ).toLocaleDateString("en-IN")}
                             {item.firstSlotDateTime !== item.lastSlotDateTime &&
                               ` - ${new Date(item.lastSlotDateTime).toLocaleDateString("en-IN")}`}
                             {`, ${new Date(`1970-01-01T${item.firstSlotDateTime.split("T")[1].slice(0, 5)}`).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`}
@@ -342,8 +341,13 @@ function SuccessContent() {
                 ₹{booking?.totalAmount || "-"}
               </span>
             </div>
-            <div className="text-xs sm:text-sm font-mono tracking-widest text-royal-blue/30 font-bold select-none text-right">
-              #ET-{bookingId ? bookingId.slice(-6).toUpperCase() : "7FCFA9"}
+            <div className="text-right select-none">
+              <div className="mt-1 text-[10px] sm:text-xs font-mono tracking-wider text-royal-blue/55 font-bold">
+                Payment ID: {booking?.paymentId || "-"}
+              </div>
+              <div className="mt-1 text-[10px] sm:text-xs font-mono tracking-wider text-royal-blue/55 font-bold">
+                Transaction ID: {booking?.txnId || "-"}
+              </div>
             </div>
           </div>
         </motion.div>

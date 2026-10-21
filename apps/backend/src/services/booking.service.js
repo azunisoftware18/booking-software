@@ -416,7 +416,7 @@ class BookingService {
               ticketPayload: [],
               annexureItems: {
                 create: normalizedItems.map(
-                  ({ securityDeposit, electricityCharge, ...item }) => item,
+                  ({ securityDeposit, electricityCharge, ...item }) => item
                 ),
               },
             },
@@ -728,6 +728,8 @@ class BookingService {
         status: true,
         totalAmount: true,
         totalSeats: true,
+        txnId: true,
+        paymentId: true,
         slotDateTime: true,
         ticketPdfUrl: true,
         place: {
@@ -1098,13 +1100,17 @@ We can't wait to welcome you! 🎉`;
 
   static assertAnnexureRefundable(booking) {
     if (booking.bookingType !== "ANNEXURE") {
-      throw ApiError.badRequest("Refunds are only available for Annexure bookings");
+      throw ApiError.badRequest(
+        "Refunds are only available for Annexure bookings"
+      );
     }
     if (booking.status !== "PAID") {
       throw ApiError.badRequest("Only paid bookings can be refunded");
     }
     if (booking.refundedAt || booking.refundAmount !== null) {
-      throw ApiError.conflict("A refund has already been recorded for this booking");
+      throw ApiError.conflict(
+        "A refund has already been recorded for this booking"
+      );
     }
     if (!booking.annexureItems?.length) {
       throw ApiError.badRequest("No Annexure booking items were found");
@@ -1176,7 +1182,7 @@ We can't wait to welcome you! 🎉`;
       payload.items.length !== groups.length
     ) {
       throw ApiError.badRequest(
-        "Confirm the external refund and provide charges for every option",
+        "Confirm the external refund and provide charges for every option"
       );
     }
 
@@ -1184,7 +1190,7 @@ We can't wait to welcome you! 🎉`;
     for (const item of payload.items) {
       if (submittedItems.has(item.placeId)) {
         throw ApiError.badRequest(
-          "Each Annexure option can only be submitted once",
+          "Each Annexure option can only be submitted once"
         );
       }
       submittedItems.set(item.placeId, item);
@@ -1194,41 +1200,41 @@ We can't wait to welcome you! 🎉`;
       const submitted = submittedItems.get(group.placeId);
       if (!submitted) {
         throw ApiError.badRequest(
-          "Refund charges are missing for an Annexure option",
+          "Refund charges are missing for an Annexure option"
         );
       }
       const electricityUnits = submitted.electricityUnits;
       const electricityCharge = roundCurrency(
-        electricityUnits * ELECTRICITY_RATE_PER_UNIT,
+        electricityUnits * ELECTRICITY_RATE_PER_UNIT
       );
       const damageDeduction = roundCurrency(submitted.damageDeduction);
       const electricityRefund = roundCurrency(
-        Math.max(0, group.electricityHeld - electricityCharge),
+        Math.max(0, group.electricityHeld - electricityCharge)
       );
       const electricityOverage = roundCurrency(
-        Math.max(0, electricityCharge - group.electricityHeld),
+        Math.max(0, electricityCharge - group.electricityHeld)
       );
       const depositAfterDamage = Math.max(
         0,
-        group.securityDepositHeld - damageDeduction,
+        group.securityDepositHeld - damageDeduction
       );
       const damageCoveredByDeposit = roundCurrency(
-        Math.min(group.securityDepositHeld, damageDeduction),
+        Math.min(group.securityDepositHeld, damageDeduction)
       );
       const damageCollection = roundCurrency(
-        Math.max(0, damageDeduction - group.securityDepositHeld),
+        Math.max(0, damageDeduction - group.securityDepositHeld)
       );
       const electricityOverageFromDeposit = roundCurrency(
-        Math.min(depositAfterDamage, electricityOverage),
+        Math.min(depositAfterDamage, electricityOverage)
       );
       const electricityCollection = roundCurrency(
-        Math.max(0, electricityOverage - depositAfterDamage),
+        Math.max(0, electricityOverage - depositAfterDamage)
       );
       const securityDepositRefund = roundCurrency(
-        Math.max(0, depositAfterDamage - electricityOverage),
+        Math.max(0, depositAfterDamage - electricityOverage)
       );
       const collectionAmount = roundCurrency(
-        damageCollection + electricityCollection,
+        damageCollection + electricityCollection
       );
 
       return {
@@ -1251,15 +1257,15 @@ We can't wait to welcome you! 🎉`;
 
     if (submittedItems.size !== groups.length) {
       throw ApiError.badRequest(
-        "Refund data contains an unknown Annexure option",
+        "Refund data contains an unknown Annexure option"
       );
     }
 
     const refundAmount = roundCurrency(
-      refundItems.reduce((total, item) => total + item.refundAmount, 0),
+      refundItems.reduce((total, item) => total + item.refundAmount, 0)
     );
     const collectionAmount = roundCurrency(
-      refundItems.reduce((total, item) => total + item.collectionAmount, 0),
+      refundItems.reduce((total, item) => total + item.collectionAmount, 0)
     );
     const refundedAt = new Date();
     const refundDetails = {
