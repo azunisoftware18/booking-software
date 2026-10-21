@@ -213,7 +213,7 @@ class TicketService {
         .fontSize(9)
         .fillColor(colors.muted)
         .text(
-          `Location: ${booking.location?.name || "—"} · Booking ID: ${booking.id}`,
+          `Location: ${booking.location?.name || "—"}`,
           margin,
           98,
           { width, align: "center" },

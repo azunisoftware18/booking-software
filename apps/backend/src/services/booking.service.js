@@ -1345,6 +1345,7 @@ We can't wait to welcome you! 🎉`;
       },
       include: {
         place: true,
+        location: true,
         user: true,
         annexureItems: { include: { place: true } },
         tickets: {
