@@ -99,11 +99,12 @@ model SlotTemplate {
 
   startTime String @map("start_time")
   endTime   String @map("end_time")
+  date      DateTime?
   capacity  Int    @map("capacity")
 
   place Place @relation(fields: [placeId], references: [id])
 
-  @@unique([placeId, startTime, endTime])
+  @@unique([placeId, date, startTime, endTime])
   @@map("slot_templates")
 }
 

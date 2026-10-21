@@ -12,7 +12,8 @@ async function assertPlaceAccess(placeId, currentUser) {
 
 class SlotTemplateService {
   static async create(payload, currentUser) {
-    const { placeId, startTime, endTime, capacity } = payload;
+    const { placeId, date, startTime, endTime, capacity } = payload;
+    const parsedDate = new Date(`${date}T00:00:00.000Z`);
     await assertPlaceAccess(placeId, currentUser);
 
     const place = await prisma.place.findUnique({
@@ -23,10 +24,10 @@ class SlotTemplateService {
 
     const [existingTemplate, sameStartTemplates] = await Promise.all([
       prisma.slotTemplate.findFirst({
-        where: { placeId, startTime, endTime },
+        where: { placeId, date: parsedDate, startTime, endTime },
       }),
       prisma.slotTemplate.findMany({
-        where: { placeId, startTime },
+        where: { placeId, date: parsedDate, startTime },
         select: { capacity: true },
       }),
     ]);
@@ -42,7 +43,7 @@ class SlotTemplateService {
     }
 
     return prisma.slotTemplate.create({
-      data: { placeId, startTime, endTime, capacity },
+      data: { placeId, date: parsedDate, startTime, endTime, capacity },
     });
   }
 
@@ -71,6 +72,8 @@ class SlotTemplateService {
 
     const startTime = payload.startTime ?? existing.startTime;
     const endTime = payload.endTime ?? existing.endTime;
+    const date = payload.date ?? (existing.date ? existing.date.toISOString().slice(0, 10) : undefined);
+    const parsedDate = date ? new Date(`${date}T00:00:00.000Z`) : null;
     const capacity = payload.capacity ?? existing.capacity;
 
     if (startTime >= endTime) {
@@ -81,13 +84,14 @@ class SlotTemplateService {
       prisma.slotTemplate.findFirst({
         where: {
           placeId: existing.placeId,
+          date: parsedDate,
           startTime,
           endTime,
           id: { not: id },
         },
       }),
       prisma.slotTemplate.findMany({
-        where: { placeId: existing.placeId, startTime, id: { not: id } },
+        where: { placeId: existing.placeId, date: parsedDate, startTime, id: { not: id } },
         select: { capacity: true },
       }),
     ]);
@@ -108,14 +112,14 @@ class SlotTemplateService {
     return prisma.$transaction(async (tx) => {
       if (payload.capacity !== undefined && sameStartTemplates.length) {
         await tx.slotTemplate.updateMany({
-          where: { placeId: existing.placeId, startTime },
+          where: { placeId: existing.placeId, date: parsedDate, startTime },
           data: { capacity },
         });
       }
 
       return tx.slotTemplate.update({
         where: { id },
-        data: { ...payload, placeId: existing.placeId },
+        data: { ...payload, placeId: existing.placeId, ...(parsedDate ? { date: parsedDate } : {}) },
       });
     });
   }
@@ -205,13 +209,16 @@ class SlotService {
   static async getSlotsByDate(placeId, date, currentUser) {
     await assertPlaceAccess(placeId, currentUser);
 
-    const templates = await prisma.slotTemplate.findMany({
-      where: { placeId },
-      orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
-    });
-
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
+
+    const templates = await prisma.slotTemplate.findMany({
+      where: {
+        placeId,
+        OR: [{ date: null }, { date: { gte: start, lte: end } }],
+      },
+      orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
+    });
 
     const overrides = await prisma.slotOverride.findMany({
       where: {
@@ -333,7 +340,9 @@ class SlotService {
 
       let status = "available";
 
-      if (override?.isClosed || isPastSlot(date, t.startTime)) {
+      if (isPastSlot(date, t.startTime)) {
+        status = "expired";
+      } else if (override?.isClosed) {
         status = "unavailable";
       } else if (available === 0) {
         status = "Slot full";

@@ -36,7 +36,8 @@ export default function SlotCard({ slots, selectedSlot, onSelect }) {
                                     selectedSlot?.endTime === slot.endTime;
 
                                 const getStatusText = () => {
-                                    if (!slot.isAvailable && !isFull) return "⏳ EXPIRED";
+                                    if (slot.status === "expired" || slot.uiStatus === "expired") return "EXPIRED";
+                                    if (!slot.isAvailable && !isFull) return "UNAVAILABLE";
                                     if (isFull) return "🚫 FULL BOOKED";
                                     return `👤 ${slot.available} Tickets Left`;
                                 };
@@ -54,7 +55,7 @@ export default function SlotCard({ slots, selectedSlot, onSelect }) {
                                                 : "border-gold/20 bg-white hover:border-gold/50 text-royal-blue shadow-sm hover:shadow-md"
                                             } 
                                             ${isDisabled
-                                                ? "opacity-50 cursor-not-allowed bg-sandstone/30 border-gray-200 grayscale hover:shadow-none"
+                                                ? "opacity-50 cursor-default bg-sandstone/30 border-gray-200 grayscale hover:shadow-none"
                                                 : "cursor-pointer"
                                             }`}
                                     >

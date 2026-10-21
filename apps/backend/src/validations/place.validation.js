@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const slotTemplateSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
   capacity: z.coerce.number().int().min(1),
@@ -27,7 +28,7 @@ const slotTemplatesSchema = z.preprocess((value) => {
       });
     }
 
-    const range = `${slot.startTime}-${slot.endTime}`;
+    const range = `${slot.date}-${slot.startTime}-${slot.endTime}`;
     if (slotRanges.has(range)) {
       context.addIssue({
         code: "custom",
@@ -36,7 +37,7 @@ const slotTemplatesSchema = z.preprocess((value) => {
       });
     }
 
-    const sharedCapacity = capacitiesByStartTime.get(slot.startTime);
+    const sharedCapacity = capacitiesByStartTime.get(`${slot.date}-${slot.startTime}`);
     if (
       sharedCapacity !== undefined &&
       sharedCapacity !== slot.capacity
@@ -49,7 +50,7 @@ const slotTemplatesSchema = z.preprocess((value) => {
     }
 
     slotRanges.add(range);
-    capacitiesByStartTime.set(slot.startTime, slot.capacity);
+    capacitiesByStartTime.set(`${slot.date}-${slot.startTime}`, slot.capacity);
   });
 }).optional());
 

@@ -30,7 +30,7 @@ export default function AddPlaceForm({
 }) {
   const [annexureError, setAnnexureError] = useState("");
   const [slotTemplates, setSlotTemplates] = useState([
-    { startTime: "", endTime: "", capacity: "" },
+    { date: "", startTime: "", endTime: "", capacity: "" },
   ]);
   const [slotError, setSlotError] = useState("");
   const [formError, setFormError] = useState("");
@@ -98,11 +98,12 @@ export default function AddPlaceForm({
       defaultValues?.id
         ? (defaultValues.slotTemplates || []).map((slot) => ({
             id: slot.id,
+            date: slot.date ? String(slot.date).slice(0, 10) : "",
             startTime: slot.startTime,
             endTime: slot.endTime,
             capacity: String(slot.capacity),
           }))
-        : [{ startTime: "", endTime: "", capacity: "" }],
+        : [{ date: "", startTime: "", endTime: "", capacity: "" }],
     );
     setSlotError("");
   }, [assignedLocation, defaultValues, reset]);
@@ -226,12 +227,13 @@ export default function AddPlaceForm({
             (slot) =>
               !slot.startTime ||
               !slot.endTime ||
+              !slot.date ||
               !Number.isInteger(slot.capacity) ||
               slot.capacity < 1,
           )
         ) {
           setSlotError(
-            "Enter a start time, end time and capacity for every slot.",
+            "Enter a date, start time, end time and capacity for every slot.",
           );
           return;
         }
@@ -244,7 +246,7 @@ export default function AddPlaceForm({
         }
 
         const slotRanges = configuredSlots.map(
-          (slot) => `${slot.startTime}-${slot.endTime}`,
+          (slot) => `${slot.date}-${slot.startTime}-${slot.endTime}`,
         );
         if (new Set(slotRanges).size !== configuredSlots.length) {
           setSlotError("Each slot must have a different time range.");
@@ -253,7 +255,9 @@ export default function AddPlaceForm({
 
         const capacitiesByStartTime = new Map();
         for (const slot of configuredSlots) {
-          const sharedCapacity = capacitiesByStartTime.get(slot.startTime);
+          const sharedCapacity = capacitiesByStartTime.get(
+            `${slot.date}-${slot.startTime}`,
+          );
           if (
             sharedCapacity !== undefined &&
             sharedCapacity !== slot.capacity
@@ -263,7 +267,10 @@ export default function AddPlaceForm({
             );
             return;
           }
-          capacitiesByStartTime.set(slot.startTime, slot.capacity);
+          capacitiesByStartTime.set(
+            `${slot.date}-${slot.startTime}`,
+            slot.capacity,
+          );
         }
       }
 
@@ -304,7 +311,7 @@ export default function AddPlaceForm({
       setPendingOption("");
       setShowAnnexurePopup(false);
       setAnnexureError("");
-      setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
+      setSlotTemplates([{ date: "", startTime: "", endTime: "", capacity: "" }]);
       setSlotError("");
     } catch (error) {
       console.error("Place form submit error:", error);
@@ -336,7 +343,7 @@ export default function AddPlaceForm({
     setPreview(null);
     setImageError("");
     setAnnexureError("");
-    setSlotTemplates([{ startTime: "", endTime: "", capacity: "" }]);
+    setSlotTemplates([{ date: "", startTime: "", endTime: "", capacity: "" }]);
     setSlotError("");
   };
 
@@ -646,8 +653,25 @@ export default function AddPlaceForm({
                 {slotTemplates.map((slot, index) => (
                   <div
                     key={slot.id || index}
-                    className="grid grid-cols-1 items-end gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                    className="grid grid-cols-1 items-end gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_1fr_auto]"
                   >
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      Date
+                      <input
+                        type="date"
+                        value={slot.date}
+                        onChange={(event) => {
+                          const date = event.target.value;
+                          setSlotTemplates((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, date } : item,
+                            ),
+                          );
+                          setSlotError("");
+                        }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
                     <label className="space-y-1 text-xs font-medium text-slate-600">
                       Start Time
                       <input
@@ -751,7 +775,7 @@ export default function AddPlaceForm({
                     onClick={() => {
                       setSlotTemplates((current) => [
                         ...current,
-                        { startTime: "", endTime: "", capacity: "" },
+                        { date: "", startTime: "", endTime: "", capacity: "" },
                       ]);
                       setSlotError("");
                     }}

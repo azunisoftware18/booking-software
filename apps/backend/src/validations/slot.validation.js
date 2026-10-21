@@ -5,6 +5,7 @@ class SlotValidation {
   static get createSlot() {
     return z.object({
       placeId: z.string().uuid(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
       startTime: z.string().regex(timeRegex, "Invalid time format (HH:mm)"),
       endTime: z.string().regex(timeRegex, "Invalid time format (HH:mm)"),
       capacity: z.number().int().min(1),
@@ -18,6 +19,7 @@ class SlotValidation {
     return z.object({
       startTime: z.string().optional(),
       endTime: z.string().optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)").optional(),
       capacity: z.number().int().min(1).optional(),
     }).refine(
       (slot) =>

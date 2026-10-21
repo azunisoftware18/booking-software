@@ -29,6 +29,7 @@ const publicPlaceSelect = {
   slotTemplates: {
     select: {
       id: true,
+      date: true,
       startTime: true,
       endTime: true,
       capacity: true,
@@ -145,8 +146,9 @@ class PlaceService {
 
       if (slotTemplates.length) {
         await tx.slotTemplate.createMany({
-          data: slotTemplates.map(({ startTime, endTime, capacity }) => ({
+          data: slotTemplates.map(({ date, startTime, endTime, capacity }) => ({
             placeId: place.id,
+            date: date ? new Date(`${date}T00:00:00.000Z`) : null,
             startTime,
             endTime,
             capacity,

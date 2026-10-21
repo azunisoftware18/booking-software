@@ -111,9 +111,10 @@ export default function PlacePage() {
             const original = originalTemplates.find(
               (item) => item.id === template.id,
             );
-            if (
+              if (
               original &&
-              (original.startTime !== template.startTime ||
+              (original.date !== template.date ||
+                original.startTime !== template.startTime ||
                 original.endTime !== template.endTime ||
                 Number(original.capacity) !== Number(template.capacity))
             ) {
@@ -121,6 +122,7 @@ export default function PlacePage() {
                 id: template.id,
                 payload: {
                   placeId: editData.id,
+                  date: template.date,
                   startTime: template.startTime,
                   endTime: template.endTime,
                   capacity: Number(template.capacity),
@@ -136,6 +138,7 @@ export default function PlacePage() {
 
             await createSlotTemplate({
               placeId: editData.id,
+              date: template.date,
               startTime: template.startTime,
               endTime: template.endTime,
               capacity: Number(template.capacity),

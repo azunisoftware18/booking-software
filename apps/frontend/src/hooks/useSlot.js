@@ -10,5 +10,8 @@ export const useSlots = ({ placeId, date, enabled = true }) => {
             return res?.data?.data || [];
         },
         enabled: enabled && !!placeId && !!date,
+        refetchInterval: enabled && placeId && date ? 10000 : false,
+        refetchIntervalInBackground: false,
+        refetchOnWindowFocus: true,
     });
 };
