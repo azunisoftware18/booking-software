@@ -3,6 +3,7 @@
 import prisma from "../db/db.js";
 import fs from "fs";
 import path from "path";
+import { deleteByKey, upload } from "../utils/s3Service.js";
 
 const settingsUploadDirectory = path.resolve("uploads/settings");
 
@@ -19,8 +20,8 @@ const deleteStoredFile = (storedPath) => {
   }
 };
 
-const getUploadedFilePath = (file) =>
-  file ? `/uploads/settings/${file.filename}` : null;
+const isS3Key = (value) =>
+  typeof value === "string" && value && !value.startsWith("/uploads/");
 
 // ================= GET SETTINGS =================
 
@@ -68,16 +69,16 @@ export const updateSetting = async (req, res, next) => {
 
     // Upload new logo
     if (logoFile) {
-      deleteStoredFile(existingSetting?.logo);
-      logo = getUploadedFilePath(logoFile);
-      logoKey = logo;
+      const uploadedLogo = await upload(logoFile.path);
+      logo = uploadedLogo.url;
+      logoKey = uploadedLogo.key;
     }
 
     // Upload new favicon
     if (faviconFile) {
-      deleteStoredFile(existingSetting?.favicon);
-      favicon = getUploadedFilePath(faviconFile);
-      faviconKey = favicon;
+      const uploadedFavicon = await upload(faviconFile.path);
+      favicon = uploadedFavicon.url;
+      faviconKey = uploadedFavicon.key;
     }
 
     const setting = await prisma.setting.upsert({
@@ -108,6 +109,23 @@ export const updateSetting = async (req, res, next) => {
         faviconKey,
       },
     });
+
+    if (logoFile) {
+      deleteStoredFile(existingSetting?.logo);
+      if (isS3Key(existingSetting?.logoKey)) {
+        await deleteByKey(existingSetting.logoKey).catch((error) =>
+          console.error("Failed to delete old S3 logo:", error),
+        );
+      }
+    }
+    if (faviconFile) {
+      deleteStoredFile(existingSetting?.favicon);
+      if (isS3Key(existingSetting?.faviconKey)) {
+        await deleteByKey(existingSetting.faviconKey).catch((error) =>
+          console.error("Failed to delete old S3 favicon:", error),
+        );
+      }
+    }
 
     return res.status(200).json({
       success: true,
