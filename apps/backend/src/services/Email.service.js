@@ -34,9 +34,14 @@ class EmailService {
       const info = await this.transporter.sendMail({
         from: `"Garba Edit" <${process.env.MAIL_USER}>`,
         to,
-        subject: `Booking Confirmation – Garba Edit | Springfield School`,
-        html: this._buildTemplate({ name, booking, to }),
-        attachments, 
+        subject: `Booking Confirmation `,
+        html: this._buildTemplate({
+          name,
+          booking,
+          to,
+          placeName: booking.place?.name || "—",
+        }),
+        attachments,
       });
 
       return info;
@@ -65,26 +70,26 @@ class EmailService {
   }
 
   // 🔥 HTML Template (private)
-  static _buildTemplate({ name, booking, to }) {
+  static _buildTemplate({ name, booking, to, placeName }) {
     const slot = booking.slotDateTime
       ? new Date(booking.slotDateTime)
       : null;
 
     const formattedDate = slot
       ? slot.toLocaleDateString("en-IN", {
-          weekday: "long",
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        })
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
       : "-";
 
     const formattedTime = slot
       ? slot.toLocaleTimeString("en-IN", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
       : "-";
 
     return `
@@ -120,12 +125,12 @@ class EmailService {
             </h1>
 
             <h3 style="
-              margin:0;
-              color:#d9a441;
-              font-family:Georgia,serif;
-            ">
-             Springfield School
-            </h3>
+  margin:0;
+  color:#d9a441;
+  font-family:Georgia,serif;
+">
+  ${placeName}
+</h3>
 
             <p style="margin-top:8px;">Booking Confirmation</p>
           </div>
@@ -148,7 +153,7 @@ class EmailService {
               <p><strong>Name:</strong> ${name}</p>
               <p><strong>Email:</strong> ${to}</p>
               <p><strong>Phone:</strong> ${booking.phone || "-"}</p>
-              <p><strong>Place:</strong> Springfield School</p>
+              <p><strong>Place:</strong> ${placeName}</p>
               <p><strong>Date:</strong> ${formattedDate}</p>
               <p><strong>Time:</strong> ${formattedTime}</p>
               <p><strong>Total Amount:</strong> Rs ${booking.totalAmount || "-"}</p>
