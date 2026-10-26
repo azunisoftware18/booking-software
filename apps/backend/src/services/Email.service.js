@@ -32,7 +32,7 @@ class EmailService {
       }
 
       const info = await this.transporter.sendMail({
-        from: `"Garba Edit" <${process.env.MAIL_USER}>`,
+        from: `"Department of Science and Technology" <${process.env.MAIL_USER}>`,
         to,
         subject: `Booking Confirmation `,
         html: this._buildTemplate({
@@ -55,7 +55,7 @@ class EmailService {
   static async sendMail({ to, subject, html, attachments = [] }) {
     try {
       const info = await this.transporter.sendMail({
-        from: `"Garba Edit" <${process.env.MAIL_USER}>`,
+        from: `"Department of Science and Technology" <${process.env.MAIL_USER}>`,
         to,
         subject,
         html,
@@ -121,7 +121,7 @@ class EmailService {
               color:#d9a441;
               font-family:Georgia,serif;
             ">
-             Garba Edit
+             Department of Science and Technology
             </h1>
 
             <h3 style="
