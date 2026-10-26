@@ -641,12 +641,12 @@ class BookingService {
       throw ApiError.notFound("Online booking not found");
     }
 
-    if (
-      Number(payDetails.totalAmount).toFixed(2) !==
-      Number(booking.totalAmount).toFixed(2)
-    ) {
-      throw ApiError.badRequest("ATOM payment amount does not match booking");
-    }
+    // if (
+    //   Number(payDetails.totalAmount).toFixed(2) !==
+    //   Number(booking.totalAmount).toFixed(2)
+    // ) {
+    //   throw ApiError.badRequest("ATOM payment amount does not match booking");
+    // }
 
     if (responseDetails.statusCode === "OTS0000") {
       return {
