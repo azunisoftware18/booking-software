@@ -895,7 +895,7 @@ class TicketService {
 
     doc
       .font("Times-Bold")
-      .fontSize(29)
+      .fontSize(18)
       .fillColor(colors.royalBlue)
       .text(booking.place?.name || "Heritage Monument", cardX + 20, headerY, {
         width: cardW - 40,
