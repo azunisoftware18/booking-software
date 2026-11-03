@@ -106,17 +106,21 @@ class TicketService {
       gray: "#8a8a8a",
     };
 
-    const slot = new Date(booking.slotDateTime);
+    const hasScheduledSlot = Boolean(booking.slotDateTime);
+    const slot = new Date(booking.slotDateTime || booking.createdAt);
+    const displayTimeZone = hasScheduledSlot ? "UTC" : "Asia/Kolkata";
     const formattedDate = slot.toLocaleDateString("en-IN", {
       weekday: "long",
       day: "2-digit",
       month: "long",
       year: "numeric",
+      timeZone: displayTimeZone,
     });
     const formattedTime = slot.toLocaleTimeString("en-IN", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+      timeZone: displayTimeZone,
     });
     const gstBreakdown = booking.tickets.reduce(
       (summary, ticket) => {

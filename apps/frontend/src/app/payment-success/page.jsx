@@ -111,12 +111,19 @@ function SuccessContent() {
   const annexureDates = (booking?.annexureItems || [])
     .map((item) => new Date(item.slotDateTime))
     .sort((first, second) => first - second);
+  const visitDateTime = booking?.slotDateTime
+    ? new Date(booking.slotDateTime)
+    : booking?.createdAt
+      ? new Date(booking.createdAt)
+      : null;
+  const visitTimeZone = booking?.slotDateTime ? "UTC" : "Asia/Kolkata";
   const formatVisitDate = (date) =>
     date.toLocaleDateString("en-IN", {
       weekday: "long",
       day: "2-digit",
       month: "long",
       year: "numeric",
+      timeZone: "UTC",
     });
   const formattedDate = booking?.slotDateTime
     ? booking.bookingType === "ANNEXURE" && annexureDates.length > 1
@@ -124,17 +131,25 @@ function SuccessContent() {
           annexureDates[annexureDates.length - 1],
         )}`
       : formatVisitDate(new Date(booking.slotDateTime))
-    : "-";
+    : visitDateTime && !Number.isNaN(visitDateTime.getTime())
+      ? visitDateTime.toLocaleDateString("en-IN", {
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          timeZone: "Asia/Kolkata",
+        })
+      : "-";
 
-  const formattedTime = booking?.slotDateTime
-    ? new Date(
-        `1970-01-01T${booking.slotDateTime.split("T")[1].slice(0, 5)}`,
-      ).toLocaleTimeString("en-IN", {
+  const formattedTime =
+    visitDateTime && !Number.isNaN(visitDateTime.getTime())
+      ? visitDateTime.toLocaleTimeString("en-IN", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
+        timeZone: visitTimeZone,
       })
-    : "-";
+      : "-";
   const ticketGstGroups = getTicketGstGroups(booking?.tickets).filter(
     (group) => group.taxPercent > 0,
   );
@@ -202,12 +217,12 @@ function SuccessContent() {
               <p className="text-[11px] sm:text-xs font-sans text-gray-400 font-semibold tracking-wide">
                 {booking?.place?.location || "Jaipur, Rajasthan"}
               </p>
-              <p className="mt-1 text-[10px] sm:text-xs font-sans text-gray-500">
+              {/* <p className="mt-1 text-[10px] sm:text-xs font-sans text-gray-500">
                 Contact: {booking?.location?.contactNumber || booking?.phone || "-"}
                 {booking?.location?.email || booking?.email
                   ? ` · ${booking?.location?.email || booking?.email}`
                   : ""}
-              </p>
+              </p> */}
             </div>
 
             <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-gold/30 to-transparent mx-auto" />

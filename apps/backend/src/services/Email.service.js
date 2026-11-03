@@ -71,25 +71,23 @@ class EmailService {
 
   // 🔥 HTML Template (private)
   static _buildTemplate({ name, booking, to, placeName }) {
-    const slot = booking.slotDateTime
-      ? new Date(booking.slotDateTime)
-      : null;
+    const slot = booking.slotDateTime ? new Date(booking.slotDateTime) : null;
 
     const formattedDate = slot
       ? slot.toLocaleDateString("en-IN", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
       : "-";
 
     const formattedTime = slot
       ? slot.toLocaleTimeString("en-IN", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
       : "-";
 
     return `

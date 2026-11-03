@@ -259,16 +259,6 @@ export default function VisitorForm({
               )}
             </div>
           )}
-
-          {formData.paymentMethod === "ONLINE" && (
-            <p
-              role="alert"
-              className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-900"
-            >
-              Online payment gateway is not integrated/configured yet. Please
-              contact the administrator before continuing.
-            </p>
-          )}
         </div>
 
         {/* ─── EMAIL INFO BOX ─── */}

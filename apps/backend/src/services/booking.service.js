@@ -21,6 +21,16 @@ import {
 const roundCurrency = (amount) =>
   Math.round((Number(amount) + Number.EPSILON) * 100) / 100;
 
+const isAtomGatewayLocation = (location) => {
+  const values = [location?.name, location?.city]
+    .filter(Boolean)
+    .map((value) => value.trim().toLowerCase());
+
+  return values.some(
+    (value) => value.includes("jaipur") || value.includes("jodhpur")
+  );
+};
+
 class BookingService {
   // ============================================================
   // CREATE BOOKING
@@ -109,6 +119,15 @@ class BookingService {
         if (!selectedLocation) {
           throw ApiError.badRequest(
             "Selected location is invalid or no longer available"
+          );
+        }
+
+        if (
+          paymentMethod === "ONLINE" &&
+          !isAtomGatewayLocation(selectedLocation)
+        ) {
+          throw ApiError.badRequest(
+            "Online payment gateway is not integrated for this location yet"
           );
         }
 
@@ -585,16 +604,34 @@ class BookingService {
       const AtomPaymentService = (await import("./atom-payment.service.js"))
         .default;
 
+      const paymentLocation = await prisma.location.findUnique({
+        where: {
+          id: booking.locationId,
+        },
+        select: {
+          id: true,
+          name: true,
+          city: true,
+        },
+      });
+
+      if (!paymentLocation) {
+        throw ApiError.badRequest("Booking location not found");
+      }
+
       try {
-        const payment = await AtomPaymentService.initiatePayment({
-          bookingId: booking.id,
-          txnId: booking.txnId,
-          amount: Number(booking.totalAmount).toFixed(2),
-          name: booking.name,
-          email: booking.email,
-          phone: booking.phone,
-          userId: booking.userId || "",
-        });
+        const payment = await AtomPaymentService.initiatePayment(
+          {
+            bookingId: booking.id,
+            txnId: booking.txnId,
+            amount: Number(booking.totalAmount).toFixed(2),
+            name: booking.name,
+            email: booking.email,
+            phone: booking.phone,
+            userId: booking.userId || "",
+          },
+          paymentLocation
+        );
 
         return {
           booking,
@@ -613,34 +650,118 @@ class BookingService {
     }
   }
 
+  // static async processAtomResponse(formData) {
+  //   const AtomPaymentService = (await import("./atom-payment.service.js"))
+  //     .default;
+  //   let response;
+
+  //   try {
+  //     response = AtomPaymentService.decodeCallback(formData.encData);
+  //   } catch {
+  //     throw ApiError.badRequest("Unable to verify ATOM payment response");
+  //   }
+
+  //   if (!AtomPaymentService.verifyCallbackSignature(response)) {
+  //     throw ApiError.badRequest("Invalid ATOM payment signature");
+  //   }
+
+  //   const instrument = response.payInstrument;
+  //   const { merchDetails, payDetails, responseDetails } = instrument;
+  //   if (String(merchDetails.merchId) !== String(envConfig.ATOM_MERCHANT_ID)) {
+  //     throw ApiError.badRequest("ATOM merchant ID does not match");
+  //   }
+
+  //   const booking = await prisma.booking.findUnique({
+  //     where: { txnId: String(merchDetails.merchTxnId) },
+  //   });
+  //   if (!booking || booking.paymentMethod !== "ONLINE") {
+  //     throw ApiError.notFound("Online booking not found");
+  //   }
+
+  //   // if (
+  //   //   Number(payDetails.totalAmount).toFixed(2) !==
+  //   //   Number(booking.totalAmount).toFixed(2)
+  //   // ) {
+  //   //   throw ApiError.badRequest("ATOM payment amount does not match booking");
+  //   // }
+
+  //   if (responseDetails.statusCode === "OTS0000") {
+  //     return {
+  //       booking: await this.completeBooking(
+  //         booking.id,
+  //         String(payDetails.atomTxnId)
+  //       ),
+  //       isSuccessful: true,
+  //     };
+  //   }
+
+  //   if (booking.status === "PENDING") {
+  //     await prisma.booking.update({
+  //       where: { id: booking.id },
+  //       data: { status: "FAILED" },
+  //     });
+  //   }
+
+  //   return { booking, isSuccessful: false };
+  // }
+
   static async processAtomResponse(formData) {
     const AtomPaymentService = (await import("./atom-payment.service.js"))
       .default;
+
     let response;
+    let locationName;
 
     try {
-      response = AtomPaymentService.decodeCallback(formData.encData);
-    } catch {
+      const verifiedCallback = AtomPaymentService.decodeAndVerifyCallback(
+        formData.encData
+      );
+
+      response = verifiedCallback.response;
+      locationName = verifiedCallback.locationName;
+    } catch (error) {
+      console.error("[ATOM CALLBACK] Verification failed:", error.message);
+
       throw ApiError.badRequest("Unable to verify ATOM payment response");
     }
 
-    if (!AtomPaymentService.verifyCallbackSignature(response)) {
-      throw ApiError.badRequest("Invalid ATOM payment signature");
-    }
-
     const instrument = response.payInstrument;
+
     const { merchDetails, payDetails, responseDetails } = instrument;
-    if (String(merchDetails.merchId) !== String(envConfig.ATOM_MERCHANT_ID)) {
-      throw ApiError.badRequest("ATOM merchant ID does not match");
-    }
 
     const booking = await prisma.booking.findUnique({
-      where: { txnId: String(merchDetails.merchTxnId) },
+      where: {
+        txnId: String(merchDetails.merchTxnId),
+      },
     });
+
     if (!booking || booking.paymentMethod !== "ONLINE") {
       throw ApiError.notFound("Online booking not found");
     }
 
+    // Verify that the booking belongs to the location
+    // whose merchant credentials verified this callback.
+    const bookingLocation = await prisma.location.findUnique({
+      where: {
+        id: booking.locationId,
+      },
+      select: {
+        name: true,
+        city: true,
+      },
+    });
+
+    const actualLocation = [bookingLocation?.name, bookingLocation?.city]
+      .filter(Boolean)
+      .map((value) => value.trim().toUpperCase());
+
+    if (!actualLocation.some((value) => value.includes(locationName))) {
+      throw ApiError.badRequest(
+        "ATOM merchant does not match booking location"
+      );
+    }
+
+    // Verify payment amount
     // if (
     //   Number(payDetails.totalAmount).toFixed(2) !==
     //   Number(booking.totalAmount).toFixed(2)
@@ -660,12 +781,19 @@ class BookingService {
 
     if (booking.status === "PENDING") {
       await prisma.booking.update({
-        where: { id: booking.id },
-        data: { status: "FAILED" },
+        where: {
+          id: booking.id,
+        },
+        data: {
+          status: "FAILED",
+        },
       });
     }
 
-    return { booking, isSuccessful: false };
+    return {
+      booking,
+      isSuccessful: false,
+    };
   }
 
   static createReceiptToken(bookingId) {
@@ -732,6 +860,7 @@ class BookingService {
         email: true,
         phone: true,
         slotDateTime: true,
+        createdAt: true,
         ticketPdfUrl: true,
         place: {
           select: {

@@ -177,6 +177,7 @@ export default function BookingFlowRight() {
     () => initialEntryFeeQuantities,
   );
   const [bookingError, setBookingError] = useState("");
+  const [showGatewayUnavailable, setShowGatewayUnavailable] = useState(false);
 
   const dispatch = useDispatch();
   const reduxData = useSelector((state) => state.booking);
@@ -206,12 +207,33 @@ export default function BookingFlowRight() {
       entryFeeIds.includes(entryFee.id),
     ) || [];
   const selectedLocation =
-    bookingLocations.find((location) => location.id === selectedLocationId) ||
-    directEntryFeeLocation;
+    bookingLocations.find(
+      (location) =>
+        String(location._id ?? location.id) === String(selectedLocationId),
+    ) || directEntryFeeLocation;
+
+  // const isJaipurLocation = [
+  //   selectedLocation?.name,
+  //   selectedLocation?.city,
+  // ].some((value) => value?.toLowerCase().includes("jaipur"));
+
+  const isAtomGatewayLocation = (location) => {
+    const values = [location?.name, location?.city]
+      .filter(Boolean)
+      .map((value) => value.trim().toLowerCase());
+
+    return values.some(
+      (value) => value.includes("jaipur") || value.includes("jodhpur"),
+    );
+  };
+
   const isJaipurLocation = [
     selectedLocation?.name,
     selectedLocation?.city,
   ].some((value) => value?.toLowerCase().includes("jaipur"));
+
+  const isAtomPaymentAvailable = isAtomGatewayLocation(selectedLocation);
+
   const jaipurVenues = isJaipurLocation
     ? mapStaticAnnexurePlaces(
         ANNEXURE_OPTIONS.A,
@@ -332,10 +354,10 @@ export default function BookingFlowRight() {
     setEntryFeeVenueId(venue.id);
     setSelectedEntryFeeGroup(null);
     setIsDirectEntryFeeModalDismissed(true);
-    setSelectedLocationId(selectedLocation.id);
+    // setSelectedLocationId(selectedLocation.id);
+    setSelectedLocationId(String(selectedLocation._id ?? selectedLocation.id));
     setLocationConfirmed(true);
 
-    // Entry fee ke baad direct Visitor Details form
     setStep(3);
   };
 
@@ -450,11 +472,7 @@ export default function BookingFlowRight() {
   const handleFinalBooking = async (visitorInfo) => {
     try {
       setBookingError("");
-      const paymentMethod = entryFeeVenueId
-        ? "ONLINE"
-        : isLoggedIn
-          ? visitorInfo?.paymentMethod
-          : "ONLINE";
+      const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
 
       if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
         throw new Error("Please select a valid payment method");
@@ -462,6 +480,16 @@ export default function BookingFlowRight() {
 
       if (!isLoggedIn && paymentMethod !== "ONLINE") {
         throw new Error("Guest users can only use online payment");
+      }
+
+      // if (paymentMethod === "ONLINE" && !isJaipurLocation) {
+      //   setShowGatewayUnavailable(true);
+      //   return;
+      // }
+
+      if (paymentMethod === "ONLINE" && !isAtomPaymentAvailable) {
+        setShowGatewayUnavailable(true);
+        return;
       }
 
       if (!placeId) {
@@ -597,14 +625,21 @@ export default function BookingFlowRight() {
         return;
       }
     } catch (error) {
-      console.error("Booking Error:", error);
+      console.error("[BOOKING ERROR]", error);
+
+      console.error("[BOOKING ERROR DETAILS]", {
+        message: error?.message,
+        status: error?.response?.status,
+        responseData: error?.response?.data,
+      });
+
       const errorMessage =
-        error?.response?.data?.message || error?.message || "";
-      setBookingError(
-        /ATOM|payment gateway/i.test(errorMessage)
-          ? "Payment gateway is not integrated/configured yet. Please contact the administrator."
-          : errorMessage || "Booking failed. Please try again.",
-      );
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Booking failed. Please try again.";
+
+      setBookingError(errorMessage);
     }
   };
 
@@ -846,67 +881,70 @@ export default function BookingFlowRight() {
                         : "md:grid-cols-2"
                   }`}
                 >
-                  {!entryFeeId && isJaipurLocation && (
-                    <section className="min-w-0">
-                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                        <Landmark size={16} className="text-[#994113]" />
-                        Venues
-                      </h3>
-                      {jaipurVenues.length ? (
-                        <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
-                          {jaipurVenues.map((venue) => (
-                            <button
-                              key={venue.id}
-                              type="button"
-                              disabled={!venue.isConfigured}
-                              onClick={() => {
-                                if (!venue.isConfigured) return;
-                                setAnnexureDraftItems({});
-                                setShowDepositForm(false);
-                                setSelectedAnnexure({
-                                  annexure: "A",
-                                  venues: [venue],
-                                });
-                              }}
-                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <span className="flex items-start justify-between gap-3">
-                                <span className="flex min-w-0 items-start gap-3">
-                                  <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
-                                    <Landmark size={18} />
-                                  </span>
-                                  <span className="min-w-0">
-                                    <span className="block font-bold text-slate-800">
-                                      {venue.name}
+                  {!entryFeeId &&
+                    isJaipurLocation &&
+                    !entryFeeIds.length &&
+                    planetariumPlaces.length > 0 && (
+                      <section className="min-w-0">
+                        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                          <Landmark size={16} className="text-[#994113]" />
+                          Venues
+                        </h3>
+                        {jaipurVenues.length ? (
+                          <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+                            {jaipurVenues.map((venue) => (
+                              <button
+                                key={venue.id}
+                                type="button"
+                                disabled={!venue.isConfigured}
+                                onClick={() => {
+                                  if (!venue.isConfigured) return;
+                                  setAnnexureDraftItems({});
+                                  setShowDepositForm(false);
+                                  setSelectedAnnexure({
+                                    annexure: "A",
+                                    venues: [venue],
+                                  });
+                                }}
+                                className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-slate-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <span className="flex items-start justify-between gap-3">
+                                  <span className="flex min-w-0 items-start gap-3">
+                                    <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
+                                      <Landmark size={18} />
                                     </span>
-                                    <span className="mt-1 block text-xs text-slate-500">
-                                      {venue.isConfigured
-                                        ? "Available for booking"
-                                        : "Jaipur Admin setup required"}
+                                    <span className="min-w-0">
+                                      <span className="block font-bold text-slate-800">
+                                        {venue.name}
+                                      </span>
+                                      <span className="mt-1 block text-xs text-slate-500">
+                                        {venue.isConfigured
+                                          ? "Available for booking"
+                                          : "Jaipur Admin setup required"}
+                                      </span>
                                     </span>
                                   </span>
+                                  <ArrowRight
+                                    size={16}
+                                    className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
+                                  />
                                 </span>
-                                <ArrowRight
-                                  size={16}
-                                  className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
-                                />
-                              </span>
-                              <span className="mt-3 block text-xs font-bold text-[#994113]">
-                                {venue.isConfigured
-                                  ? "Choose venue"
-                                  : "Unavailable"}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                          No Annexure options are configured for this location
-                          yet.
-                        </p>
-                      )}
-                    </section>
-                  )}
+                                <span className="mt-3 block text-xs font-bold text-[#994113]">
+                                  {venue.isConfigured
+                                    ? "Choose venue"
+                                    : "Unavailable"}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+                            No Annexure options are configured for this location
+                            yet.
+                          </p>
+                        )}
+                      </section>
+                    )}
 
                   <section className="min-w-0">
                     <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -1363,6 +1401,49 @@ export default function BookingFlowRight() {
       )}
 
       {isSubmitting && <FullPageLoader message="Generating Secure Ledger..." />}
+      <AnimatePresence>
+        {showGatewayUnavailable && (
+          <motion.div
+            className="fixed inset-0 z-2000 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gateway-unavailable-title"
+            aria-describedby="gateway-unavailable-description"
+          >
+            <motion.div
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            >
+              <h2
+                id="gateway-unavailable-title"
+                className="text-xl font-bold text-royal-blue"
+              >
+                Payment gateway not integrated yet
+              </h2>
+              <p
+                id="gateway-unavailable-description"
+                className="mt-3 text-sm leading-relaxed text-slate-600"
+              >
+                Online payments for {selectedLocation?.name || "this location"}{" "}
+                are temporarily unavailable. Please try again once the payment
+                gateway is configured.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowGatewayUnavailable(false)}
+                className="mt-6 w-full rounded-xl bg-linear-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white"
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1784,7 +1865,7 @@ function renderStep(step, props) {
         <VisitorForm
           onSubmit={handleFinalBooking}
           onBack={() => (entryFeeVenueId ? setStep(2) : setStep(2))}
-          showCashOption={entryFeeVenueId ? false : isLoggedIn}
+          showCashOption={isLoggedIn}
           isSubmitting={isSubmitting}
         />
       );

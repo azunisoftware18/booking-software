@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import axios from "axios";
-import { envConfig } from "../config/env.config.js";
+import { envConfig, getAtomCredentials } from "../config/env.config.js";
 
-const IV = Buffer.from(
-  Array.from({ length: 16 }, (_, index) => index)
-);
+const ATOM_LOCATION_NAMES = ["JAIPUR", "JODHPUR"];
+
+const IV = Buffer.from(Array.from({ length: 16 }, (_, index) => index));
 
 const PBKDF2_ITERATIONS = 65536;
 const DERIVED_KEY_BITS = 512;
@@ -33,8 +33,10 @@ function formatAtomDate(date = new Date()) {
     parts.map(({ type, value }) => [type, value])
   );
 
-  return `${values.year}-${values.month}-${values.day} ` +
-    `${values.hour}:${values.minute}:${values.second}`;
+  return (
+    `${values.year}-${values.month}-${values.day} ` +
+    `${values.hour}:${values.minute}:${values.second}`
+  );
 }
 
 function deriveAesKey(password) {
@@ -52,13 +54,14 @@ function deriveAesKey(password) {
   );
 }
 
-function encryptRequest(payload) {
+function encryptRequest(payload, credentials) {
   const password = requireConfig(
     "ATOM_REQUEST_ENCRYPTION_KEY",
-    envConfig.ATOM_REQUEST_ENCRYPTION_KEY
+    credentials.requestEncryptionKey
   );
 
   const key = deriveAesKey(password).subarray(0, 32);
+
   const cipher = crypto.createCipheriv("aes-256-cbc", key, IV);
 
   const encrypted = Buffer.concat([
@@ -69,10 +72,10 @@ function encryptRequest(payload) {
   return encrypted.toString("hex").toUpperCase();
 }
 
-function decryptResponse(encryptedData) {
+function decryptResponse(encryptedData, credentials) {
   const password = requireConfig(
     "ATOM_RESPONSE_DECRYPTION_KEY",
-    envConfig.ATOM_RESPONSE_DECRYPTION_KEY
+    credentials.responseDecryptionKey
   );
 
   if (
@@ -121,12 +124,9 @@ class AtomPaymentService {
     userId = "",
     custAccNo,
     platformOS,
+    credentials,
   }) {
-    if (
-      typeof txnId !== "string" ||
-      !txnId.trim() ||
-      txnId.length > 50
-    ) {
+    if (typeof txnId !== "string" || !txnId.trim() || txnId.length > 50) {
       throw new Error("A valid ATOM transaction ID is required");
     }
 
@@ -146,10 +146,8 @@ class AtomPaymentService {
 
     const payDetails = {
       amount: numericAmount.toFixed(2),
-      product: requireConfig(
-        "ATOM_PRODUCT_CODE",
-        envConfig.ATOM_PRODUCT_CODE
-      ),
+      // product: requireConfig("ATOM_PRODUCT_CODE", envConfig.ATOM_PRODUCT_CODE),
+      product: requireConfig("ATOM_PRODUCT_CODE", credentials.productCode),
       txnCurrency: "INR",
     };
 
@@ -175,16 +173,10 @@ class AtomPaymentService {
         },
         merchDetails: {
           merchId: String(
-            requireConfig(
-              "ATOM_MERCHANT_ID",
-              envConfig.ATOM_MERCHANT_ID
-            )
+            requireConfig("ATOM_MERCHANT_ID", credentials.merchantId)
           ),
           userId: String(userId),
-          password: requireConfig(
-            "ATOM_PASSWORD",
-            envConfig.ATOM_PASSWORD
-          ),
+          password: requireConfig("ATOM_PASSWORD", credentials.password),
           merchTxnDate: formatAtomDate(),
           merchTxnId: txnId,
         },
@@ -201,16 +193,11 @@ class AtomPaymentService {
     };
   }
 
-  static async initiatePayment(details) {
-    const merchantId = requireConfig(
-      "ATOM_MERCHANT_ID",
-      envConfig.ATOM_MERCHANT_ID
-    );
+  static async initiatePayment(details, location) {
+    const credentials = getAtomCredentials(location);
+    const merchantId = credentials.merchantId;
 
-    const authUrl = requireConfig(
-      "ATOM_AUTH_URL",
-      envConfig.ATOM_AUTH_URL
-    );
+    const authUrl = requireConfig("ATOM_AUTH_URL", envConfig.ATOM_AUTH_URL);
 
     const checkoutJsUrl = requireConfig(
       "ATOM_CHECKOUT_JS_URL",
@@ -218,30 +205,40 @@ class AtomPaymentService {
     );
 
     const baseUrl = requireConfig("BASE_URL", envConfig.BASE_URL);
-
+    console.log({ baseUrl });
     requireConfig(
       "ATOM_REQUEST_ENCRYPTION_KEY",
-      envConfig.ATOM_REQUEST_ENCRYPTION_KEY
+      credentials.requestEncryptionKey
     );
 
     requireConfig(
       "ATOM_RESPONSE_DECRYPTION_KEY",
-      envConfig.ATOM_RESPONSE_DECRYPTION_KEY
+      credentials.responseDecryptionKey
     );
 
-    requireConfig("ATOM_PASSWORD", envConfig.ATOM_PASSWORD);
-    requireConfig("ATOM_PRODUCT_CODE", envConfig.ATOM_PRODUCT_CODE);
+    requireConfig("ATOM_PASSWORD", credentials.password);
+    requireConfig("ATOM_PRODUCT_CODE", credentials.productCode);
+    requireConfig("ATOM_MERCHANT_ID", credentials.merchantId);
+    requireConfig("ATOM_RESPONSE_HASH_KEY", credentials.responseHashKey);
 
-    const payload = this.buildAuthPayload(details);
-    const encryptedRequest = encryptRequest(payload);
+    const payload = this.buildAuthPayload({
+      ...details,
+      credentials,
+    });
+
+    console.log(payload, credentials);
+
+    const encryptedRequest = encryptRequest(payload, credentials);
+    console.log({ encryptedRequest });
 
     let response;
 
+    
     try {
       response = await axios.post(
         authUrl,
         new URLSearchParams({
-          merchId: merchantId,
+          merchId: credentials.merchantId,
           encData: encryptedRequest,
         }).toString(),
         {
@@ -252,6 +249,8 @@ class AtomPaymentService {
         }
       );
     } catch (error) {
+      console.log("err", error.response.data);
+
       // Do not log credentials, encryption keys or the complete request.
       throw new Error(
         `ATOM AUTH request failed: ${
@@ -261,8 +260,33 @@ class AtomPaymentService {
         }`
       );
     }
+    console.log(
+      authUrl,
+      { merchId: merchantId },
+      { encData: encryptedRequest }
+    );
+    console.log("[ATOM AUTH DIAGNOSTICS]", {
+      merchantId,
+      environment: envConfig.ATOM_ENV,
+      authUrl,
+      httpStatus: response.status,
+      contentLength: response.headers["content-length"],
+      contentType: response.headers["content-type"],
+      responseDataLength: response.data?.length ?? 0,
+      responseData: response.data,
+    });
 
+    if (!response.data || response.data.length === 0) {
+      throw new Error(
+        `ATOM returned an empty response for merchant ${merchantId}. HTTP ${response.status}`
+      );
+    }
     const encryptedResponse = extractEncryptedData(response.data);
+
+    console.log("[ATOM PAYMENT INITIATED]", {
+      merchantConfigured: Boolean(merchantId),
+      environment: envConfig.ATOM_ENV,
+    });
 
     if (!encryptedResponse) {
       throw new Error(
@@ -270,7 +294,7 @@ class AtomPaymentService {
       );
     }
 
-    const authResponse = decryptResponse(encryptedResponse);
+    const authResponse = decryptResponse(encryptedResponse, credentials);
 
     if (
       String(authResponse?.responseDetails?.txnStatusCode) !== "OTS0000" ||
@@ -278,8 +302,8 @@ class AtomPaymentService {
     ) {
       throw new Error(
         authResponse?.responseDetails?.txnMessage ||
-        authResponse?.responseDetails?.txnDescription ||
-        "ATOM could not initialize this payment"
+          authResponse?.responseDetails?.txnDescription ||
+          "ATOM could not initialize this payment"
       );
     }
 
@@ -294,18 +318,26 @@ class AtomPaymentService {
     };
   }
 
-  static decodeCallback(encryptedData) {
-    return decryptResponse(encryptedData);
+  static decodeCallback(encryptedData, locationName) {
+    const credentials = getAtomCredentials(locationName);
+
+    return decryptResponse(encryptedData, credentials);
   }
 
-  static verifyCallbackSignature(response) {
+  static verifyCallbackSignature(response, locationName) {
+    const credentials = getAtomCredentials(locationName);
+
     const hashKey = requireConfig(
       "ATOM_RESPONSE_HASH_KEY",
-      envConfig.ATOM_RESPONSE_HASH_KEY
+      credentials.responseHashKey
     );
 
     const instrument = response?.payInstrument;
     const merchant = instrument?.merchDetails;
+
+    if (String(merchant?.merchId) !== String(credentials.merchantId)) {
+      return false;
+    }
     const payment = instrument?.payDetails;
     const mode = instrument?.payModeSpecificData;
     const details = instrument?.responseDetails;
@@ -359,7 +391,33 @@ class AtomPaymentService {
 
     return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
   }
-}
 
+  static decodeAndVerifyCallback(encryptedData) {
+    let lastError;
+
+    for (const locationName of ATOM_LOCATION_NAMES) {
+      try {
+        const response = this.decodeCallback(encryptedData, locationName);
+
+        const isValid = this.verifyCallbackSignature(response, locationName);
+
+        if (isValid) {
+          return {
+            response,
+            locationName,
+          };
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw new Error(
+      `Unable to verify ATOM callback with configured merchant credentials: ${
+        lastError?.message || "Invalid callback"
+      }`
+    );
+  }
+}
 
 export default AtomPaymentService;
