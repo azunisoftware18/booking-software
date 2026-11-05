@@ -73,6 +73,15 @@ export const envConfig = {
     process.env.ATOM_JODHPUR_RESPONSE_DECRYPTION_KEY,
   ATOM_JODHPUR_RESPONSE_HASH_KEY: process.env.ATOM_JODHPUR_RESPONSE_HASH_KEY,
 
+
+  // Kota credentials
+  ATOM_KOTA_MERCHANT_ID: process.env.ATOM_KOTA_MERCHANT_ID,
+  ATOM_KOTA_PASSWORD: process.env.ATOM_KOTA_PASSWORD,
+  ATOM_KOTA_PRODUCT_CODE: process.env.ATOM_KOTA_PRODUCT_CODE,
+  ATOM_KOTA_REQUEST_ENCRYPTION_KEY: process.env.ATOM_KOTA_REQUEST_ENCRYPTION_KEY,
+  ATOM_KOTA_RESPONSE_DECRYPTION_KEY: process.env.ATOM_KOTA_RESPONSE_DECRYPTION_KEY,
+  ATOM_KOTA_RESPONSE_HASH_KEY: process.env.ATOM_KOTA_RESPONSE_HASH_KEY,
+
   // Shared Atom URLs
   ATOM_AUTH_URL:
     process.env.ATOM_AUTH_URL ||
@@ -104,6 +113,7 @@ export const getAtomCredentials = (locationName) => {
 
   const isJaipur = values.some((value) => value.includes("JAIPUR"));
   const isJodhpur = values.some((value) => value.includes("JODHPUR"));
+  const isKota = values.some((value) => value.includes("KOTA"));
 
   if (isJaipur) {
     return {
@@ -125,6 +135,17 @@ export const getAtomCredentials = (locationName) => {
       responseDecryptionKey: envConfig.ATOM_JODHPUR_RESPONSE_DECRYPTION_KEY,
       responseHashKey: envConfig.ATOM_JODHPUR_RESPONSE_HASH_KEY,
     };
+  }
+
+  if (isKota) {
+    return {
+      merchantId: envConfig.ATOM_KOTA_MERCHANT_ID,
+      password: envConfig.ATOM_KOTA_PASSWORD,
+      productCode: envConfig.ATOM_KOTA_PRODUCT_CODE,
+      requestEncryptionKey: envConfig.ATOM_KOTA_REQUEST_ENCRYPTION_KEY,
+      responseDecryptionKey: envConfig.ATOM_KOTA_RESPONSE_DECRYPTION_KEY,
+      responseHashKey: envConfig.ATOM_KOTA_RESPONSE_HASH_KEY,
+    }
   }
 
   throw new Error(

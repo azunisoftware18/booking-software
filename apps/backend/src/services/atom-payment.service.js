@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import axios from "axios";
 import { envConfig, getAtomCredentials } from "../config/env.config.js";
 
-const ATOM_LOCATION_NAMES = ["JAIPUR", "JODHPUR"];
+const ATOM_LOCATION_NAMES = ["JAIPUR", "JODHPUR", "KOTA"];
 
 const IV = Buffer.from(Array.from({ length: 16 }, (_, index) => index));
 

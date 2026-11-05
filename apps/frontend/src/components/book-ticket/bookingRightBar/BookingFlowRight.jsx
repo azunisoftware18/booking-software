@@ -223,7 +223,10 @@ export default function BookingFlowRight() {
       .map((value) => value.trim().toLowerCase());
 
     return values.some(
-      (value) => value.includes("jaipur") || value.includes("jodhpur"),
+      (value) =>
+        value.includes("jaipur") ||
+        value.includes("jodhpur") ||
+        value.includes("kota"),
     );
   };
 
