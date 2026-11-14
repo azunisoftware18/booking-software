@@ -91,9 +91,13 @@ class TicketService {
       return pdfPromise;
     }
 
-    // Pre-generate all QR codes
+    const isGroupBooking = booking.tickets.length > 1;
+    const ticketsToPrint = isGroupBooking
+      ? [booking.tickets[0]]
+      : booking.tickets;
+
     const qrImages = await Promise.all(
-      booking.tickets.map((t) =>
+      ticketsToPrint.map((t) =>
         QRCode.toDataURL(t.qrCode, { width: 400, margin: 1 })
       )
     );
@@ -152,19 +156,21 @@ class TicketService {
       .map((rate) => `${rate}%`)
       .join(", ");
 
-    for (let i = 0; i < booking.tickets.length; i++) {
+    for (let i = 0; i < ticketsToPrint.length; i++) {
       if (i > 0) doc.addPage();
 
       TicketService._drawTicketPage(doc, {
         booking,
-        ticket: booking.tickets[i],
+        ticket: ticketsToPrint[i],
+        tickets: booking.tickets,
         qrImage: qrImages[i],
         formattedDate,
         formattedTime,
         colors,
         gstBreakdown,
         index: i,
-        total: booking.tickets.length,
+        total: ticketsToPrint.length,
+        isGroupBooking,
       });
     }
 
@@ -822,6 +828,7 @@ class TicketService {
     {
       booking,
       ticket,
+      tickets,
       qrImage,
       formattedDate,
       formattedTime,
@@ -829,8 +836,21 @@ class TicketService {
       gstBreakdown,
       index,
       total,
+      isGroupBooking,
     }
   ) {
+    const ticketTypeSummary = tickets.reduce((summary, item) => {
+      const typeName = item.type?.name || "Ticket";
+      summary.set(typeName, (summary.get(typeName) || 0) + 1);
+      return summary;
+    }, new Map());
+    const ticketTypeLabel = [...ticketTypeSummary]
+      .map(([typeName, quantity]) => `${typeName} x ${quantity}`)
+      .join(", ");
+    const entryFee = tickets.reduce(
+      (totalAmount, item) => totalAmount + Number(item.type?.price || 0),
+      0
+    );
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
 
@@ -944,11 +964,18 @@ class TicketService {
       .font("Helvetica-Bold")
       .fontSize(10)
       .fillColor(colors.jaipurDark)
-      .text(`TICKET ${index + 1} OF ${total}`, cardX + 20, headerY, {
-        width: cardW - 40,
-        align: "center",
-        characterSpacing: 2,
-      });
+      .text(
+        isGroupBooking
+          ? `GROUP ENTRY · ${booking.totalSeats} VISITORS`
+          : `TICKET ${index + 1} OF ${total}`,
+        cardX + 20,
+        headerY,
+        {
+          width: cardW - 40,
+          align: "center",
+          characterSpacing: 2,
+        }
+      );
 
     // Header divider
     let cursorY = headerY + 28;
@@ -1011,7 +1038,7 @@ class TicketService {
 
     cursorY += 47;
 
-    drawField(leftX, cursorY, "Ticket Type", ticket.type?.name || "-");
+    drawField(leftX, cursorY, "Ticket Type", ticketTypeLabel || "-");
     drawField(rightX, cursorY, "Payment Mode", booking.paymentMethod || "-");
 
     cursorY += 48;
@@ -1020,7 +1047,7 @@ class TicketService {
       leftX,
       cursorY,
       "Entry Fee",
-      `Rs ${Number(ticket.type?.price || 0).toFixed(2)}`
+      `Rs ${entryFee.toFixed(2)}`
     );
     drawField(rightX, cursorY, "Venue", booking.place?.name || "-");
 
@@ -1087,10 +1114,17 @@ class TicketService {
       .font("Helvetica")
       .fontSize(9)
       .fillColor(colors.gray)
-      .text("Scan this QR at entry gate", cardX + 20, qrY + qrSize + 10, {
-        width: cardW - 40,
-        align: "center",
-      });
+      .text(
+        isGroupBooking
+          ? "Scan once to admit the full group"
+          : "Scan this QR at entry gate",
+        cardX + 20,
+        qrY + qrSize + 10,
+        {
+          width: cardW - 40,
+          align: "center",
+        }
+      );
 
     // ------------------------------------
     // FOOTER
@@ -1150,11 +1184,18 @@ class TicketService {
       .font("Courier")
       .fontSize(7)
       .fillColor(colors.gray)
-      .text(`Ticket ID: ${ticket.id}`, cardX + 200, footerY + 15, {
-        width: cardW - 240,
-        align: "right",
-        ellipsis: true,
-      });
+      .text(
+        `${isGroupBooking ? "Booking ID" : "Ticket ID"}: ${
+          isGroupBooking ? booking.id : ticket.id
+        }`,
+        cardX + 200,
+        footerY + 15,
+        {
+          width: cardW - 240,
+          align: "right",
+          ellipsis: true,
+        }
+      );
 
     doc
       .font("Helvetica-Oblique")
@@ -1188,14 +1229,59 @@ class TicketService {
       throw ApiError.notFound("Invalid Ticket");
     }
 
-    // already scanned
-    if (ticket.status === "SCANNED") {
-      throw ApiError.badRequest("Ticket already scanned");
-    }
-
     // booking unpaid
     if (ticket.booking.status !== "PAID") {
       throw ApiError.badRequest("Payment not completed");
+    }
+
+    const groupTickets = await prisma.ticket.findMany({
+      where: { bookingId: ticket.bookingId },
+      select: { id: true, status: true },
+    });
+    const isGroupBooking = groupTickets.length > 1;
+
+    if (isGroupBooking) {
+      await prisma.$transaction(async (tx) => {
+        const tickets = await tx.ticket.findMany({
+          where: { bookingId: ticket.bookingId },
+          select: { id: true, status: true },
+        });
+
+        if (tickets.some((groupTicket) => groupTicket.status === "SCANNED")) {
+          throw ApiError.badRequest("Group booking already scanned");
+        }
+
+        const updated = await tx.ticket.updateMany({
+          where: {
+            bookingId: ticket.bookingId,
+            status: { not: "SCANNED" },
+          },
+          data: { status: "SCANNED" },
+        });
+
+        if (updated.count !== tickets.length) {
+          throw ApiError.badRequest("Group booking already scanned");
+        }
+
+        await tx.scanLog.createMany({
+          data: tickets.map((groupTicket) => ({
+            ticketId: groupTicket.id,
+            type: "ENTRY",
+          })),
+        });
+      });
+
+      return {
+        ticket: { ...ticket, status: "SCANNED" },
+        booking: ticket.booking,
+        type: ticket.type,
+        groupSize: groupTickets.length,
+      };
+    }
+
+    // already scanned
+    if (ticket.status === "SCANNED") {
+      throw ApiError.badRequest("Ticket already scanned");
     }
 
     // update status
@@ -1216,6 +1302,7 @@ class TicketService {
       ticket: updatedTicket,
       booking: ticket.booking,
       type: ticket.type,
+      groupSize: 1,
     };
   }
 }

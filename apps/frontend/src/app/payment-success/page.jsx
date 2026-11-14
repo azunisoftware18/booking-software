@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Download, CheckCheck } from "lucide-react";
+import { Download, CheckCheck, Printer } from "lucide-react";
 import { useBookingById } from "@/hooks/useBooking";
 import api from "@/lib/api";
 
@@ -95,6 +95,53 @@ function SuccessContent() {
     window.open(downloadUrl, "_blank");
   };
 
+  const handlePrint = async () => {
+    try {
+      const baseUrl = api.defaults.baseURL || "http://localhost:8000/api";
+
+      const downloadUrl = receiptToken
+        ? `${baseUrl}/ticket/receipt/${bookingId}/download?receiptToken=${encodeURIComponent(receiptToken)}`
+        : `${baseUrl}/ticket/download/${bookingId}`;
+
+      // Fetch the same PDF used by Download E-Ticket
+      const response = await api.get(downloadUrl, {
+        responseType: "blob",
+      });
+
+      const pdfBlob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      // Create hidden iframe for printing
+      const iframe = document.createElement("iframe");
+
+      iframe.style.position = "fixed";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      iframe.style.visibility = "hidden";
+
+      iframe.src = pdfUrl;
+
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+
+        iframe.contentWindow.onafterprint = () => {
+          iframe.remove();
+          URL.revokeObjectURL(pdfUrl);
+        };
+      };
+    } catch (error) {
+      console.error("Ticket print failed:", error);
+      alert("Unable to print E-Ticket. Please try again.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-sandstone">
@@ -144,11 +191,11 @@ function SuccessContent() {
   const formattedTime =
     visitDateTime && !Number.isNaN(visitDateTime.getTime())
       ? visitDateTime.toLocaleTimeString("en-IN", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: visitTimeZone,
-      })
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+          timeZone: visitTimeZone,
+        })
       : "-";
   const ticketGstGroups = getTicketGstGroups(booking?.tickets).filter(
     (group) => group.taxPercent > 0,
@@ -391,15 +438,23 @@ function SuccessContent() {
             onClick={handleDownload}
             className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-jaipur-dark to-[#994113] text-xs sm:text-sm text-white font-bold font-serif tracking-[3px] uppercase py-3 rounded-xl border border-gold/30 shadow-md cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
           >
-            Download E-Ticket{" "}
+            Download E-Ticket
             <Download size={14} className="text-gold animate-pulse" />
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="w-full inline-flex items-center justify-center gap-2 bg-white text-jaipur-dark text-xs sm:text-sm font-bold font-serif tracking-[3px] uppercase py-3 rounded-xl border border-jaipur-dark/30 shadow-sm cursor-pointer transition-all duration-300 hover:bg-jaipur-dark hover:text-white active:scale-[0.99]"
+          >
+            Print E-Ticket
+            <Printer size={15} />
           </button>
 
           <button
             onClick={() => router.push("/")}
             className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-bold font-serif tracking-[2px] text-royal-blue/60 hover:text-royal-blue uppercase transition-colors py-1 group cursor-pointer"
           >
-            Back To Home Gateway{" "}
+            Back To Home Gateway
             <span className="group-hover:translate-x-1 transition-transform duration-300 text-sm">
               ⟶
             </span>

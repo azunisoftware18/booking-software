@@ -147,7 +147,10 @@ export default function TicketScanner() {
 
       setResult({
         success: true,
-        message: "Ticket verified successfully!",
+        message:
+          res.data.data.groupSize > 1
+            ? `Group booking verified; all ${res.data.data.groupSize} visitors admitted.`
+            : "Ticket verified successfully!",
         data: res.data.data,
       });
     } catch (err) {
@@ -525,7 +528,11 @@ export default function TicketScanner() {
                       <p className={`font-bold text-xl ${
                         result.success ? "text-green-700" : "text-red-700"
                       }`}>
-                        {result.success ? "✓ Ticket Verified" : "✗ Invalid Ticket"}
+                        {result.success
+                          ? result.data?.groupSize > 1
+                            ? "✓ Group Booking Verified"
+                            : "✓ Ticket Verified"
+                          : "✗ Invalid Ticket"}
                       </p>
                       <p className="text-sm opacity-80">{result.message}</p>
                     </div>
@@ -541,9 +548,13 @@ export default function TicketScanner() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-green-600 opacity-70 text-xs uppercase font-semibold">Ticket Type</p>
+                          <p className="text-green-600 opacity-70 text-xs uppercase font-semibold">
+                            {result.data.groupSize > 1 ? "Group Size" : "Ticket Type"}
+                          </p>
                           <p className="font-semibold text-slate-800 mt-1">
-                            {result.data.type?.name || "N/A"}
+                            {result.data.groupSize > 1
+                              ? `${result.data.groupSize} visitors`
+                              : result.data.type?.name || "N/A"}
                           </p>
                         </div>
                         <div>
