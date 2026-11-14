@@ -11,8 +11,8 @@ static get createBooking() {
 
     bookingType: z.enum(["TICKET", "PASS", "ENTRY_FEE", "ANNEXURE"]).optional(),
 
-    name: z.string().min(2),
-    email: z.string().email(),
+    name: z.string().min(2).nullable().optional(),
+    email: z.string().email().nullable().optional(),
     phone: z.string().min(10),
 
 

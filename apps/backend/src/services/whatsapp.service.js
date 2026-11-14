@@ -24,7 +24,7 @@ class WhatsappService {
 
       return response.data;
     } catch (error) {
-      console.log("WhatsApp Error");
+      console.log(error.message, "WhatsApp Error");
 
     
       return null;

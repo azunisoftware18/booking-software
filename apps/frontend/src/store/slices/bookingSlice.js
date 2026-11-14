@@ -5,8 +5,6 @@ const initialState = {
     slot: null,
     tickets: {},
     visitorInfo: {
-        name: "",
-        email: "",
         phone: "",
     },
     totalAmount: 0,

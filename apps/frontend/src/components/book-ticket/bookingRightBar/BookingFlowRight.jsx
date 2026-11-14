@@ -605,8 +605,6 @@ export default function BookingFlowRight() {
         placeId,
         locationId: selectedLocationId,
         slotDateTime: isEntryFeeBooking ? null : slotDateTime,
-        name: visitorInfo?.name,
-        email: visitorInfo?.email,
         phone: visitorInfo?.phone,
         paymentMethod,
         bookingType: isAnnexureBooking

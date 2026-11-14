@@ -15,8 +15,6 @@ export default function VisitorForm({
   const dispatch = useDispatch();
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
     phone: "",
     paymentMethod: showCashOption ? "" : "ONLINE",
   });
@@ -28,14 +26,6 @@ export default function VisitorForm({
   // =========================================================
   const errors = useMemo(() => {
     const errs = {};
-
-    if (formData.name.length > 0 && formData.name.length < 3) {
-      errs.name = "Name must be at least 3 characters";
-    }
-
-    if (formData.email.length > 0 && !/^\S+@\S+\.\S+$/.test(formData.email)) {
-      errs.email = "Invalid email format";
-    }
 
     if (formData.phone.length > 0 && formData.phone.length !== 10) {
       errs.phone = "Phone must be exactly 10 digits";
@@ -53,8 +43,6 @@ export default function VisitorForm({
   // FORM VALIDITY
   // =========================================================
   const isFormValid =
-    formData.name.length >= 3 &&
-    /^\S+@\S+\.\S+$/.test(formData.email) &&
     formData.phone.length === 10 &&
     (showCashOption
       ? formData.paymentMethod !== ""
@@ -131,58 +119,13 @@ export default function VisitorForm({
         {/* ─── HEADER ─── */}
         <div className="relative">
           <h2 className="text-2xl sm:text-3xl font-serif font-normal text-royal-blue leading-tight">
-            Enter your personal details
+            Enter your mobile number
           </h2>
           <div className="h-[1px] w-12 bg-gold/40 mt-2" />
         </div>
 
         {/* ─── FORM FIELDS ─── */}
         <div className="space-y-4">
-          {/* Full Name */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-bold text-royal-blue/60 uppercase tracking-[2px] block ml-1">
-              Full Name
-            </label>
-            <input
-              required
-              value={formData.name}
-              onBlur={() => setTouched({ ...touched, name: true })}
-              className={inputClasses("name")}
-              placeholder="Your Name"
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-            />
-            {touched.name && errors.name && (
-              <p className="text-[10px] text-red-500 font-bold ml-1 tracking-wide">
-                ✦ {errors.name}
-              </p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-bold text-royal-blue/60 uppercase tracking-[2px] block ml-1">
-              Email Address
-            </label>
-            <input
-              required
-              type="email"
-              value={formData.email}
-              onBlur={() => setTouched({ ...touched, email: true })}
-              className={inputClasses("email")}
-              placeholder="Email Address"
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-            />
-            {touched.email && errors.email && (
-              <p className="text-[10px] text-red-500 font-bold ml-1 tracking-wide">
-                ✦ {errors.email}
-              </p>
-            )}
-          </div>
-
           {/* Mobile Number */}
           <div className="space-y-1">
             <label className="text-[9px] font-bold text-royal-blue/60 uppercase tracking-[2px] block ml-1">
@@ -261,12 +204,11 @@ export default function VisitorForm({
           )}
         </div>
 
-        {/* ─── EMAIL INFO BOX ─── */}
+        {/* ─── WHATSAPP TICKET INFO ─── */}
         <div className="bg-sandstone/60 p-4 rounded-xl border border-gold/15 flex gap-3 items-center select-none">
-          <span className="text-xl filter drop-shadow-sm">📧</span>
+          <span className="text-xl filter drop-shadow-sm">📲</span>
           <p className="text-[11px] text-royal-blue/70 leading-relaxed font-serif italic">
-            Your e-ticket and transaction details will be sent to this email
-            address. Please double check.
+            Your e-ticket will be sent to this mobile number on WhatsApp.
           </p>
         </div>
 

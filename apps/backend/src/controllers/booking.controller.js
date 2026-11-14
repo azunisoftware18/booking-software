@@ -116,23 +116,25 @@ class BookingController {
         req.user,
       );
     let receiptEmailSent = false;
-    try {
-      const pdfBuffer = await TicketService.generateAnnexureRefundPDF(booking);
-      const emailInfo = await EmailService.sendMail({
-        to: booking.email,
-        subject: "Venue booking refund receipt",
-        html: `<p>Dear ${escapeHtml(booking.name)},</p><p>Your Venue booking settlement has been recorded. Refund amount: <strong>Rs ${Number(refundDetails.refundAmount).toFixed(2)}</strong>. Amount to collect: <strong>Rs ${Number(refundDetails.collectionAmount).toFixed(2)}</strong>. The itemized calculation receipt is attached.</p>`,
-        attachments: [
-          {
-            filename: `refund-receipt-${booking.id}.pdf`,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ],
-      });
-      receiptEmailSent = Boolean(emailInfo);
-    } catch (error) {
-      console.error("Refund was recorded, but receipt email failed:", error);
+    if (booking.email) {
+      try {
+        const pdfBuffer = await TicketService.generateAnnexureRefundPDF(booking);
+        const emailInfo = await EmailService.sendMail({
+          to: booking.email,
+          subject: "Venue booking refund receipt",
+          html: `<p>Dear ${escapeHtml(booking.name)},</p><p>Your Venue booking settlement has been recorded. Refund amount: <strong>Rs ${Number(refundDetails.refundAmount).toFixed(2)}</strong>. Amount to collect: <strong>Rs ${Number(refundDetails.collectionAmount).toFixed(2)}</strong>. The itemized calculation receipt is attached.</p>`,
+          attachments: [
+            {
+              filename: `refund-receipt-${booking.id}.pdf`,
+              content: pdfBuffer,
+              contentType: "application/pdf",
+            },
+          ],
+        });
+        receiptEmailSent = Boolean(emailInfo);
+      } catch (error) {
+        console.error("Refund was recorded, but receipt email failed:", error);
+      }
     }
 
     return res.json(

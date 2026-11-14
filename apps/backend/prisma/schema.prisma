@@ -159,8 +159,8 @@ model Booking {
 
   bookingType BookingType @default(TICKET) @map("booking_type")
 
-  name  String
-  email String
+  name  String?
+  email String?
   phone String
 
   totalAmount Float @map("total_amount")

@@ -11,7 +11,6 @@ import path from "path";
 
 import { upload } from "../utils/s3Service.js";
 import WhatsappService from "./whatsapp.service.js";
-import EmailService from "./Email.service.js";
 import {
   ELECTRICITY_CHARGE_BY_OPTION,
   ELECTRICITY_RATE_PER_UNIT,
@@ -91,9 +90,15 @@ class BookingService {
       throw ApiError.badRequest("Select at least one Annexure option");
     }
 
-    if (!name || !email || !phone) {
-      throw ApiError.badRequest("Name, email and phone are required");
+    if (typeof phone !== "string" || !phone.trim()) {
+      throw ApiError.badRequest("Phone number is required");
     }
+
+    const bookingPhone = phone.trim();
+    const bookingName =
+      typeof name === "string" && name.trim() ? name.trim() : null;
+    const bookingEmail =
+      typeof email === "string" && email.trim() ? email.trim() : null;
 
     if (!["CASH", "UPI", "ONLINE"].includes(paymentMethod)) {
       throw ApiError.badRequest("Invalid payment method");
@@ -116,7 +121,7 @@ class BookingService {
             id: locationId,
             status: "ACTIVE",
           },
-          select: { id: true, name: true, city: true },
+          select: { id: true, name: true, city: true, email: true },
         });
 
         if (!selectedLocation) {
@@ -426,9 +431,9 @@ class BookingService {
               locationId: selectedLocation.id,
               slotDateTime: primaryItem.slotDateTime,
               bookingType: "ANNEXURE",
-              name,
-              email,
-              phone,
+              name: bookingName,
+              email: bookingEmail,
+              phone: bookingPhone,
               paymentMethod,
               totalAmount,
               totalSeats,
@@ -558,9 +563,9 @@ class BookingService {
             locationId: selectedLocation.id,
             slotDateTime: slotDate,
             bookingType,
-            name,
-            email,
-            phone,
+            name: bookingName,
+            email: bookingEmail,
+            phone: bookingPhone,
             paymentMethod,
             totalAmount,
             totalSeats,
@@ -615,6 +620,7 @@ class BookingService {
           id: true,
           name: true,
           city: true,
+          email: true,
         },
       });
 
@@ -623,13 +629,21 @@ class BookingService {
       }
 
       try {
+        const paymentEmail =
+          booking.email || paymentLocation.email || process.env.MAIL_USER;
+        if (!paymentEmail) {
+          throw ApiError.badRequest(
+            "Online payment requires a configured email address for this location",
+          );
+        }
+
         const payment = await AtomPaymentService.initiatePayment(
           {
             bookingId: booking.id,
             txnId: booking.txnId,
             amount: Number(booking.totalAmount).toFixed(2),
             name: booking.name,
-            email: booking.email,
+            email: paymentEmail,
             phone: booking.phone,
             userId: booking.userId || "",
           },
@@ -1062,7 +1076,7 @@ class BookingService {
     });
 
     // ----------------------------------------------------------
-    // EMAIL + WHATSAPP
+    // WHATSAPP NOTIFICATION
     // ----------------------------------------------------------
 
     const annexureDetails = booking.annexureItems
@@ -1073,9 +1087,7 @@ class BookingService {
       .join("\n");
     const message =
       booking.bookingType === "ANNEXURE"
-        ? `Dear ${booking.name},
-
-Your Venue booking is confirmed.
+        ? `Your Venue booking is confirmed.
 
 ${annexureDetails}
 
@@ -1083,7 +1095,7 @@ Combined total: Rs ${booking.totalAmount}
 Payment Method: ${booking.paymentMethod}
 
 Please keep the attached booking confirmation for your visit.`
-        : `🎟️ *Dear ${booking.name},*
+        : `🎟️ *Your ticket booking is confirmed!*
 
 Thank you for booking with *${booking.place.name}*! 🥳
 
@@ -1102,17 +1114,6 @@ Here are your entry ticket details:
 📲 Show it only at the entry gate to authorized staff.
 
 We can't wait to welcome you! 🎉`;
-
-    try {
-      await EmailService.sendTicket({
-        to: booking.email,
-        name: booking.name,
-        booking: updatedBooking,
-        pdfBuffer,
-      });
-    } catch (error) {
-      console.error("Email sending failed:", error);
-    }
 
     try {
       await WhatsappService.sendTicket(

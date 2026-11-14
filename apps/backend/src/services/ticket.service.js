@@ -246,13 +246,13 @@ class TicketService {
       .font("Helvetica-Bold")
       .fontSize(11)
       .fillColor(colors.navy)
-      .text("Customer and refund details", margin + 14, cursorY + 12);
+      .text("Booking and refund details", margin + 14, cursorY + 12);
 
     const detailRows = [
-      [`Customer: ${booking.name || "—"}`, `Email: ${booking.email || "—"}`],
+      [`Booking ID: ${booking.id}`, `Phone: ${booking.phone || "—"}`],
       [
-        `Phone: ${booking.phone || "—"}`,
         `Payment method: ${booking.paymentMethod || "—"}`,
+        `Status: ${booking.status || "—"}`,
       ],
       [
         `Original payment: Rs ${Number(booking.totalAmount || 0).toFixed(2)}`,
@@ -544,31 +544,33 @@ class TicketService {
       .font("Helvetica-Bold")
       .fontSize(11)
       .fillColor(colors.navy)
-      .text("Customer and payment details", margin + 14, cursorY + 12);
+      .text("Booking and payment details", margin + 14, cursorY + 12);
     drawField(
-      "Customer",
-      booking.name,
+      "Booking ID",
+      String(booking.id || "")
+        .slice(-12)
+        .toUpperCase(),
       margin + 14,
-      cursorY + 34,
-      columnWidth - 14
-    );
-    drawField(
-      "Email",
-      booking.email,
-      rightColumnX,
       cursorY + 34,
       columnWidth - 14
     );
     drawField(
       "Contact number",
       booking.phone,
-      margin + 14,
-      cursorY + 64,
+      rightColumnX,
+      cursorY + 34,
       columnWidth - 14
     );
     drawField(
       "Payment method",
       booking.paymentMethod,
+      margin + 14,
+      cursorY + 64,
+      columnWidth - 14
+    );
+    drawField(
+      "Booking status",
+      booking.status,
       rightColumnX,
       cursorY + 64,
       columnWidth - 14
@@ -580,19 +582,12 @@ class TicketService {
       cursorY + 94,
       contentWidth - 28
     );
-    drawField(
-      "Payment status",
-      booking.status,
-      margin + 14,
-      cursorY + 124,
-      contentWidth - 28
-    );
 
     drawField(
       "Transaction ID",
       booking.txnId,
       margin + 14,
-      cursorY + 154,
+      cursorY + 124,
       contentWidth - 28
     );
 
@@ -600,7 +595,7 @@ class TicketService {
       "Payment ID",
       booking.paymentId,
       margin + 14,
-      cursorY + 184,
+      cursorY + 154,
       contentWidth - 28
     );
     drawField(
@@ -609,7 +604,7 @@ class TicketService {
         .filter(Boolean)
         .join(" · "),
       margin + 14,
-      cursorY + 214,
+      cursorY + 184,
       contentWidth - 28
     );
     cursorY += 282;
@@ -1024,11 +1019,6 @@ class TicketService {
         .toUpperCase()
     );
 
-    drawField(rightX, cursorY, "Customer", booking.name || "Guest");
-
-    cursorY += 47;
-
-    drawField(leftX, cursorY, "Email", booking.email || "-");
     drawField(rightX, cursorY, "Phone", booking.phone || "-");
 
     cursorY += 47;
