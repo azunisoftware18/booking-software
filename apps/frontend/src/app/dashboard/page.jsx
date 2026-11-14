@@ -10,6 +10,8 @@ import { useTickets } from "@/lib/queries/useTickets";
 import { useBookings } from "@/lib/queries/useBooking";
 import { useSlots } from "@/lib/queries/useSlot";
 
+const REVENUE_STATUSES = new Set(["PAID", "COMPLETED"]);
+
 export default function Page() {
   // =====================
   // PLACE
@@ -31,7 +33,10 @@ export default function Page() {
   // =====================
   const totalRevenue =
     bookings?.reduce((sum, booking) => {
-      if (booking.status === "PAID" || booking.paymentStatus === "PAID") {
+      if (
+        REVENUE_STATUSES.has(booking.status) ||
+        REVENUE_STATUSES.has(booking.paymentStatus)
+      ) {
         return sum + Number(booking.totalAmount || 0);
       }
       return sum;
@@ -80,7 +85,7 @@ export default function Page() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
           title="Total Revenue"
-          value={`₹${String(totalRevenue).slice(-2)}`}
+          value={`₹${Number(totalRevenue).toLocaleString("en-IN")}`}
           percentage={12}
           isUp={true}
           trendingText="Revenue generated"
