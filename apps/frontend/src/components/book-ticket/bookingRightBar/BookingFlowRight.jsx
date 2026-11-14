@@ -304,6 +304,55 @@ export default function BookingFlowRight() {
 
     return groups;
   }, []);
+
+  useEffect(() => {
+    const assignedLocationId =
+      currentUser?.locationId || currentUser?.location?.id;
+
+    if (
+      !["ADMIN", "LOCATION_ADMIN"].includes(currentUser?.role?.roleCode) ||
+      !assignedLocationId ||
+      entryFeeIds.length > 0 ||
+      isLoadingLocations ||
+      hasLocationError
+    ) {
+      return;
+    }
+
+    const assignedLocation = bookingLocations.find(
+      (location) =>
+        String(location.id || location._id) === String(assignedLocationId),
+    );
+
+    if (!assignedLocation) return;
+
+    const locationId = String(assignedLocation.id || assignedLocation._id);
+    setSelectedLocationId(locationId);
+    setLocationSelectionStep(2);
+
+    if (
+      String(currentPlace?.bookingLocation?.id || "") !==
+      String(assignedLocation.id || assignedLocation._id)
+    ) {
+      dispatch(
+        setCurrentPlace({
+          ...(currentPlace || {}),
+          bookingLocation: assignedLocation,
+        }),
+      );
+    }
+  }, [
+    currentUser?.locationId,
+    currentUser?.location?.id,
+    currentUser?.role?.roleCode,
+    entryFeeIds.length,
+    bookingLocations,
+    isLoadingLocations,
+    hasLocationError,
+    currentPlace,
+    dispatch,
+  ]);
+
   const selectedAnnexureItems = Object.values(annexureDraftItems);
   const annexureRentalTotal = selectedAnnexureItems.reduce(
     (total, item) => total + Number(item.amount || 0) * getBookedDayCount(item),
