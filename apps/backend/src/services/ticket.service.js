@@ -629,9 +629,16 @@ class TicketService {
       const group = groupedItems.get(key) || {
         ...item,
         amount: 0,
+        securityDeposit: 0,
+        hasStoredSecurityDeposit: true,
         slotDates: [],
       };
       group.amount += Number(item.amount || 0);
+      if (item.securityDeposit == null) {
+        group.hasStoredSecurityDeposit = false;
+      } else {
+        group.securityDeposit += Number(item.securityDeposit);
+      }
       group.slotDates.push(item.slotDateTime);
       groupedItems.set(key, group);
     }
@@ -692,8 +699,9 @@ class TicketService {
           : `Persons: ${item.persons} · Students: ${item.students}`;
       const option = item.place.annexureOption;
       const venueCharges = Number(item.amount || 0);
-      const securityDeposit =
-        (SECURITY_DEPOSIT_BY_OPTION[option] || 0) * dayCount;
+      const securityDeposit = item.hasStoredSecurityDeposit
+        ? item.securityDeposit
+        : (SECURITY_DEPOSIT_BY_OPTION[option] || 0) * dayCount;
       const electricity =
         (ELECTRICITY_CHARGE_BY_OPTION[option]?.[item.durationHours] || 0) *
         dayCount;
@@ -834,14 +842,17 @@ class TicketService {
       isGroupBooking,
     }
   ) {
+    const isEntryFeeBooking = booking.bookingType === "ENTRY_FEE";
     const ticketTypeSummary = tickets.reduce((summary, item) => {
       const typeName = item.type?.name || "Ticket";
       summary.set(typeName, (summary.get(typeName) || 0) + 1);
       return summary;
     }, new Map());
-    const ticketTypeLabel = [...ticketTypeSummary]
-      .map(([typeName, quantity]) => `${typeName} x ${quantity}`)
-      .join(", ");
+    const ticketTypeLabel = isEntryFeeBooking
+      ? "Entry Fee"
+      : [...ticketTypeSummary]
+          .map(([typeName, quantity]) => `${typeName} x ${quantity}`)
+          .join(", ");
     const entryFee = tickets.reduce(
       (totalAmount, item) => totalAmount + Number(item.type?.price || 0),
       0
@@ -916,10 +927,17 @@ class TicketService {
       .font("Times-Bold")
       .fontSize(18)
       .fillColor(colors.royalBlue)
-      .text(booking.place?.name || "Heritage Monument", cardX + 20, headerY, {
-        width: cardW - 40,
-        align: "center",
-      });
+      .text(
+        isEntryFeeBooking
+          ? "Entry Ticket"
+          : booking.place?.name || "Heritage Monument",
+        cardX + 20,
+        headerY,
+        {
+          width: cardW - 40,
+          align: "center",
+        }
+      );
 
     headerY += 37;
 
@@ -1039,7 +1057,12 @@ class TicketService {
       "Entry Fee",
       `Rs ${entryFee.toFixed(2)}`
     );
-    drawField(rightX, cursorY, "Venue", booking.place?.name || "-");
+    drawField(
+      rightX,
+      cursorY,
+      "Venue",
+      isEntryFeeBooking ? "Entry Fee" : booking.place?.name || "-"
+    );
 
     cursorY += 48;
 

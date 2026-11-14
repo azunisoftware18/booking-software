@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { ApiError } from "../utils/ApiError.js";
 import { envConfig } from "../config/env.config.js";
 import TicketService from "./ticket.service.js";
+import { SlotService } from "./slot.service.js";
 
 import fs from "fs";
 import os from "os";
@@ -246,6 +247,7 @@ class BookingService {
           };
 
           const normalizedItems = [];
+          const depositAssignedPlaces = new Set();
           const now = new Date();
 
           for (const item of expandedAnnexureItems) {
@@ -275,10 +277,39 @@ class BookingService {
             }
 
             const startTime = itemSlotDate.toISOString().slice(11, 16);
-            const template = await tx.slotTemplate.findFirst({
-              where: { placeId: place.id, startTime },
-            });
+            const templates = await SlotService.getTemplatesForDate(
+              place.id,
+              itemSlotDate.toISOString().slice(0, 10),
+              tx
+            );
+            const matchesDuration = (candidate) => {
+              if (candidate.startTime !== startTime) return false;
+              if (item.durationHours == null) return true;
+              const [endHour, endMinute] = candidate.endTime
+                .split(":")
+                .map(Number);
+              const [startHour, startMinute] = startTime
+                .split(":")
+                .map(Number);
+              return (
+                endHour * 60 +
+                  endMinute -
+                  (startHour * 60 + startMinute) ===
+                item.durationHours * 60
+              );
+            };
+            const template = templates.find(
+              (candidate) =>
+                (!item.slotEndTime ||
+                candidate.endTime === item.slotEndTime) &&
+                matchesDuration(candidate)
+            );
             if (!template) {
+              if (item.durationHours != null) {
+                throw ApiError.badRequest(
+                `Select a ${item.durationHours}-hour slot for ${place.name}`
+                );
+              }
               throw ApiError.badRequest(
                 `The selected slot is not available for ${place.name}`
               );
@@ -341,7 +372,8 @@ class BookingService {
             const capacity = await this.getSlotCapacity(
               tx,
               place.id,
-              itemSlotDate
+              itemSlotDate,
+              template
             );
             const activeStatusFilter = {
               OR: [
@@ -387,8 +419,10 @@ class BookingService {
               );
             }
 
-            const securityDeposit =
-              SECURITY_DEPOSIT_BY_OPTION[place.annexureOption] || 0;
+            const securityDeposit = depositAssignedPlaces.has(place.id)
+              ? 0
+              : SECURITY_DEPOSIT_BY_OPTION[place.annexureOption] || 0;
+            depositAssignedPlaces.add(place.id);
             const electricityCharge =
               ELECTRICITY_CHARGE_BY_OPTION[place.annexureOption]?.[
                 item.durationHours
@@ -443,7 +477,7 @@ class BookingService {
               ticketPayload: [],
               annexureItems: {
                 create: normalizedItems.map(
-                  ({ securityDeposit, electricityCharge, ...item }) => item
+                  ({ electricityCharge, ...item }) => item
                 ),
               },
             },
@@ -1149,7 +1183,12 @@ We can't wait to welcome you! 🎉`;
   // ============================================================
   // SLOT CAPACITY
   // ============================================================
-  static async getSlotCapacity(tx, placeId, slotDateTime) {
+  static async getSlotCapacity(
+    tx,
+    placeId,
+    slotDateTime,
+    selectedTemplate = null
+  ) {
     const dateObj = new Date(slotDateTime);
 
     const startOfDay = new Date(dateObj);
@@ -1183,17 +1222,19 @@ We can't wait to welcome you! 🎉`;
     // SLOT TEMPLATE
     // ----------------------------------------------------------
 
-    const template = await tx.slotTemplate.findFirst({
-      where: {
-        placeId,
-        startTime: {
-          lte: time,
+    const template =
+      selectedTemplate ||
+      (await tx.slotTemplate.findFirst({
+        where: {
+          placeId,
+          startTime: {
+            lte: time,
+          },
+          endTime: {
+            gt: time,
+          },
         },
-        endTime: {
-          gt: time,
-        },
-      },
-    });
+      }));
 
     if (!template) {
       throw ApiError.notFound("Slot not found");
@@ -1273,16 +1314,24 @@ We can't wait to welcome you! 🎉`;
         students: item.students,
         dates: [],
         venueCharges: 0,
+        securityDepositHeld: 0,
+        hasStoredSecurityDeposit: true,
       };
       group.dates.push(item.slotDateTime);
       group.venueCharges += Number(item.amount || 0);
+      if (item.securityDeposit == null) {
+        group.hasStoredSecurityDeposit = false;
+      } else {
+        group.securityDepositHeld += Number(item.securityDeposit);
+      }
       groups.set(item.placeId, group);
     }
 
     return [...groups.values()].map((group) => {
       const days = group.dates.length;
-      const securityDepositHeld =
-        (SECURITY_DEPOSIT_BY_OPTION[group.annexureOption] || 0) * days;
+      const securityDepositHeld = group.hasStoredSecurityDeposit
+        ? group.securityDepositHeld
+        : (SECURITY_DEPOSIT_BY_OPTION[group.annexureOption] || 0) * days;
       const electricityHeld =
         (ELECTRICITY_CHARGE_BY_OPTION[group.annexureOption]?.[
           group.durationHours

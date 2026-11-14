@@ -257,9 +257,11 @@ function SuccessContent() {
                 Official Bookinig Ticket
               </span>
               <h3 className="font-serif text-xl sm:text-2xl lg:text-3xl text-royal-blue font-bold tracking-wide truncate px-4">
-                {booking?.place?.name ||
-                  booking?.placeId?.name ||
-                  "Booking Complete"}
+                {booking?.bookingType === "ENTRY_FEE"
+                  ? "Entry Ticket"
+                  : booking?.place?.name ||
+                    booking?.placeId?.name ||
+                    "Booking Complete"}
               </h3>
               <p className="text-[11px] sm:text-xs font-sans text-gray-400 font-semibold tracking-wide">
                 {booking?.place?.location || "Jaipur, Rajasthan"}

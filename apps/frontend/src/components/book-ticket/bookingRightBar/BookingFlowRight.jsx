@@ -360,9 +360,7 @@ export default function BookingFlowRight() {
   );
   const annexureSecurityDepositTotal = selectedAnnexureItems.reduce(
     (total, item) =>
-      total +
-      Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0) *
-        getBookedDayCount(item),
+      total + Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0),
     0,
   );
   const annexureElectricityTotal = selectedAnnexureItems.reduce(
@@ -431,17 +429,20 @@ export default function BookingFlowRight() {
 
     const firstItem = selectedItems[0];
     const totalAmount = selectedItems.reduce(
-      (total, item) =>
-        total +
-        (Number(item.amount || 0) +
-          Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0) +
-          getElectricityCharge(item)) *
-          getBookedDayCount(item),
+      (total, item) => {
+        const days = getBookedDayCount(item);
+        return (
+          total +
+          (Number(item.amount || 0) + getElectricityCharge(item)) * days +
+          Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0)
+        );
+      },
       0,
     );
     const bookingItems = selectedItems.map((item) => ({
       placeId: item.place.id,
       slotDateTime: item.slotDateTime,
+      slotEndTime: item.slot?.endTimeValue || null,
       endDate: item.endDate || null,
       durationHours: item.durationHours || null,
       persons: Number(item.persons || 0),
@@ -1156,7 +1157,7 @@ export default function BookingFlowRight() {
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               {showDepositForm
-                ? "Charges are calculated for each booked day."
+                ? "Security deposit is charged once; electricity charges are calculated for each booked day."
                 : selectedAnnexure.annexure === "C"
                   ? "Select ticket types, visitor quantities, date and slot."
                   : "Choose a start date and slot. End date is optional for multi-day bookings."}
@@ -1170,7 +1171,7 @@ export default function BookingFlowRight() {
                       Number(
                         SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] ||
                           0,
-                      ) * days;
+                    );
                     const electricity = getElectricityCharge(item) * days;
 
                     return (
@@ -1535,6 +1536,13 @@ function AnnexureOptionRow({ venue, value, onChange }) {
   });
   const availabilityDate = date;
   const availabilitySlots = slots;
+  const durationFilteredSlots =
+    rateMode === "duration"
+      ? availabilitySlots.filter(
+          (slot) =>
+            Number(slot.durationMinutes) === Number(value?.durationHours) * 60,
+        )
+      : availabilitySlots;
   const isLoadingAvailability = isLoading;
   const isAvailabilityError = isError;
   const refetchAvailability = refetch;
@@ -1662,7 +1670,11 @@ function AnnexureOptionRow({ venue, value, onChange }) {
               <select
                 value={value.durationHours}
                 onChange={(event) =>
-                  updateValue({ durationHours: Number(event.target.value) })
+                  updateValue({
+                    durationHours: Number(event.target.value),
+                    slot: null,
+                    slotDateTime: null,
+                  })
                 }
                 className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
               >
@@ -1784,9 +1796,9 @@ function AnnexureOptionRow({ venue, value, onChange }) {
                   Retry
                 </button>
               </div>
-            ) : availabilitySlots.length ? (
+            ) : durationFilteredSlots.length ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {availabilitySlots
+                {durationFilteredSlots
                   // .filter((slot) => slot.status === "available")
                   .map((slot) => {
                     const isSelected =
@@ -1860,7 +1872,9 @@ function AnnexureOptionRow({ venue, value, onChange }) {
               </div>
             ) : (
               <p className="text-sm text-slate-500">
-                No available slots for this date.
+                {rateMode === "duration" && value?.durationHours
+                  ? `No ${value.durationHours}-hour slots available for this date.`
+                  : "No available slots for this date."}
               </p>
             )}
           </div>

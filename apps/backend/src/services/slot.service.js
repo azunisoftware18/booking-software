@@ -205,20 +205,61 @@ const formatTime12Hour = (time) => {
   });
 };
 
+const getTimeMinutes = (time) => {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+};
+
 class SlotService {
+  static async getTemplatesForDate(placeId, date, client = prisma) {
+    const start = new Date(`${date}T00:00:00.000Z`);
+    const end = new Date(`${date}T23:59:59.999Z`);
+    const orderBy = [{ startTime: "asc" }, { endTime: "asc" }];
+
+    const [recurringTemplates, dateTemplates] = await Promise.all([
+      client.slotTemplate.findMany({
+        where: { placeId, date: null },
+        orderBy,
+      }),
+      client.slotTemplate.findMany({
+        where: { placeId, date: { gte: start, lte: end } },
+        orderBy,
+      }),
+    ]);
+
+    let applicableDateTemplates = dateTemplates;
+    if (!applicableDateTemplates.length) {
+      const previousTemplate = await client.slotTemplate.findFirst({
+        where: { placeId, date: { lt: start } },
+        orderBy: { date: "desc" },
+        select: { date: true },
+      });
+
+      if (previousTemplate?.date) {
+        applicableDateTemplates = await client.slotTemplate.findMany({
+          where: { placeId, date: previousTemplate.date },
+          orderBy,
+        });
+      }
+    }
+
+    return [...recurringTemplates, ...applicableDateTemplates].sort(
+      (first, second) =>
+        first.startTime.localeCompare(second.startTime) ||
+        first.endTime.localeCompare(second.endTime)
+    );
+  }
+
   static async getSlotsByDate(placeId, date, currentUser) {
     await assertPlaceAccess(placeId, currentUser);
 
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
 
-    const templates = await prisma.slotTemplate.findMany({
-      where: {
-        placeId,
-        OR: [{ date: null }, { date: { gte: start, lte: end } }],
-      },
-      orderBy: [{ startTime: "asc" }, { endTime: "asc" }],
-    });
+    const templates = await SlotService.getTemplatesForDate(
+      placeId,
+      date
+    );
 
     const overrides = await prisma.slotOverride.findMany({
       where: {
@@ -352,6 +393,8 @@ class SlotService {
         time: t.startTime,
         startTime: formatTime12Hour(t.startTime),
         endTime: formatTime12Hour(t.endTime),
+        endTimeValue: t.endTime,
+        durationMinutes: getTimeMinutes(t.endTime) - getTimeMinutes(t.startTime),
         capacity,
         booked,
         available,
