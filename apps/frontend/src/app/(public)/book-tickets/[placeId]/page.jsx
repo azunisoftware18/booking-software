@@ -26,12 +26,6 @@ export default function Page() {
     }
   }, [place, dispatch]);
 
-  useEffect(() => {
-    if (place?.name) {
-      document.title = `${place.name} | Ticket Booking`;
-    }
-  }, [place]);
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {

@@ -667,7 +667,6 @@ export default function BookingFlowRight() {
           {
             atomTokenId: paymentData.atomTokenId,
             merchId: paymentData.merchId,
-            custEmail: paymentData.custEmail,
             custMobile: paymentData.custMobile,
             returnUrl: paymentData.returnUrl,
           },

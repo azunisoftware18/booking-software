@@ -654,7 +654,6 @@ class BookingService {
           id: true,
           name: true,
           city: true,
-          email: true,
         },
       });
 
@@ -663,21 +662,12 @@ class BookingService {
       }
 
       try {
-        const paymentEmail =
-          booking.email || paymentLocation.email || process.env.MAIL_USER;
-        if (!paymentEmail) {
-          throw ApiError.badRequest(
-            "Online payment requires a configured email address for this location",
-          );
-        }
-
         const payment = await AtomPaymentService.initiatePayment(
           {
             bookingId: booking.id,
             txnId: booking.txnId,
             amount: Number(booking.totalAmount).toFixed(2),
             name: booking.name,
-            email: paymentEmail,
             phone: booking.phone,
             userId: booking.userId || "",
           },

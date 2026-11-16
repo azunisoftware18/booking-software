@@ -119,7 +119,6 @@ class AtomPaymentService {
   static buildAuthPayload({
     txnId,
     amount,
-    email,
     phone,
     userId = "",
     custAccNo,
@@ -130,8 +129,8 @@ class AtomPaymentService {
       throw new Error("A valid ATOM transaction ID is required");
     }
 
-    if (!email || !phone) {
-      throw new Error("Customer email and mobile are required");
+    if (!phone) {
+      throw new Error("Customer mobile is required");
     }
 
     const numericAmount = Number(amount);
@@ -156,7 +155,6 @@ class AtomPaymentService {
     }
 
     const custDetails = {
-      custEmail: String(email).trim(),
       custMobile: String(phone).trim(),
     };
 
@@ -310,7 +308,6 @@ class AtomPaymentService {
     return {
       atomTokenId: String(authResponse.atomTokenId),
       merchId: merchantId,
-      custEmail: String(details.email).trim(),
       custMobile: String(details.phone).trim(),
       returnUrl: `${baseUrl.replace(/\/+$/, "")}/api/booking/atom-response`,
       checkoutJsUrl,
