@@ -1109,6 +1109,11 @@ class BookingService {
         return `• ${item.place.name} — ${date} — Rs ${item.amount}`;
       })
       .join("\n");
+    const bookingDate = booking.slotDateTime || booking.createdAt;
+    const formattedBookingDate = new Date(bookingDate).toLocaleDateString(
+      "en-IN",
+      { timeZone: "Asia/Kolkata" }
+    );
     const message =
       booking.bookingType === "ANNEXURE"
         ? `Your Venue booking is confirmed.
@@ -1121,11 +1126,11 @@ Payment Method: ${booking.paymentMethod}
 Please keep the attached booking confirmation for your visit.`
         : `🎟️ *Your ticket booking is confirmed!*
 
-Thank you for booking with *${booking.place.name}*! 🥳
+Thank you for booking! 🥳
 
 Here are your entry ticket details:
 
-📅 Date: ${new Date(booking.slotDateTime).toLocaleDateString("en-IN")}
+📅 Date: ${formattedBookingDate}
 
 🎫 Total Tickets: ${booking.totalSeats}
 
