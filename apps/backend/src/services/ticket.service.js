@@ -91,14 +91,35 @@ class TicketService {
       return pdfPromise;
     }
 
-    const isGroupBooking = booking.tickets.length > 1;
-    const ticketsToPrint = isGroupBooking
-      ? [booking.tickets[0]]
-      : booking.tickets;
+    const isEntryFeeBooking = booking.bookingType === "ENTRY_FEE";
+    const isGroupBooking = !isEntryFeeBooking && booking.tickets.length > 1;
+    const entryFeeTicketGroups = isEntryFeeBooking
+      ? [
+          ...booking.tickets
+            .reduce((groups, ticket) => {
+              const group = groups.get(ticket.typeId) || [];
+              group.push(ticket);
+              groups.set(ticket.typeId, group);
+              return groups;
+            }, new Map())
+            .values(),
+        ].map((tickets) => ({
+          ticket: tickets[0],
+          quantity: tickets.length,
+        }))
+      : null;
+    const ticketsToPrint = isEntryFeeBooking
+      ? entryFeeTicketGroups
+      : isGroupBooking
+        ? [booking.tickets[0]]
+        : booking.tickets;
 
     const qrImages = await Promise.all(
-      ticketsToPrint.map((t) =>
-        QRCode.toDataURL(t.qrCode, { width: 400, margin: 1 })
+      ticketsToPrint.map((item) =>
+        QRCode.toDataURL(
+          isEntryFeeBooking ? item.ticket.qrCode : item.qrCode,
+          { width: 400, margin: 1 }
+        )
       )
     );
 
@@ -156,22 +177,48 @@ class TicketService {
       .map((rate) => `${rate}%`)
       .join(", ");
 
-    for (let i = 0; i < ticketsToPrint.length; i++) {
-      if (i > 0) doc.addPage();
+    if (isEntryFeeBooking) {
+      const ticketsPerPage = 2;
+      const cardGap = 14;
+      const cardMargin = 24;
+      const cardHeight =
+        (doc.page.height - cardMargin * 2 - cardGap) / ticketsPerPage;
 
-      TicketService._drawTicketPage(doc, {
-        booking,
-        ticket: ticketsToPrint[i],
-        tickets: booking.tickets,
-        qrImage: qrImages[i],
-        formattedDate,
-        formattedTime,
-        colors,
-        gstBreakdown,
-        index: i,
-        total: ticketsToPrint.length,
-        isGroupBooking,
-      });
+      for (let i = 0; i < ticketsToPrint.length; i++) {
+        if (i > 0 && i % ticketsPerPage === 0) doc.addPage();
+
+        TicketService._drawEntryFeeTicket(doc, {
+          booking,
+          ticket: ticketsToPrint[i].ticket,
+          quantity: ticketsToPrint[i].quantity,
+          qrImage: qrImages[i],
+          formattedDate,
+          formattedTime,
+          index: i,
+          total: ticketsToPrint.length,
+          cardY: cardMargin + (i % ticketsPerPage) * (cardHeight + cardGap),
+          cardHeight,
+          colors,
+        });
+      }
+    } else {
+      for (let i = 0; i < ticketsToPrint.length; i++) {
+        if (i > 0) doc.addPage();
+
+        TicketService._drawTicketPage(doc, {
+          booking,
+          ticket: ticketsToPrint[i],
+          tickets: booking.tickets,
+          qrImage: qrImages[i],
+          formattedDate,
+          formattedTime,
+          colors,
+          gstBreakdown,
+          index: i,
+          total: ticketsToPrint.length,
+          isGroupBooking,
+        });
+      }
     }
 
     doc.end();
@@ -826,6 +873,168 @@ class TicketService {
       );
   }
 
+  static _drawEntryFeeTicket(
+    doc,
+    {
+      booking,
+      ticket,
+      quantity,
+      qrImage,
+      formattedDate,
+      formattedTime,
+      index,
+      total,
+      cardY,
+      cardHeight,
+      colors,
+    }
+  ) {
+    const pageWidth = doc.page.width;
+    const cardX = 28;
+    const cardW = pageWidth - cardX * 2;
+    const contentX = cardX + 18;
+    const contentW = cardW - 36;
+    const ticketPrice = Number(ticket.type?.price || 0) * quantity;
+    const savedBookingAmount = Number(booking.totalAmount);
+    const price =
+      total === 1 &&
+      Number.isFinite(savedBookingAmount) &&
+      savedBookingAmount > 0
+        ? savedBookingAmount
+        : ticketPrice;
+
+    doc
+      .roundedRect(cardX, cardY, cardW, cardHeight, 14)
+      .fillAndStroke("#ffffff", colors.gold);
+    doc
+      .roundedRect(cardX + 7, cardY + 7, cardW - 14, cardHeight - 14, 10)
+      .dash(3, { space: 3 })
+      .lineWidth(0.5)
+      .strokeColor(colors.gold)
+      .stroke()
+      .undash();
+
+    if (fs.existsSync(LOGO_PATH)) {
+      doc.image(LOGO_PATH, contentX, cardY + 12, {
+        fit: [92, 40],
+        align: "left",
+        valign: "center",
+      });
+    }
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor(colors.jaipurDark)
+      .text("OFFICIAL BOOKING TICKET", contentX, cardY + 17, {
+        width: contentW,
+        align: "center",
+        characterSpacing: 2,
+      })
+      .font("Times-Bold")
+      .fontSize(17)
+      .fillColor(colors.royalBlue)
+      .text("Entry Ticket", contentX, cardY + 34, {
+        width: contentW,
+        align: "center",
+      })
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor(colors.jaipurDark)
+      .text(`TICKET ${index + 1} OF ${total}`, contentX, cardY + 57, {
+        width: contentW,
+        align: "center",
+        characterSpacing: 1.5,
+      });
+
+    doc
+      .moveTo(contentX, cardY + 76)
+      .lineTo(contentX + contentW, cardY + 76)
+      .dash(2, { space: 3 })
+      .lineWidth(0.6)
+      .strokeColor(colors.gold)
+      .stroke()
+      .undash();
+
+    const drawField = (label, value, x, y, width) => {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(7)
+        .fillColor(colors.gray)
+        .text(label.toUpperCase(), x, y, { width });
+      doc
+        .font("Times-Bold")
+        .fontSize(10)
+        .fillColor(colors.royalBlue)
+        .text(String(value ?? "-"), x, y + 10, {
+          width,
+          height: 15,
+          ellipsis: true,
+        });
+    };
+
+    const fieldGap = 18;
+    const fieldW = (contentW - fieldGap) / 2;
+    const rightX = contentX + fieldW + fieldGap;
+    drawField(
+      "Booking ID",
+      String(booking.id || "").slice(-12).toUpperCase(),
+      contentX,
+      cardY + 88,
+      fieldW
+    );
+    drawField("Phone", booking.phone || "-", rightX, cardY + 88, fieldW);
+    drawField("Date of Visit", formattedDate, contentX, cardY + 119, fieldW);
+    drawField("Visiting Time", formattedTime, rightX, cardY + 119, fieldW);
+    drawField(
+      "Ticket Type",
+      `${ticket.type?.name || "Entry Fee"} x ${quantity}`,
+      contentX,
+      cardY + 150,
+      fieldW
+    );
+    drawField("Entry Fee", `Rs ${price.toFixed(2)}`, rightX, cardY + 150, fieldW);
+
+    const qrSize = Math.min(94, cardHeight * 0.26);
+    const qrX = (pageWidth - qrSize) / 2;
+    const qrY = cardY + 183;
+    doc.rect(qrX - 5, qrY - 5, qrSize + 10, qrSize + 10).fill("#ffffff");
+    doc.image(qrImage, qrX, qrY, { width: qrSize, height: qrSize });
+
+    doc
+      .font("Helvetica")
+      .fontSize(7)
+      .fillColor(colors.gray)
+      .text(
+        quantity > 1
+          ? `Scan once to admit all ${quantity} visitors`
+          : "Scan this QR at entry gate",
+        contentX,
+        qrY + qrSize + 5,
+        {
+          width: contentW,
+          align: "center",
+        }
+      );
+
+    const footerY = cardY + cardHeight - 27;
+    doc
+      .moveTo(contentX, footerY - 8)
+      .lineTo(contentX + contentW, footerY - 8)
+      .dash(2, { space: 3 })
+      .lineWidth(0.5)
+      .strokeColor(colors.gold)
+      .stroke()
+      .undash()
+      .font("Courier")
+      .fontSize(7)
+      .fillColor(colors.gray)
+      .text(`Ticket ID: ${ticket.id}`, contentX, footerY, {
+        width: contentW,
+        ellipsis: true,
+      });
+  }
+
   static _drawTicketPage(
     doc,
     {
@@ -853,10 +1062,12 @@ class TicketService {
       : [...ticketTypeSummary]
           .map(([typeName, quantity]) => `${typeName} x ${quantity}`)
           .join(", ");
-    const entryFee = tickets.reduce(
-      (totalAmount, item) => totalAmount + Number(item.type?.price || 0),
-      0
-    );
+    const entryFee = isEntryFeeBooking
+      ? Number(ticket.type?.price || 0)
+      : tickets.reduce(
+          (totalAmount, item) => totalAmount + Number(item.type?.price || 0),
+          0
+        );
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
 
@@ -1187,7 +1398,11 @@ class TicketService {
       .fontSize(22)
       .fillColor(colors.royalBlue)
       .text(
-        `Rs ${Number(booking.totalAmount || 0).toFixed(2)}`,
+        `Rs ${
+          isEntryFeeBooking
+            ? Number(ticket.type?.price || 0).toFixed(2)
+            : Number(booking.totalAmount || 0).toFixed(2)
+        }`,
         leftX,
         totalAmountY
       );
@@ -1247,8 +1462,14 @@ class TicketService {
       throw ApiError.badRequest("Payment not completed");
     }
 
+    const scanGroupWhere = {
+      bookingId: ticket.bookingId,
+      ...(ticket.booking.bookingType === "ENTRY_FEE"
+        ? { typeId: ticket.typeId }
+        : {}),
+    };
     const groupTickets = await prisma.ticket.findMany({
-      where: { bookingId: ticket.bookingId },
+      where: scanGroupWhere,
       select: { id: true, status: true },
     });
     const isGroupBooking = groupTickets.length > 1;
@@ -1256,7 +1477,7 @@ class TicketService {
     if (isGroupBooking) {
       await prisma.$transaction(async (tx) => {
         const tickets = await tx.ticket.findMany({
-          where: { bookingId: ticket.bookingId },
+          where: scanGroupWhere,
           select: { id: true, status: true },
         });
 
@@ -1266,7 +1487,7 @@ class TicketService {
 
         const updated = await tx.ticket.updateMany({
           where: {
-            bookingId: ticket.bookingId,
+            ...scanGroupWhere,
             status: { not: "SCANNED" },
           },
           data: { status: "SCANNED" },
