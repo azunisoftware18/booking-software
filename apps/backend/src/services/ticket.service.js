@@ -17,6 +17,10 @@ const __dirname = path.dirname(__filename);
 const LOGO_PATH = path.resolve(__dirname, "../../uploads/ticklogo.png");
 
 class TicketService {
+  static getPaymentReference(booking) {
+    return booking?.paymentId || booking?.txnId || "—";
+  }
+
   static async getAllTickets() {
     const tickets = await prisma.ticket.findMany({
       include: {
@@ -638,22 +642,24 @@ class TicketService {
       contentWidth - 28
     );
 
-    drawField(
-      "Payment ID",
-      booking.paymentId,
-      margin + 14,
-      cursorY + 154,
-      contentWidth - 28
-    );
-    drawField(
-      "Venue contact",
-      [booking.location?.contactNumber, booking.location?.email]
-        .filter(Boolean)
-        .join(" · "),
-      margin + 14,
-      cursorY + 184,
-      contentWidth - 28
-    );
+    // drawField(
+    //   "Payment ID",
+    //   TicketService.getPaymentReference(booking),
+    //   margin + 14,
+    //   cursorY + 154,
+    //   contentWidth - 28
+    // );
+    
+    // drawField(
+    //   "Venue contact",
+    //   [booking.location?.contactNumber, booking.location?.email]
+    //     .filter(Boolean)
+    //     .join(" · "),
+    //   margin + 14,
+    //   cursorY + 184,
+    //   contentWidth - 28
+    // );
+
     cursorY += 282;
 
     doc
@@ -1280,7 +1286,8 @@ class TicketService {
     // ------------------------------------
     // VENUE + PAYMENT ID
     // ------------------------------------
-    const venueWidth = booking.paymentId ? cardW - 250 : cardW - 80;
+    const paymentReference = TicketService.getPaymentReference(booking);
+    const venueWidth = booking.paymentId || booking.txnId ? cardW - 250 : cardW - 80;
 
     drawField(
       leftX,
@@ -1290,8 +1297,8 @@ class TicketService {
       venueWidth
     );
 
-    if (booking.paymentId) {
-      drawField(rightX, cursorY, "Payment ID", booking.paymentId);
+    if (booking.paymentId || booking.txnId) {
+      drawField(rightX, cursorY, "Payment ID", paymentReference);
     }
 
     cursorY += 55;
