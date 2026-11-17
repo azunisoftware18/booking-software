@@ -170,9 +170,7 @@ export default function BookingTable({
   // =========================================================
 
   const columns = [
-    "Customer",
     "Phone",
-    "Email",
     "Place",
     "Slot",
     "Total Tickets",
@@ -282,7 +280,7 @@ return (
             <TableLoader rows={7} />
           ) : data.length === 0 ? (
             <TableEmpty
-              colSpan={13}
+              colSpan={11}
               message={
                 hasActiveFilters
                   ? "No bookings match your filters"
@@ -326,25 +324,9 @@ return (
                 )}
               >
 
-                {/* Customer */}
-                <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
-                  <div className="flex flex-col space-y-1">
-                    <p className="font-semibold text-slate-900">
-                      {booking.name || "—"}
-                    </p>
-                  </div>
-                </td>
-
                 {/* Phone */}
                 <td className="px-4 py-3 text-slate-600 md:px-6 md:py-4">
                   {booking.phone || "N/A"}
-                </td>
-
-                {/* Email */}
-                <td className="px-4 py-3 text-slate-600 md:px-6 md:py-4">
-                  <span className="break-all inline-block max-w-45">
-                    {booking.email || "N/A"}
-                  </span>
                 </td>
 
                 {/* Place */}
