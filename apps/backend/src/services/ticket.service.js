@@ -90,7 +90,13 @@ class TicketService {
     );
 
     if (booking.bookingType === "ANNEXURE") {
-      TicketService._drawAnnexureReceipt(doc, booking);
+      const activityQrImage = booking.activityQrCode
+        ? await QRCode.toDataURL(booking.activityQrCode, {
+            width: 400,
+            margin: 1,
+          })
+        : null;
+      TicketService._drawAnnexureReceipt(doc, booking, activityQrImage);
       doc.end();
       return pdfPromise;
     }
@@ -504,7 +510,7 @@ class TicketService {
     return pdfPromise;
   }
 
-  static _drawAnnexureReceipt(doc, booking) {
+  static _drawAnnexureReceipt(doc, booking, activityQrImage) {
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
     const margin = 42;
@@ -641,6 +647,22 @@ class TicketService {
       cursorY + 124,
       contentWidth - 28
     );
+
+    if (activityQrImage) {
+      const qrSize = 92;
+      const qrY = cursorY + 151;
+      doc.image(activityQrImage, (pageWidth - qrSize) / 2, qrY, {
+        fit: [qrSize, qrSize],
+      });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .fillColor(colors.navy)
+        .text("Activity entry QR", margin, qrY + qrSize + 2, {
+          width: contentWidth,
+          align: "center",
+        });
+    }
 
     // drawField(
     //   "Payment ID",
@@ -1461,7 +1483,47 @@ class TicketService {
     });
 
     if (!ticket) {
-      throw ApiError.notFound("Invalid Ticket");
+      const activityBooking = await prisma.booking.findFirst({
+        where: { activityQrCode: qrCode },
+        include: {
+          annexureItems: {
+            include: { place: true },
+          },
+        },
+      });
+
+      if (!activityBooking) {
+        throw ApiError.notFound("Invalid Ticket");
+      }
+      if (activityBooking.status !== "PAID") {
+        throw ApiError.badRequest("Payment not completed");
+      }
+
+      const scannedAt = new Date();
+      const updated = await prisma.booking.updateMany({
+        where: {
+          id: activityBooking.id,
+          status: "PAID",
+          activityScannedAt: null,
+        },
+        data: { activityScannedAt: scannedAt },
+      });
+      if (updated.count !== 1) {
+        throw ApiError.badRequest("Activity booking already scanned");
+      }
+
+      return {
+        ticket: { id: activityBooking.id, status: "SCANNED" },
+        booking: { ...activityBooking, activityScannedAt: scannedAt },
+        type: {
+          name: [
+            ...new Set(
+              activityBooking.annexureItems.map((item) => item.place.name)
+            ),
+          ].join(", "),
+        },
+        groupSize: activityBooking.totalSeats,
+      };
     }
 
     // booking unpaid

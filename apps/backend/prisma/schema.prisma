@@ -177,6 +177,8 @@ model Booking {
 
   ticketPdfUrl String? @map("ticket_pdf_url")
   ticketPdfKey String? @map("ticket_pdf_key")
+  activityQrCode    String?   @unique @map("activity_qr_code")
+  activityScannedAt DateTime? @map("activity_scanned_at")
 
   refundAmount   Float?    @map("refund_amount")
   refundDetails  Json?     @map("refund_details")

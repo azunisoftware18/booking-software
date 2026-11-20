@@ -477,6 +477,9 @@ class BookingService {
               status: paymentMethod === "ONLINE" ? "PENDING" : "PAID",
               expiresAt,
               txnId,
+              activityQrCode: places.every((place) => place.annexure === "C")
+                ? crypto.randomUUID()
+                : null,
               ticketPayload: [],
               annexureItems: {
                 create: normalizedItems.map(
