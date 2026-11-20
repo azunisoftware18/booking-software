@@ -11,6 +11,7 @@ export default function VisitorForm({
   onBack,
   loading,
   showCashOption = false,
+  showActivityDisclaimer = false,
 }) {
   const dispatch = useDispatch();
 
@@ -20,6 +21,8 @@ export default function VisitorForm({
   });
 
   const [touched, setTouched] = useState({});
+  const [activityDisclaimerAccepted, setActivityDisclaimerAccepted] =
+    useState(false);
 
   // =========================================================
   // VALIDATION
@@ -76,6 +79,7 @@ export default function VisitorForm({
     const finalData = {
       ...formData,
       paymentMethod: showCashOption ? formData.paymentMethod : "ONLINE",
+      activityDisclaimerAccepted,
     };
 
     dispatch(setVisitorInfo(finalData));
@@ -204,6 +208,24 @@ export default function VisitorForm({
           )}
         </div>
 
+        {showActivityDisclaimer && (
+          <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-slate-700">
+            <input
+              type="checkbox"
+              required
+              checked={activityDisclaimerAccepted}
+              onChange={(event) =>
+                setActivityDisclaimerAccepted(event.target.checked)
+              }
+              className="mt-1 h-4 w-4 shrink-0 accent-[#994113]"
+            />
+            <span>
+              Entry ticket is required for all other activities. Please ensure
+              you have a valid entry ticket before booking.
+            </span>
+          </label>
+        )}
+
         {/* ─── WHATSAPP TICKET INFO ─── */}
         <div className="bg-sandstone/60 p-4 rounded-xl border border-gold/15 flex gap-3 items-center select-none">
           <span className="text-xl filter drop-shadow-sm">📲</span>
@@ -224,9 +246,15 @@ export default function VisitorForm({
 
           <button
             type="submit"
-            disabled={loading || !isFormValid}
+            disabled={
+              loading ||
+              !isFormValid ||
+              (showActivityDisclaimer && !activityDisclaimerAccepted)
+            }
             className={`flex-[2] py-3.5 rounded-xl font-serif text-xs font-bold tracking-[3px] transition-all duration-300 uppercase border relative overflow-hidden ${
-              loading || !isFormValid
+              loading ||
+              !isFormValid ||
+              (showActivityDisclaimer && !activityDisclaimerAccepted)
                 ? "bg-sandstone/50 text-gray-400 cursor-not-allowed border-gray-200/60"
                 : "bg-gradient-to-r from-jaipur-dark to-[#994113] text-white border-gold/30 cursor-pointer shadow-md shadow-jaipur-dark/10 active:scale-99"
             }`}

@@ -18,6 +18,9 @@ import {
   SECURITY_DEPOSIT_BY_OPTION,
 } from "./annexurePricing.js";
 
+const GROUP_STUDENT_TICKET_NAME = "Group of Student**";
+const MIN_GROUP_STUDENT_QUANTITY = 10;
+
 const roundCurrency = (amount) =>
   Math.round((Number(amount) + Number.EPSILON) * 100) / 100;
 
@@ -532,6 +535,15 @@ class BookingService {
 
           if (!Number.isInteger(quantity) || quantity <= 0) {
             throw ApiError.badRequest("Invalid ticket quantity");
+          }
+
+          if (
+            type.name === GROUP_STUDENT_TICKET_NAME &&
+            quantity < MIN_GROUP_STUDENT_QUANTITY
+          ) {
+            throw ApiError.badRequest(
+              `${GROUP_STUDENT_TICKET_NAME} requires a minimum booking of ${MIN_GROUP_STUDENT_QUANTITY} tickets`
+            );
           }
 
           const unitAmount = Math.round(type.price * 100) / 100;

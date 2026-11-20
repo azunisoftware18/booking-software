@@ -33,6 +33,9 @@ import FullPageLoader from "@/components/ui/FullPageLoader";
 
 let atomCheckoutScriptPromise;
 
+const GROUP_STUDENT_TICKET_NAME = "Group of Student**";
+const MIN_GROUP_STUDENT_QUANTITY = 10;
+
 function getEntryFeePriceBreakdown(entryFee) {
   const total = Math.round(Number(entryFee.price) * 100) / 100;
   const taxPercent = Number(entryFee.taxPercent || 0);
@@ -169,6 +172,8 @@ export default function BookingFlowRight() {
   const [showDepositForm, setShowDepositForm] = useState(false);
   const [annexureDraftItems, setAnnexureDraftItems] = useState({});
   const [annexureBookingItems, setAnnexureBookingItems] = useState(null);
+  const [requiresActivityDisclaimer, setRequiresActivityDisclaimer] =
+    useState(false);
   const [entryFeeVenueId, setEntryFeeVenueId] = useState(null);
   const [selectedEntryFeeGroup, setSelectedEntryFeeGroup] = useState(null);
   const [isDirectEntryFeeModalDismissed, setIsDirectEntryFeeModalDismissed] =
@@ -251,7 +256,6 @@ export default function BookingFlowRight() {
         selectedLocation?.venues,
       ).filter((venue) => venue.isConfigured)
     : [];
-  const configuredPlanetariumCount = planetariumPlaces.length;
   const bookingLocationId = selectedLocationId || directEntryFeeLocation?.id;
   const isDirectEntryFeeUnavailable =
     entryFeeIds.length > 0 &&
@@ -272,10 +276,17 @@ export default function BookingFlowRight() {
         }
       : null;
   const activeEntryFeeGroup = selectedEntryFeeGroup || directEntryFeeGroup;
+  const getSelectedEntryFeeQuantity = (entryFee) => {
+    const quantity = Number(selectedEntryFeeQuantities[entryFee.id] || 0);
+    return entryFee.name === GROUP_STUDENT_TICKET_NAME && quantity > 0
+      ? Math.max(MIN_GROUP_STUDENT_QUANTITY, quantity)
+      : quantity;
+  };
+
   const selectedEntryFeeTotals = (activeEntryFeeGroup?.entryFees || []).reduce(
     (totals, entryFee) => {
       const breakdown = getEntryFeePriceBreakdown(entryFee);
-      const quantity = Number(selectedEntryFeeQuantities[entryFee.id] || 0);
+      const quantity = getSelectedEntryFeeQuantity(entryFee);
 
       return {
         base: totals.base + breakdown.base * quantity,
@@ -360,7 +371,8 @@ export default function BookingFlowRight() {
   );
   const annexureSecurityDepositTotal = selectedAnnexureItems.reduce(
     (total, item) =>
-      total + Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0),
+      total +
+      Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0),
     0,
   );
   const annexureElectricityTotal = selectedAnnexureItems.reduce(
@@ -401,6 +413,7 @@ export default function BookingFlowRight() {
         ),
       ),
     );
+    setRequiresActivityDisclaimer(false);
     setEntryFeeVenueId(venue.id);
     setSelectedEntryFeeGroup(null);
     setIsDirectEntryFeeModalDismissed(true);
@@ -428,17 +441,14 @@ export default function BookingFlowRight() {
     }
 
     const firstItem = selectedItems[0];
-    const totalAmount = selectedItems.reduce(
-      (total, item) => {
-        const days = getBookedDayCount(item);
-        return (
-          total +
-          (Number(item.amount || 0) + getElectricityCharge(item)) * days +
-          Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0)
-        );
-      },
-      0,
-    );
+    const totalAmount = selectedItems.reduce((total, item) => {
+      const days = getBookedDayCount(item);
+      return (
+        total +
+        (Number(item.amount || 0) + getElectricityCharge(item)) * days +
+        Number(SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] || 0)
+      );
+    }, 0);
     const bookingItems = selectedItems.map((item) => ({
       placeId: item.place.id,
       slotDateTime: item.slotDateTime,
@@ -461,6 +471,7 @@ export default function BookingFlowRight() {
     dispatch(setSlot(firstItem.slot));
     dispatch(setTotalAmount(totalAmount));
     setAnnexureBookingItems(bookingItems);
+    setRequiresActivityDisclaimer(firstItem.place.annexure === "C");
     setEntryFeeVenueId(null);
     setSelectedAnnexure(null);
     setLocationConfirmed(true);
@@ -471,6 +482,7 @@ export default function BookingFlowRight() {
     setLocationConfirmed(false);
     setLocationSelectionStep(2);
     setAnnexureBookingItems(null);
+    setRequiresActivityDisclaimer(false);
     setSelectedAnnexure(null);
     setShowDepositForm(false);
     setAnnexureDraftItems({});
@@ -555,6 +567,13 @@ export default function BookingFlowRight() {
 
       const isEntryFeeBooking = Boolean(entryFeeVenueId);
       const isAnnexureBooking = Boolean(annexureBookingItems?.length);
+
+      if (
+        requiresActivityDisclaimer &&
+        visitorInfo?.activityDisclaimerAccepted !== true
+      ) {
+        throw new Error("Please acknowledge the activity booking disclaimer.");
+      }
 
       if (!isEntryFeeBooking) {
         if (!reduxData?.date || !reduxData?.slot?.time) {
@@ -785,6 +804,7 @@ export default function BookingFlowRight() {
                 isLoggedIn,
                 entryFeeVenueId,
                 annexureBookingItems,
+                requiresActivityDisclaimer,
                 onAnnexureBack: returnToAnnexureSelection,
               })}
               {bookingError && (
@@ -1065,51 +1085,42 @@ export default function BookingFlowRight() {
                       <section className="min-w-0">
                         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
                           <Ticket size={16} className="text-[#994113]" />
-                          Planetarium
+                          Other activities
                         </h3>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAnnexureDraftItems({});
-                            setShowDepositForm(false);
-                            setSelectedAnnexure({
-                              annexure: "C",
-                              venues: planetariumPlaces,
-                            });
-                          }}
-                          className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
-                        >
-                          <span className="flex items-start justify-between gap-3">
-                            <span className="flex min-w-0 items-start gap-3">
-                              <span className="rounded-xl bg-[#994113]/10 p-2 text-[#994113]">
-                                <Ticket size={18} />
+                        <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+                          {planetariumPlaces.map((venue) => (
+                            <button
+                              key={venue.id}
+                              type="button"
+                              onClick={() => {
+                                setAnnexureDraftItems({});
+                                setShowDepositForm(false);
+                                setSelectedAnnexure({
+                                  annexure: "C",
+                                  venues: [venue],
+                                });
+                              }}
+                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                            >
+                              <span className="flex items-start justify-between gap-3">
+                                <span className="block min-w-0 font-bold text-slate-800">
+                                  {venue.name}
+                                </span>
+                                <ArrowRight
+                                  size={16}
+                                  className="mt-1 shrink-0 text-slate-400 transition-colors group-hover:text-[#994113]"
+                                />
                               </span>
-                              <span className="min-w-0">
-                                <span className="block font-bold text-slate-800">
-                                  Planetarium
-                                </span>
-                                <span className="mt-1 block text-xs text-slate-600">
-                                  7D Theater, 3D Film, Taramandal, I.T. Gallery
-                                  and more
-                                </span>
-                                <span className="mt-1 block text-xs text-slate-500">
-                                  ₹10–₹20 per person · ₹5–₹10 per student
-                                </span>
+                              <span className="mt-2 block text-xs text-slate-500">
+                                ₹{venue.ratePerPerson} per person · ₹
+                                {venue.ratePerStudent} per student
                               </span>
-                            </span>
-                            <ArrowRight
-                              size={16}
-                              className="mt-1 shrink-0 text-slate-400"
-                            />
-                          </span>
-                          <span className="mt-4 flex items-center justify-between text-xs font-bold text-[#994113]">
-                            <span>Browse ticket types</span>
-                            <span className="text-slate-500">
-                              {configuredPlanetariumCount}/
-                              {ANNEXURE_OPTIONS.C.length} configured
-                            </span>
-                          </span>
-                        </button>
+                              <span className="mt-3 block text-xs font-bold text-[#994113]">
+                                Choose ticket quantity
+                              </span>
+                            </button>
+                          ))}
+                        </div>
                       </section>
                     )}
                 </div>
@@ -1149,27 +1160,34 @@ export default function BookingFlowRight() {
               {showDepositForm
                 ? "Security deposit and electricity"
                 : selectedAnnexure.annexure === "C"
-                  ? "Planetarium tickets"
+                  ? "Other activities "
                   : selectedAnnexure.venues.length === 1
                     ? selectedAnnexure.venues[0].name
                     : "Select venue options"}
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              {showDepositForm
-                ? "Security deposit is charged once; electricity charges are calculated for each booked day."
-                : selectedAnnexure.annexure === "C"
-                  ? "Select ticket types, visitor quantities, date and slot."
-                  : "Choose a start date and slot. End date is optional for multi-day bookings."}
+              {showDepositForm ? (
+                "Security deposit is charged once; electricity charges are calculated for each booked day."
+              ) : selectedAnnexure.annexure === "C" ? (
+                <>
+                  Select ticket types, visitor quantities, date and slot.
+                  <span className="mt-1 block text-sm font-bold text-[#994113]">
+                    Entry Fee ticket is mandatory before booking any other
+                    activities. Please select your Entry Fee first.
+                  </span>
+                </>
+              ) : (
+                "Choose a start date and slot. End date is optional for multi-day bookings."
+              )}
             </p>
 
             <div className="mt-5 space-y-3">
               {showDepositForm
                 ? selectedAnnexureItems.map((item) => {
                     const days = getBookedDayCount(item);
-                    const securityDeposit =
-                      Number(
-                        SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] ||
-                          0,
+                    const securityDeposit = Number(
+                      SECURITY_DEPOSIT_BY_OPTION[item.place.annexureOption] ||
+                        0,
                     );
                     const electricity = getElectricityCharge(item) * days;
 
@@ -1314,9 +1332,7 @@ export default function BookingFlowRight() {
             </h2>
             <div className="mt-5 grid gap-3">
               {activeEntryFeeGroup.entryFees.map((entryFee) => {
-                const quantity = Number(
-                  selectedEntryFeeQuantities[entryFee.id] || 0,
-                );
+                const quantity = getSelectedEntryFeeQuantity(entryFee);
                 const breakdown = getEntryFeePriceBreakdown(entryFee);
                 const { taxPercent, total: priceWithTax } = breakdown;
 
@@ -1336,7 +1352,11 @@ export default function BookingFlowRight() {
                         onChange={(event) =>
                           setSelectedEntryFeeQuantities((current) => ({
                             ...current,
-                            [entryFee.id]: event.target.checked ? 1 : 0,
+                            [entryFee.id]: event.target.checked
+                              ? entryFee.name === GROUP_STUDENT_TICKET_NAME
+                                ? MIN_GROUP_STUDENT_QUANTITY
+                                : 1
+                              : 0,
                           }))
                         }
                         className="h-5 w-5 shrink-0 accent-[#994113]"
@@ -1345,6 +1365,12 @@ export default function BookingFlowRight() {
                         <span className="block truncate text-base font-semibold text-slate-800 sm:text-lg">
                           {entryFee.name}
                         </span>
+                        {entryFee.name === GROUP_STUDENT_TICKET_NAME && (
+                          <span className="mt-1 block text-xs font-medium text-slate-500">
+                            Minimum booking: {MIN_GROUP_STUDENT_QUANTITY}{" "}
+                            tickets
+                          </span>
+                        )}
                         <span className="mt-1 block text-sm font-bold text-[#994113]">
                           {priceWithTax === 0
                             ? "Free"
@@ -1364,16 +1390,29 @@ export default function BookingFlowRight() {
                       Qty
                       <input
                         type="number"
-                        min="0"
+                        min={
+                          entryFee.name === GROUP_STUDENT_TICKET_NAME &&
+                          quantity > 0
+                            ? MIN_GROUP_STUDENT_QUANTITY
+                            : 0
+                        }
                         value={quantity}
                         onChange={(event) => {
                           const requestedQuantity = Number(event.target.value);
 
-                          const nextQuantity = Number.isFinite(
+                          const requestedValue = Number.isFinite(
                             requestedQuantity,
                           )
                             ? Math.max(0, Math.floor(requestedQuantity))
                             : 0;
+                          const nextQuantity =
+                            entryFee.name === GROUP_STUDENT_TICKET_NAME &&
+                            requestedValue > 0
+                              ? Math.max(
+                                  MIN_GROUP_STUDENT_QUANTITY,
+                                  requestedValue,
+                                )
+                              : requestedValue;
 
                           setSelectedEntryFeeQuantities((current) => ({
                             ...current,
@@ -1394,8 +1433,7 @@ export default function BookingFlowRight() {
                   (
                   {activeEntryFeeGroup.entryFees.reduce(
                     (total, entryFee) =>
-                      total +
-                      Number(selectedEntryFeeQuantities[entryFee.id] || 0),
+                      total + getSelectedEntryFeeQuantity(entryFee),
                     0,
                   )}
                   )
@@ -1435,7 +1473,7 @@ export default function BookingFlowRight() {
                     )
                     .map((item) => ({
                       ...item,
-                      quantity: Number(selectedEntryFeeQuantities[item.id]),
+                      quantity: getSelectedEntryFeeQuantity(item),
                     }));
                   if (selectedEntryFees.length) {
                     startBookingForEntryFee(selectedEntryFees);
@@ -1901,6 +1939,7 @@ function renderStep(step, props) {
     isLoggedIn,
     entryFeeVenueId,
     annexureBookingItems,
+    requiresActivityDisclaimer,
     onAnnexureBack,
   } = props;
 
@@ -1929,6 +1968,7 @@ function renderStep(step, props) {
           onSubmit={handleFinalBooking}
           onBack={() => (entryFeeVenueId ? setStep(2) : setStep(2))}
           showCashOption={isLoggedIn}
+          showActivityDisclaimer={requiresActivityDisclaimer}
           isSubmitting={isSubmitting}
         />
       );
