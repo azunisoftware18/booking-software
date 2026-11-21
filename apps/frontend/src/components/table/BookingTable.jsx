@@ -82,6 +82,7 @@ export default function BookingTable({
 
       const matchesSearch =
         !searchTerm ||
+        item.id?.toLowerCase().includes(searchTerm) ||
         item.name?.toLowerCase().includes(searchTerm) ||
         item.email?.toLowerCase().includes(searchTerm) ||
         item.place?.name?.toLowerCase().includes(searchTerm) ||
@@ -170,6 +171,7 @@ export default function BookingTable({
   // =========================================================
 
   const columns = [
+    "Booking ID",
     "Phone",
     "Place",
     "Slot",
@@ -325,6 +327,9 @@ return (
               >
 
                 {/* Phone */}
+                <td className="px-4 py-3 text-slate-600 md:px-6 md:py-4">
+                  {booking.id.slice(-12).toUpperCase()}
+                </td>
                 <td className="px-4 py-3 text-slate-600 md:px-6 md:py-4">
                   {booking.phone || "N/A"}
                 </td>

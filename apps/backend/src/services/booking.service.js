@@ -1577,7 +1577,21 @@ We can't wait to welcome you! 🎉`;
         bookingType: "ANNEXURE",
       },
     });
-    if (!booking) throw ApiError.notFound("Venue booking not found");
+
+    if (!booking) {
+      throw ApiError.notFound("Venue booking not found");
+    }
+
+    // Prevent changing an already reviewed booking
+    const currentReviewStatus = String(
+      booking.reviewStatus || "UNDER_REVIEW"
+    ).toUpperCase();
+
+    if (currentReviewStatus !== "UNDER_REVIEW") {
+      throw ApiError.badRequest(
+        `Venue booking is already ${currentReviewStatus}. Review status cannot be changed again.`
+      );
+    }
 
     const updated = await prisma.booking.update({
       where: { id: booking.id },
