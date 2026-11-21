@@ -277,10 +277,7 @@ export default function BookingFlowRight() {
       : null;
   const activeEntryFeeGroup = selectedEntryFeeGroup || directEntryFeeGroup;
   const getSelectedEntryFeeQuantity = (entryFee) => {
-    const quantity = Number(selectedEntryFeeQuantities[entryFee.id] || 0);
-    return entryFee.name === GROUP_STUDENT_TICKET_NAME && quantity > 0
-      ? Math.max(MIN_GROUP_STUDENT_QUANTITY, quantity)
-      : quantity;
+    return Number(selectedEntryFeeQuantities[entryFee.id] || 0);
   };
 
   const selectedEntryFeeTotals = (activeEntryFeeGroup?.entryFees || []).reduce(
@@ -1144,7 +1141,7 @@ export default function BookingFlowRight() {
 
       {selectedAnnexure && (
         <div
-          className="fixed inset-0 z-[2100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-2100 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="annexure-options-title"
@@ -1300,7 +1297,7 @@ export default function BookingFlowRight() {
                     setShowDepositForm(true);
                   }
                 }}
-                className="rounded-xl bg-gradient-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-linear-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {selectedAnnexure.annexure === "C"
                   ? "Book tickets"
@@ -1349,16 +1346,15 @@ export default function BookingFlowRight() {
                       <input
                         type="checkbox"
                         checked={quantity > 0}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          setBookingError("");
                           setSelectedEntryFeeQuantities((current) => ({
                             ...current,
                             [entryFee.id]: event.target.checked
-                              ? entryFee.name === GROUP_STUDENT_TICKET_NAME
-                                ? MIN_GROUP_STUDENT_QUANTITY
-                                : 1
+                              ? 1
                               : 0,
-                          }))
-                        }
+                          }));
+                        }}
                         className="h-5 w-5 shrink-0 accent-[#994113]"
                       />
                       <span className="min-w-0">
@@ -1390,14 +1386,10 @@ export default function BookingFlowRight() {
                       Qty
                       <input
                         type="number"
-                        min={
-                          entryFee.name === GROUP_STUDENT_TICKET_NAME &&
-                          quantity > 0
-                            ? MIN_GROUP_STUDENT_QUANTITY
-                            : 0
-                        }
+                        min={0}
                         value={quantity}
                         onChange={(event) => {
+                          setBookingError("");
                           const requestedQuantity = Number(event.target.value);
 
                           const requestedValue = Number.isFinite(
@@ -1405,18 +1397,10 @@ export default function BookingFlowRight() {
                           )
                             ? Math.max(0, Math.floor(requestedQuantity))
                             : 0;
-                          const nextQuantity =
-                            entryFee.name === GROUP_STUDENT_TICKET_NAME &&
-                            requestedValue > 0
-                              ? Math.max(
-                                  MIN_GROUP_STUDENT_QUANTITY,
-                                  requestedValue,
-                                )
-                              : requestedValue;
 
                           setSelectedEntryFeeQuantities((current) => ({
                             ...current,
-                            [entryFee.id]: nextQuantity,
+                            [entryFee.id]: requestedValue,
                           }));
                         }}
                         className="ml-2 w-20 rounded-lg border border-slate-300 px-2 py-2 text-center text-base font-semibold text-slate-800 outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
@@ -1448,6 +1432,14 @@ export default function BookingFlowRight() {
                 ₹{selectedEntryFeeTotals.total.toFixed(2)}
               </span>
             </div>
+            {bookingError && (
+              <p
+                role="alert"
+                className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+              >
+                {bookingError}
+              </p>
+            )}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -1475,7 +1467,20 @@ export default function BookingFlowRight() {
                       ...item,
                       quantity: getSelectedEntryFeeQuantity(item),
                     }));
+                  const groupStudentTicket = selectedEntryFees.find(
+                    (item) => item.name === GROUP_STUDENT_TICKET_NAME,
+                  );
+                  if (
+                    groupStudentTicket &&
+                    groupStudentTicket.quantity < MIN_GROUP_STUDENT_QUANTITY
+                  ) {
+                    setBookingError(
+                      `${GROUP_STUDENT_TICKET_NAME} requires a minimum booking of ${MIN_GROUP_STUDENT_QUANTITY} tickets.`,
+                    );
+                    return;
+                  }
                   if (selectedEntryFees.length) {
+                    setBookingError("");
                     startBookingForEntryFee(selectedEntryFees);
                   }
                 }}
