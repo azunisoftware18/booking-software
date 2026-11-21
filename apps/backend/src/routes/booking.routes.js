@@ -48,6 +48,20 @@ router.post(
 );
 
 router.get(
+  "/venue-reports",
+  AuthMiddleware.isAuthenticated,
+  PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),
+  asyncHandler(BookingController.getVenueBookings)
+);
+
+router.patch(
+  "/:id/venue-review",
+  AuthMiddleware.isAuthenticated,
+  PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),
+  asyncHandler(BookingController.updateVenueReview)
+);
+
+router.get(
   "/:id/refund-quote",
   AuthMiddleware.isAuthenticated,
   PermissionMiddleware.hasPermission(PermissionsRegistry.BOOKING.READ),

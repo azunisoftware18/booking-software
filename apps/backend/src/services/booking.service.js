@@ -80,6 +80,12 @@ class BookingService {
       throw ApiError.badRequest("Invalid booking type");
     }
 
+    // if (bookingType === "ANNEXURE") {
+    //   throw ApiError.badRequest(
+    //     "Venue booking is no longer available from the customer portal"
+    //   );
+    // }
+
     if (
       bookingType !== "ANNEXURE" &&
       (!Array.isArray(tickets) || tickets.length === 0)
@@ -291,26 +297,21 @@ class BookingService {
               const [endHour, endMinute] = candidate.endTime
                 .split(":")
                 .map(Number);
-              const [startHour, startMinute] = startTime
-                .split(":")
-                .map(Number);
+              const [startHour, startMinute] = startTime.split(":").map(Number);
               return (
-                endHour * 60 +
-                  endMinute -
-                  (startHour * 60 + startMinute) ===
+                endHour * 60 + endMinute - (startHour * 60 + startMinute) ===
                 item.durationHours * 60
               );
             };
             const template = templates.find(
               (candidate) =>
-                (!item.slotEndTime ||
-                candidate.endTime === item.slotEndTime) &&
+                (!item.slotEndTime || candidate.endTime === item.slotEndTime) &&
                 matchesDuration(candidate)
             );
             if (!template) {
               if (item.durationHours != null) {
                 throw ApiError.badRequest(
-                `Select a ${item.durationHours}-hour slot for ${place.name}`
+                  `Select a ${item.durationHours}-hour slot for ${place.name}`
                 );
               }
               throw ApiError.badRequest(
@@ -1131,14 +1132,30 @@ class BookingService {
     );
     const message =
       booking.bookingType === "ANNEXURE"
-        ? `Your Venue booking is confirmed.
+        ? `⏳ *Venue Booking – Under Review*
 
+Dear Customer,
+
+Thank you for choosing us!
+
+Your venue booking request has been successfully received and is currently *UNDER REVIEW* by our administration team.
+
+📋 *Booking Details*
+━━━━━━━━━━━━━━━━━━
 ${annexureDetails}
 
-Combined total: Rs ${booking.totalAmount}
-Payment Method: ${booking.paymentMethod}
+💰 *Combined Total:* Rs. ${booking.totalAmount}
+💳 *Payment Method:* ${booking.paymentMethod}
+📌 *Booking Status:* ${booking.reviewStatus}
 
-Please keep the attached booking confirmation for your visit.`
+Our team will review your request and notify you once a decision has been made.
+
+Please keep the attached booking confirmation safe and present it when visiting the venue.
+
+Thank you for your patience and cooperation.
+
+Best Regards,
+*Venue Booking Team*`
         : `🎟️ *Your ticket booking is confirmed!*
 
 Thank you for booking! 🥳
@@ -1508,6 +1525,124 @@ We can't wait to welcome you! 🎉`;
       },
       refundDetails,
     };
+  }
+
+  static async getVenueBookings(currentUser) {
+    const scope = this.getBookingScope(currentUser);
+    if (!scope) return [];
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        ...scope,
+        bookingType: "ANNEXURE",
+      },
+      include: {
+        place: true,
+        location: true,
+        annexureItems: { include: { place: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return bookings.filter((booking) =>
+      (booking.annexureItems || []).some((item) => {
+        const option = String(item.place?.annexureOption || "").toUpperCase();
+        const annexure = String(item.place?.annexure || "").toUpperCase();
+        return annexure === "A" && ["A1", "A2", "A3"].includes(option);
+      })
+    );
+  }
+
+  static async updateVenueReview(id, payload, currentUser) {
+    const scope = this.getBookingScope(currentUser);
+    if (!scope) throw ApiError.notFound("Venue booking not found");
+
+    const reviewStatus = String(payload.reviewStatus || "").toUpperCase();
+    if (!["APPROVED", "REJECTED"].includes(reviewStatus)) {
+      throw ApiError.badRequest("Review status must be APPROVED or REJECTED");
+    }
+
+    const adminRemark =
+      typeof payload.adminRemark === "string" ? payload.adminRemark.trim() : "";
+    if (reviewStatus === "REJECTED" && !adminRemark) {
+      throw ApiError.badRequest(
+        "Remark is required when rejecting a venue booking"
+      );
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: {
+        id,
+        ...scope,
+        bookingType: "ANNEXURE",
+      },
+    });
+    if (!booking) throw ApiError.notFound("Venue booking not found");
+
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        reviewStatus,
+        adminRemark: adminRemark || null,
+        reviewedAt: new Date(),
+        reviewedById: currentUser?.id || null,
+      },
+      include: {
+        place: true,
+        location: true,
+        annexureItems: { include: { place: true } },
+      },
+    });
+
+    const bookingId = String(booking.id || "")
+      .slice(-12)
+      .toUpperCase();
+
+    const message =
+      reviewStatus === "APPROVED"
+        ? `🎉 *Venue Booking Approved!*
+
+Dear Customer,
+
+We are pleased to inform you that your venue booking request has been *APPROVED*.
+
+📋 *Booking Details*
+━━━━━━━━━━━━━━━━━━
+🆔 Booking ID: ${bookingId}
+💳 Payment Status: ${booking.status}
+📝 Admin Remark: ${adminRemark || "No additional remarks"}
+
+Thank you for choosing us. We look forward to serving you!
+
+Best Regards,
+*Venue Booking Team*`
+        : `❌ *Venue Booking Request Rejected*
+
+Dear Customer,
+
+We regret to inform you that your venue booking request has been *REJECTED*.
+
+📋 *Booking Details*
+━━━━━━━━━━━━━━━━━━
+🆔 Booking ID: ${bookingId}
+💳 Payment Status: ${booking.status}
+📝 Reason: ${adminRemark || "No reason provided"}
+
+If you have any questions or need further clarification, please feel free to contact our support team.
+
+Best Regards,
+*Venue Booking Team*`;
+
+    try {
+      await WhatsappService.sendMessage(booking.phone, message);
+    } catch (error) {
+      console.error(
+        "Venue booking WhatsApp notification failed:",
+        error.message
+      );
+    }
+
+    return updated;
   }
 
   static async getAllBookings(currentUser) {

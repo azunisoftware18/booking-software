@@ -73,6 +73,20 @@ class BookingController {
   // ============================================================
   // GET ALL BOOKINGS
   // ============================================================
+  static getVenueBookings = async (req, res) => {
+    const data = await BookingService.getVenueBookings(req.user);
+    return res.json(ApiResponse.success(data, "Venue bookings fetched"));
+  };
+
+  static updateVenueReview = async (req, res) => {
+    const data = await BookingService.updateVenueReview(
+      req.params.id,
+      req.body,
+      req.user,
+    );
+    return res.json(ApiResponse.success(data, "Venue booking review updated"));
+  };
+
   static getAll = async (req, res) => {
     const data = await BookingService.getAllBookings(req.user);
 

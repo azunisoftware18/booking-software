@@ -1332,14 +1332,20 @@ export default function BookingFlowRight() {
                 const quantity = getSelectedEntryFeeQuantity(entryFee);
                 const breakdown = getEntryFeePriceBreakdown(entryFee);
                 const { taxPercent, total: priceWithTax } = breakdown;
+                const isGroupQuantityInvalid =
+                  entryFee.name === GROUP_STUDENT_TICKET_NAME &&
+                  quantity > 0 &&
+                  quantity < MIN_GROUP_STUDENT_QUANTITY;
 
                 return (
                   <div
                     key={entryFee.id}
                     className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors sm:p-5 ${
-                      quantity > 0
-                        ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
-                        : "border-slate-200"
+                      isGroupQuantityInvalid
+                        ? "border-red-500 bg-red-50 ring-2 ring-red-500/15"
+                        : quantity > 0
+                          ? "border-[#994113] bg-amber-50 ring-2 ring-[#994113]/15"
+                          : "border-slate-200"
                     }`}
                   >
                     <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
@@ -1382,30 +1388,41 @@ export default function BookingFlowRight() {
                         </span>
                       </span>
                     </label>
-                    <label className="shrink-0 text-xs font-medium text-slate-600">
-                      Qty
-                      <input
-                        type="number"
-                        min={0}
-                        value={quantity}
-                        onChange={(event) => {
-                          setBookingError("");
-                          const requestedQuantity = Number(event.target.value);
+                    <div className="shrink-0 text-right">
+                      <label className="text-xs font-medium text-slate-600">
+                        Qty
+                        <input
+                          type="number"
+                          min={0}
+                          value={quantity}
+                          onChange={(event) => {
+                            setBookingError("");
+                            const requestedQuantity = Number(event.target.value);
 
-                          const requestedValue = Number.isFinite(
-                            requestedQuantity,
-                          )
-                            ? Math.max(0, Math.floor(requestedQuantity))
-                            : 0;
+                            const requestedValue = Number.isFinite(
+                              requestedQuantity,
+                            )
+                              ? Math.max(0, Math.floor(requestedQuantity))
+                              : 0;
 
-                          setSelectedEntryFeeQuantities((current) => ({
-                            ...current,
-                            [entryFee.id]: requestedValue,
-                          }));
-                        }}
-                        className="ml-2 w-20 rounded-lg border border-slate-300 px-2 py-2 text-center text-base font-semibold text-slate-800 outline-none focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
-                      />
-                    </label>
+                            setSelectedEntryFeeQuantities((current) => ({
+                              ...current,
+                              [entryFee.id]: requestedValue,
+                            }));
+                          }}
+                          className={`ml-2 w-20 rounded-lg border px-2 py-2 text-center text-base font-semibold text-slate-800 outline-none ${
+                            isGroupQuantityInvalid
+                              ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                              : "border-slate-300 focus:border-[#994113] focus:ring-2 focus:ring-[#994113]/20"
+                          }`}
+                        />
+                      </label>
+                      {isGroupQuantityInvalid && (
+                        <p className="mt-1 text-xs font-semibold text-red-600 animate-pulse">
+                          Minimum 10 required
+                        </p>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1474,9 +1491,6 @@ export default function BookingFlowRight() {
                     groupStudentTicket &&
                     groupStudentTicket.quantity < MIN_GROUP_STUDENT_QUANTITY
                   ) {
-                    setBookingError(
-                      `${GROUP_STUDENT_TICKET_NAME} requires a minimum booking of ${MIN_GROUP_STUDENT_QUANTITY} tickets.`,
-                    );
                     return;
                   }
                   if (selectedEntryFees.length) {

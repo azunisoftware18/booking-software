@@ -28,19 +28,19 @@ model User {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  role  Role   @relation(fields: [roleId], references: [id])
-  place Place? @relation(fields: [placeId], references: [id])
-  createdPlaces Place[] @relation("PlaceCreator")
+  role               Role         @relation(fields: [roleId], references: [id])
+  place              Place?       @relation(fields: [placeId], references: [id])
+  createdPlaces      Place[]      @relation("PlaceCreator")
   createdTicketTypes TicketType[] @relation("TicketTypeCreator")
-  createdLocations Location[] @relation("LocationCreator")
-  createdRoles Role[] @relation("RoleCreator")
+  createdLocations   Location[]   @relation("LocationCreator")
+  createdRoles       Role[]       @relation("RoleCreator")
 
   // Prisma relations; no child ID column is created
   parent   User?  @relation("UserHierarchy", fields: [parentId], references: [id])
   children User[] @relation("UserHierarchy")
 
-  tickets  Ticket[]  
-  bookings Booking[] 
+  tickets  Ticket[]
+  bookings Booking[]
 
   assignedPermissions AssignedPermission[]
   location            Location?            @relation(fields: [locationId], references: [id])
@@ -75,20 +75,20 @@ model Place {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ticketTypes   TicketType[]
-  tickets       Ticket[]
-  slotTemplates SlotTemplate[]
-  slotOverrides SlotOverride[]
-  bookings      Booking[]
+  ticketTypes          TicketType[]
+  tickets              Ticket[]
+  slotTemplates        SlotTemplate[]
+  slotOverrides        SlotOverride[]
+  bookings             Booking[]
   bookingAnnexureItems BookingAnnexureItem[]
-  users         User[]
-  createdBy     User?   @relation("PlaceCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  bookingLocation Location? @relation("PlaceBookingLocation", fields: [locationId], references: [id], onDelete: SetNull)
+  users                User[]
+  createdBy            User?                 @relation("PlaceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  bookingLocation      Location?             @relation("PlaceBookingLocation", fields: [locationId], references: [id], onDelete: SetNull)
 
-  @@index([createdById])
-  @@index([locationId])
   @@unique([name, location])
   @@unique([locationId, annexure, annexureOption])
+  @@index([createdById])
+  @@index([locationId])
   @@map("places")
 }
 
@@ -97,10 +97,10 @@ model SlotTemplate {
   id      String @id @default(uuid())
   placeId String @map("place_id")
 
-  startTime String @map("start_time")
-  endTime   String @map("end_time")
+  startTime String    @map("start_time")
+  endTime   String    @map("end_time")
   date      DateTime?
-  capacity  Int    @map("capacity")
+  capacity  Int       @map("capacity")
 
   place Place @relation(fields: [placeId], references: [id])
 
@@ -126,15 +126,14 @@ model SlotOverride {
 
 // TICKET TYPES
 model TicketType {
-  id      String @id @default(uuid())
-  name    String
-  center  String @default("Jaipur")
-  price   Float
-  taxPercent Float @default(0) @map("tax_percent")
+  id          String  @id @default(uuid())
+  name        String
+  center      String  @default("Jaipur")
+  price       Float
+  taxPercent  Float   @default(0) @map("tax_percent")
   isAvailable Boolean @default(true) @map("is_available")
-  placeId String @map("place_id")
+  placeId     String  @map("place_id")
   createdById String? @map("created_by_id")
-
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -152,9 +151,9 @@ model TicketType {
 model Booking {
   id String @id @default(uuid())
 
-  userId       String?  @map("user_id")
-  placeId      String   @map("place_id")
-  locationId String @map("location_id")
+  userId       String?   @map("user_id")
+  placeId      String    @map("place_id")
+  locationId   String    @map("location_id")
   slotDateTime DateTime? @map("slot_date_time")
 
   bookingType BookingType @default(TICKET) @map("booking_type")
@@ -175,40 +174,45 @@ model Booking {
   ticketPayload Json?         @map("ticket_payload")
   paymentMethod PaymentMethod @map("payment_method")
 
-  ticketPdfUrl String? @map("ticket_pdf_url")
-  ticketPdfKey String? @map("ticket_pdf_key")
+  ticketPdfUrl      String?   @map("ticket_pdf_url")
+  ticketPdfKey      String?   @map("ticket_pdf_key")
   activityQrCode    String?   @unique @map("activity_qr_code")
   activityScannedAt DateTime? @map("activity_scanned_at")
 
-  refundAmount   Float?    @map("refund_amount")
-  refundDetails  Json?     @map("refund_details")
-  refundedAt     DateTime? @map("refunded_at")
-  refundedById   String?   @map("refunded_by_id")
+  refundAmount  Float?    @map("refund_amount")
+  refundDetails Json?     @map("refund_details")
+  refundedAt    DateTime? @map("refunded_at")
+  refundedById  String?   @map("refunded_by_id")
+
+  reviewStatus String    @default("UNDER_REVIEW") @map("review_status")
+  adminRemark  String?   @map("admin_remark") @db.Text
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewedById String?   @map("reviewed_by_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  tickets Ticket[]
+  tickets       Ticket[]
   annexureItems BookingAnnexureItem[]
-  user    User?    @relation(fields: [userId], references: [id])
-  place   Place    @relation(fields: [placeId], references: [id])
-  location Location @relation(fields: [locationId], references: [id])
+  user          User?                 @relation(fields: [userId], references: [id])
+  place         Place                 @relation(fields: [placeId], references: [id])
+  location      Location              @relation(fields: [locationId], references: [id])
 
   @@index([locationId])
   @@map("bookings")
 }
 
 model BookingAnnexureItem {
-  id            String   @id @default(uuid())
-  bookingId     String   @map("booking_id")
-  placeId       String   @map("place_id")
-  slotDateTime  DateTime @map("slot_date_time")
-  durationHours Int?     @map("duration_hours")
-  persons       Int      @default(0)
-  students      Int      @default(0)
-  seatCount     Int      @map("seat_count")
-  amount        Float
-  securityDeposit Float? @map("security_deposit")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid())
+  bookingId       String   @map("booking_id")
+  placeId         String   @map("place_id")
+  slotDateTime    DateTime @map("slot_date_time")
+  durationHours   Int?     @map("duration_hours")
+  persons         Int      @default(0)
+  students        Int      @default(0)
+  seatCount       Int      @map("seat_count")
+  amount          Float
+  securityDeposit Float?   @map("security_deposit")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   place   Place   @relation(fields: [placeId], references: [id])
@@ -219,26 +223,26 @@ model BookingAnnexureItem {
 }
 
 model Location {
-  id          String  @id @default(cuid())
-  createdById String? @map("created_by_id")
-  name        String  @unique
-  description String? @db.Text
-  address     String?
-  city        String?
-  state       String?
-  email       String?
+  id            String  @id @default(cuid())
+  createdById   String? @map("created_by_id")
+  name          String  @unique
+  description   String? @db.Text
+  address       String?
+  city          String?
+  state         String?
+  email         String?
   contactNumber String? @map("contact_number")
-  imageUrl    String?
-  imageKey    String?
+  imageUrl      String?
+  imageKey      String?
 
   status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
+  updatedAt DateTime @updatedAt
 
   users     User[]
-  places    Place[] @relation("PlaceBookingLocation")
-  createdBy User?   @relation("LocationCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  bookings Booking[]
+  places    Place[]   @relation("PlaceBookingLocation")
+  createdBy User?     @relation("LocationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  bookings  Booking[]
 
   @@index([createdById])
   @@index([status])
@@ -255,7 +259,7 @@ model Ticket {
   placeId   String  @map("place_id")
 
   slotDateTime DateTime? @map("slot_date_time")
-  typeId       String   @map("type_id")
+  typeId       String    @map("type_id")
 
   qrCode String @unique @map("qr_code")
 
@@ -333,8 +337,8 @@ model Role {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users User[]
-  createdBy User? @relation("RoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  users     User[]
+  createdBy User?  @relation("RoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   assignedPermissions AssignedPermission[]
 

@@ -33,6 +33,7 @@ const menuItems = [
   { icon: User, label: "Location", href: "/dashboard/location", permission: "LOCATION.READ" },
   { icon: TicketIcon, label: "Entry Fees", href: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
   { icon: Map, label: "Tourist Venues", href: "/dashboard/place", permission: "PLACE.READ" },
+  { icon: Calendar, label: "Venue Booking Report", href: "/dashboard/venue-bookings", permission: "BOOKING.READ" },
   // { icon: User, label: "Entry Fee", href: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
   { icon: Calendar, label: "Slots", href: "/dashboard/slots", permission: "SLOT.READ" },
   { icon: BookCheck, label: "Booking", href: "/dashboard/booking", permission: "BOOKING.READ" },

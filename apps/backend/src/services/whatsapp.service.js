@@ -1,6 +1,10 @@
 import axios from "axios";
 
 class WhatsappService {
+  static async sendMessage(phone, message) {
+    return this.sendTicket(phone, message, null);
+  }
+
   static async sendTicket(phone, message, pdfUrl) {
     try {
       let number = String(phone).replace(/\D/g, "");

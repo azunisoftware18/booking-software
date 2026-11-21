@@ -1,6 +1,7 @@
 export const dashboardRoutePermissions = [
   { path: "/dashboard/location", permission: "LOCATION.READ" },
   { path: "/dashboard/place", permission: "PLACE.READ" },
+  { path: "/dashboard/venue-bookings", permission: "BOOKING.READ" },
   { path: "/dashboard/entryfees", permission: "DASHBOARD.READ" },
   { path: "/dashboard/slots", permission: "SLOT.READ" },
   { path: "/dashboard/ticket", permission: "TICKET_TYPE.READ" },
