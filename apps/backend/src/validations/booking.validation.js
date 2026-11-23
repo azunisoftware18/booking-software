@@ -33,6 +33,13 @@ static get createBooking() {
         durationHours: z.number().int().nullable().optional(),
         persons: z.number().int().min(0).optional(),
         students: z.number().int().min(0).optional(),
+        placeOrSchoolName: z.string().trim().max(191).optional(),
+        programAddress: z.string().trim().max(500).optional(),
+        audienceSize: z.number().int().min(0).optional(),
+        staffCount: z.number().int().min(0).optional(),
+        programType: z.enum(["Academic", "Cultural", "Others"]).optional(),
+        vipPersonName: z.string().trim().max(191).optional(),
+        termsAndConditionsAccepted: z.boolean().optional(),
       })
     ).optional(),
   }).superRefine((data, ctx) => {
@@ -55,6 +62,42 @@ static get createBooking() {
           message: "Select at least one Annexure option",
         });
       }
+      data.annexureItems?.forEach((item, index) => {
+        if (item.durationHours == null) return;
+
+        const requiredTextFields = [
+          ["placeOrSchoolName", item.placeOrSchoolName],
+          ["programAddress", item.programAddress],
+          ["programType", item.programType],
+        ];
+        requiredTextFields.forEach(([field, value]) => {
+          if (!value) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["annexureItems", index, field],
+              message: "This field is required for duration bookings",
+            });
+          }
+        });
+
+        ["audienceSize", "staffCount"].forEach((field) => {
+          if (item[field] === undefined) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["annexureItems", index, field],
+              message: "This field is required for duration bookings",
+            });
+          }
+        });
+
+        if (item.termsAndConditionsAccepted !== true) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["annexureItems", index, "termsAndConditionsAccepted"],
+            message: "Accept the venue terms and conditions to continue",
+          });
+        }
+      });
     } else if (!data.tickets?.length) {
       ctx.addIssue({
         code: "custom",

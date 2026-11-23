@@ -581,6 +581,31 @@ class TicketService {
           ellipsis: true,
         });
     };
+    const normalizeDetailValue = (value) => String(value ?? "").trim() || "—";
+    const measureVenueDetail = (value, width) => {
+      doc.font("Helvetica-Bold").fontSize(9);
+      return (
+        12 +
+        doc.heightOfString(normalizeDetailValue(value), {
+          width,
+          lineGap: 1,
+        })
+      );
+    };
+    const drawVenueDetail = (label, value, x, y, width) => {
+      const normalizedValue = normalizeDetailValue(value);
+      doc
+        .font("Helvetica")
+        .fontSize(7)
+        .fillColor(colors.muted)
+        .text(label.toUpperCase(), x, y, { width });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(9)
+        .fillColor(colors.text)
+        .text(normalizedValue, x, y + 10, { width, lineGap: 1 });
+      return measureVenueDetail(normalizedValue, width);
+    };
 
     drawHeader();
 
@@ -593,9 +618,10 @@ class TicketService {
     const columnGap = 18;
     const columnWidth = (contentWidth - columnGap) / 2;
     const rightColumnX = margin + columnWidth + columnGap;
+    const bookingDetailsCardHeight = activityQrImage ? 264 : 166;
 
     doc
-      .roundedRect(margin, cursorY, contentWidth, 264, 8)
+      .roundedRect(margin, cursorY, contentWidth, bookingDetailsCardHeight, 8)
       .fillAndStroke(colors.background, colors.border);
     doc
       .font("Helvetica-Bold")
@@ -682,7 +708,7 @@ class TicketService {
     //   contentWidth - 28
     // );
 
-    cursorY += 282;
+    cursorY += bookingDetailsCardHeight + 18;
 
     doc
       .font("Helvetica-Bold")
@@ -734,7 +760,90 @@ class TicketService {
     let electricityTotal = 0;
 
     for (const item of sortedGroups) {
-      const cardHeight = 158;
+      const detailColumnWidth = (contentWidth - 42) / 2;
+      const detailLeftX = margin + 14;
+      const detailRightX = detailLeftX + detailColumnWidth + 14;
+      const fullDetailWidth = contentWidth - 28;
+      const hasVenueDetails =
+        item.durationHours != null &&
+        [
+          item.placeOrSchoolName,
+          item.programAddress,
+          item.audienceSize,
+          item.staffCount,
+          item.programType,
+          item.vipPersonName,
+        ].some((value) => value !== null && value !== undefined && value !== "");
+      const detailRows = hasVenueDetails
+        ? [
+            [
+              {
+                label: "Place / school",
+                value: item.placeOrSchoolName,
+                x: detailLeftX,
+                width: fullDetailWidth,
+              },
+            ],
+            [
+              {
+                label: "Address",
+                value: item.programAddress,
+                x: detailLeftX,
+                width: fullDetailWidth,
+              },
+            ],
+            [
+              {
+                label: "Program type",
+                value: item.programType,
+                x: detailLeftX,
+                width: detailColumnWidth,
+              },
+              {
+                label: "Students / audience",
+                value: item.audienceSize,
+                x: detailRightX,
+                width: detailColumnWidth,
+              },
+            ],
+            [
+              {
+                label: "No. of staff",
+                value: item.staffCount,
+                x: detailLeftX,
+                width: detailColumnWidth,
+              },
+              {
+                label: "VIP person",
+                value: item.vipPersonName,
+                x: detailRightX,
+                width: detailColumnWidth,
+              },
+            ],
+            [
+              {
+                label: "Terms and conditions",
+                value: item.termsAndConditionsAccepted
+                  ? "Accepted"
+                  : "Not accepted",
+                x: detailLeftX,
+                width: fullDetailWidth,
+              },
+            ],
+          ]
+        : [];
+      const detailsHeight = detailRows.reduce(
+        (height, row) =>
+          height +
+          Math.max(
+            ...row.map((field) =>
+              measureVenueDetail(field.value, field.width),
+            ),
+          ) +
+          5,
+        0,
+      );
+      const cardHeight = hasVenueDetails ? 150 + detailsHeight : 158;
       if (cursorY + cardHeight > pageHeight - margin) {
         doc.addPage();
         drawHeader();
@@ -818,34 +927,49 @@ class TicketService {
           height: 14,
         });
 
+      let detailY = cursorY + 84;
+      for (const row of detailRows) {
+        const rowHeights = row.map((field) =>
+          drawVenueDetail(
+            field.label,
+            field.value,
+            field.x,
+            detailY,
+            field.width,
+          ),
+        );
+        detailY += Math.max(...rowHeights) + 5;
+      }
+
+      const priceY = hasVenueDetails ? detailY + 3 : cursorY + 87;
       const priceColumnWidth = (contentWidth - 42) / 2;
       const priceRightX = margin + 14 + priceColumnWidth + 14;
       drawField(
         "Venue charges",
         `Rs ${venueCharges.toFixed(2)}`,
         margin + 14,
-        cursorY + 87,
+        priceY,
         priceColumnWidth
       );
       drawField(
         "Security deposit",
         `Rs ${securityDeposit.toFixed(2)}`,
         priceRightX,
-        cursorY + 87,
+        priceY,
         priceColumnWidth
       );
       drawField(
         "Electricity",
         `Rs ${electricity.toFixed(2)}`,
         margin + 14,
-        cursorY + 112,
+        priceY + 25,
         priceColumnWidth
       );
       drawField(
         "Option total",
         `Rs ${itemTotal.toFixed(2)}`,
         priceRightX,
-        cursorY + 112,
+        priceY + 25,
         priceColumnWidth
       );
       cursorY += cardHeight + 10;

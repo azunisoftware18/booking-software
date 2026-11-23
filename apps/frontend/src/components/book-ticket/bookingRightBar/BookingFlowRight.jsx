@@ -35,6 +35,44 @@ let atomCheckoutScriptPromise;
 
 const GROUP_STUDENT_TICKET_NAME = "Group of Student**";
 const MIN_GROUP_STUDENT_QUANTITY = 10;
+const VENUE_TERMS = [
+  "कार्यक्रम हेतु हॉल / मंच नियत तिथि एवं समय को खाली होने पर ही बुक किया जा सकेगा। कार्यक्रम का समय प्रातः 09:00 बजे से रात्रि 08:00 के मध्य ही रखा जाना होगा एवं कार्यक्रम समय के पश्चात् 1 घण्टे में स्थान पूरी तरह खाली किया जाना होगा अन्यथा आगामी दिवस का शुल्क धरोहर राशि में से वसूल किया जाएगा।",
+  "बुकिंग हेतु निर्धारित नकद राशि कार्यक्रम शुरू होने से पूर्व बुकिंग विण्डो / कैशियर / online के पास जमा करानी होगी।",
+  "विज्ञान उद्यान के मेन गेट पर संस्था/विद्यालय के एक प्रतिनिधि को कार्यक्रम के दौरान मौजूद रहना होगा एवं सुरक्षा प्रहरी के साथ निमन्त्रण पत्र चैक करने होंगे।",
+  "कार्यक्रम के आगन्तुक विज्ञान उद्यान में भ्रमण करना चाहे तो निर्धारित टिकट प्राप्त करके ही भ्रमण कर सकेंगे।",
+  "संस्था/विद्यालय छात्र/व्यक्तियों द्वारा केन्द्र में किसी प्रकार का लड़ाई–झगड़ा अथवा अनुशासनहीनता नहीं बरती जायेगी। यदि किसी प्रकार की कोई दुर्घटना घटित होती है तो संस्था/विद्यालय स्वयं जिम्मेदार होगा।",
+  "कार्यक्रम आयोजित करने सम्बन्धित समस्त जिम्मेदारी आयोजक की होगी स्थल की क्षमता से अधिक लोगों को आमंत्रित नहीं किया जाए। क्षमता से अधिक लोगों को प्रवेश देने से रोकने का अधिकार विभाग के पास सुरक्षित रहेगा।",
+  "कार्यक्रम हेतु आयोजक द्वारा जारी निमंत्रण पत्र/प्रवेश कूपन धारक लोगों को ही परिसर में प्रवेश दिया जाएगा। आयोजक द्वारा निमंत्रण पत्र पर स्पष्ट रूप से प्रति कार्ड स्वीकृत व्यक्तियों की संख्या (जैसे 2 व्यक्तियों हेतु) लिखनी होगी।",
+  "कार्यक्रम के दौरान पेयजल आदि की व्यवस्था एवं विद्युत आपूर्ति चले जाने की वैकल्पिक व्यवस्था आयोजक को करना होगा।",
+  "कार्यक्रम की सूचना पुलिस विभाग/नगर निगम/फायर ब्रिगेड आदि संबंधित ऑथोरिटी जो भी नियमानुसार आवश्यक हो।",
+  "कार्यक्रम की प्रकृति अनुसार दुर्घटना, आग आदि से बचाव, फर्स्ट–एड आदि का उपाय कार्यक्रम के दौरान आयोजक को स्वयं करना होगा। पार्किंग सुविधा उद्यान परिसर में उपलब्ध नहीं है। इस हेतु आयोजक द्वारा बाहर व्यवस्था करनी होगी।",
+  "राजकीय हित में अथवा अन्य अपरिहार्य कारणों से बुकिंग निरस्त किये जाने का अधिकार विभाग के पास सुरक्षित है जिसके हर्जे–खर्चे का जिम्मेदार विभाग नहीं होगा।",
+  "आयोजक द्वारा कार्यक्रम स्थल का पूर्व में अवलोकन कर, स्थल पर लगी सामग्री की स्थिति का आंकलन कर लिया जाना चाहिए। विद्युत हेतु डी.जी.सैट की सुविधा उपलब्ध नहीं है, विद्युत व्यवधान की दशा में आयोजक को स्वयं व्यवस्था करनी होगी।",
+  "ऑडिटोरियम में लगे फोटो / बैनर पर फर्म अपना बैनर आदि न लगावें। चिपकाने हेतु कहीं भी डबल साइड टेप काम में न लें।",
+  "धरोहर राशि व आयोजन शुल्क अग्रिम जमा होगा। प्राप्त किराया लौटाया नहीं जाएगा चाहे कार्यक्रम आयोजित हो अथवा नहीं।",
+  "संबंधित संस्था को कार्यक्रम समाप्ति के पश्चात् अगले दो दिन में धरोहर राशि पुनः प्राप्त करनी होगी। धरोहर राशि हेतु एक रजिस्टर संधारित किया जायेगा, जिसमें संस्था प्रतिनिधि के हस्ताक्षर होंगे इस हेतु अलग से GA-55 प्रारूप में रसीद जारी नहीं की जाएगी। धरोहर राशि नगद जमा करवाई जा सकती है।",
+  "कार्यक्रम के दौरान यदि कोई हानि होती है तो धरोहर राशि से हानि की प्रतिपूर्ति की जा सकेगी। हानि के आंकलन के सम्बंध में विभाग का निर्णय अन्तिम होगा।",
+  "गतिविधि आयोजन हेतु चिन्हित स्थानों पर अलग–अलग विद्युत मीटर (सब मीटर) लगे हुए हैं। इनकी मीटर रीडिंग हेतु, रजिस्टर संधारित किया गया है। फर्म को कार्यक्रम शुरू होने से पूर्व एवं बाद में रीडिंग नोट कर लेनी चाहिये। बाद में इस पर कोई विवाद स्वीकार्य नहीं होगा।",
+  "संबंधित संस्था से गत माह / अन्तिम विद्युत बिल की कुल राशि के आधार पर प्रति यूनिट औसत राशि की गणना कर सब मीटर में विद्युत उपभोग की यूनिट के आधार पर, संस्था से प्राप्त की जा कर राजकोष में जमा करवाई जाएगी। वर्तमान में विद्युत उपभोग की राशि रूपये 10.50 प्रति यूनिट निर्धारित की जाती है। विद्युत दरें परिवर्तित होने पर उसी के अनुसार विद्युत प्रभार वसूल किया जावेगा।",
+  "कार्यक्रम में फर्म द्वारा पृथक् से डीजे / तेज आवाज का म्यूजिक सिस्टम लगाना मना है। सांस्कृतिक कार्यक्रम में डांस आदि संयमित रहकर करें। ज्यादा शोर–सीटी बजाना–तेज ताली बजाना, लकड़ी के फ्लोर पर ज्यादा उछलना मना है। इसका उल्लंघन किये जाने पर विभाग द्वारा कार्यक्रम बीच में ही रद्द किया जा सकता है, जिसके लिये फर्म जिम्मेदार होगी। विभाग का फर्नीचर यदि काम में लिया जाता है तो उसे वापस यथास्थान पर फर्म को ही रखना होगा।",
+];
+
+const hasRequiredDurationDetails = (item) => {
+  if (item.rateMode !== "duration") return true;
+
+  return Boolean(
+    item.placeOrSchoolName?.trim() &&
+      item.programAddress?.trim() &&
+      item.audienceSize !== "" &&
+      Number.isSafeInteger(Number(item.audienceSize)) &&
+      Number(item.audienceSize) >= 0 &&
+      item.staffCount !== "" &&
+      Number.isSafeInteger(Number(item.staffCount)) &&
+      Number(item.staffCount) >= 0 &&
+      item.programType &&
+      item.termsAndConditionsAccepted === true,
+  );
+};
 
 function getEntryFeePriceBreakdown(entryFee) {
   const total = Math.round(Number(entryFee.price) * 100) / 100;
@@ -170,6 +208,7 @@ export default function BookingFlowRight() {
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [selectedAnnexure, setSelectedAnnexure] = useState(null);
   const [showDepositForm, setShowDepositForm] = useState(false);
+  const [showVenueTerms, setShowVenueTerms] = useState(false);
   const [annexureDraftItems, setAnnexureDraftItems] = useState({});
   const [annexureBookingItems, setAnnexureBookingItems] = useState(null);
   const [requiresActivityDisclaimer, setRequiresActivityDisclaimer] =
@@ -429,6 +468,7 @@ export default function BookingFlowRight() {
         (item) =>
           !item.slotDateTime ||
           (item.rateMode === "duration" && !item.durationHours) ||
+          !hasRequiredDurationDetails(item) ||
           (item.endDate && item.endDate < item.date) ||
           (item.rateMode === "headcount" &&
             Number(item.persons || 0) + Number(item.students || 0) < 1),
@@ -454,6 +494,17 @@ export default function BookingFlowRight() {
       durationHours: item.durationHours || null,
       persons: Number(item.persons || 0),
       students: Number(item.students || 0),
+      ...(item.rateMode === "duration"
+        ? {
+            placeOrSchoolName: item.placeOrSchoolName.trim(),
+            programAddress: item.programAddress.trim(),
+            audienceSize: Number(item.audienceSize),
+            staffCount: Number(item.staffCount),
+            programType: item.programType,
+            vipPersonName: item.vipPersonName.trim(),
+            termsAndConditionsAccepted: true,
+          }
+        : {}),
     }));
 
     setBookingError("");
@@ -482,6 +533,7 @@ export default function BookingFlowRight() {
     setRequiresActivityDisclaimer(false);
     setSelectedAnnexure(null);
     setShowDepositForm(false);
+    setShowVenueTerms(false);
     setAnnexureDraftItems({});
     setStep(0);
   };
@@ -968,6 +1020,7 @@ export default function BookingFlowRight() {
                                   if (!venue.isConfigured) return;
                                   setAnnexureDraftItems({});
                                   setShowDepositForm(false);
+                                  setShowVenueTerms(false);
                                   setSelectedAnnexure({
                                     annexure: "A",
                                     venues: [venue],
@@ -1092,6 +1145,7 @@ export default function BookingFlowRight() {
                               onClick={() => {
                                 setAnnexureDraftItems({});
                                 setShowDepositForm(false);
+                                setShowVenueTerms(false);
                                 setSelectedAnnexure({
                                   annexure: "C",
                                   venues: [venue],
@@ -1220,6 +1274,7 @@ export default function BookingFlowRight() {
                       key={venue.id}
                       venue={venue}
                       value={annexureDraftItems[venue.id]}
+                      onShowTerms={() => setShowVenueTerms(true)}
                       onChange={(nextValue) =>
                         setAnnexureDraftItems((current) => {
                           const next = { ...current };
@@ -1268,7 +1323,10 @@ export default function BookingFlowRight() {
                 type="button"
                 onClick={() => {
                   if (showDepositForm) setShowDepositForm(false);
-                  else setSelectedAnnexure(null);
+                  else {
+                    setShowVenueTerms(false);
+                    setSelectedAnnexure(null);
+                  }
                 }}
                 className="rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"
               >
@@ -1284,6 +1342,7 @@ export default function BookingFlowRight() {
                         !item.slotDateTime ||
                         item.amount == null ||
                         (item.rateMode === "duration" && !item.durationHours) ||
+                        !hasRequiredDurationDetails(item) ||
                         (item.rateMode === "headcount" &&
                           Number(item.persons || 0) +
                             Number(item.students || 0) <
@@ -1306,6 +1365,38 @@ export default function BookingFlowRight() {
                     : "Next"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showVenueTerms && selectedAnnexure && selectedAnnexure.annexure !== "C" && (
+        <div
+          className="fixed inset-0 z-[2200] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="venue-terms-title"
+        >
+          <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <h2
+                id="venue-terms-title"
+                className="text-xl font-bold text-slate-900"
+              >
+                Terms and Condition
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowVenueTerms(false)}
+                className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+            <ol className="mt-5 list-decimal space-y-3 pl-5 text-sm leading-7 text-slate-700">
+              {VENUE_TERMS.map((term) => (
+                <li key={term}>{term}</li>
+              ))}
+            </ol>
           </div>
         </div>
       )}
@@ -1555,7 +1646,7 @@ export default function BookingFlowRight() {
   );
 }
 
-function AnnexureOptionRow({ venue, value, onChange }) {
+function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
   const now = new Date();
   const today = [
     now.getFullYear(),
@@ -1657,6 +1748,13 @@ function AnnexureOptionRow({ venue, value, onChange }) {
       durationHours: rateMode === "duration" ? defaultDuration : null,
       persons: defaultPersons,
       students: defaultStudents,
+      placeOrSchoolName: "",
+      programAddress: "",
+      audienceSize: "",
+      staffCount: "",
+      programType: "",
+      vipPersonName: "",
+      termsAndConditionsAccepted: false,
       amount: rateMode === "unavailable" ? null : initialAmount,
     });
   };
@@ -1721,23 +1819,107 @@ function AnnexureOptionRow({ venue, value, onChange }) {
       {value && (
         <div className="mt-4 grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
           {rateMode === "duration" ? (
-            <label className="text-xs font-semibold text-slate-600">
-              Duration
-              <select
-                value={value.durationHours}
-                onChange={(event) =>
-                  updateValue({
-                    durationHours: Number(event.target.value),
-                    slot: null,
-                    slotDateTime: null,
-                  })
-                }
-                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                {venue.rate4Hours != null && <option value={4}>4 hours</option>}
-                {venue.rate8Hours != null && <option value={8}>8 hours</option>}
-              </select>
-            </label>
+            <>
+              <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+                Name of place/school *
+                <input
+                  type="text"
+                  required
+                  maxLength={191}
+                  value={value.placeOrSchoolName}
+                  onChange={(event) =>
+                    updateValue({ placeOrSchoolName: event.target.value })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+                Address *
+                <textarea
+                  required
+                  rows={2}
+                  maxLength={500}
+                  value={value.programAddress}
+                  onChange={(event) =>
+                    updateValue({ programAddress: event.target.value })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-600">
+                Size of students/audience *
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  value={value.audienceSize}
+                  onChange={(event) =>
+                    updateValue({ audienceSize: event.target.value })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-600">
+                No. of Staff *
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  value={value.staffCount}
+                  onChange={(event) =>
+                    updateValue({ staffCount: event.target.value })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-600">
+                Type of Program *
+                <select
+                  required
+                  value={value.programType}
+                  onChange={(event) =>
+                    updateValue({ programType: event.target.value })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">Select program type</option>
+                  <option value="Academic">Academic</option>
+                  <option value="Cultural">Cultural</option>
+                  <option value="Others">Others</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-slate-600">
+                VIP Person Name (optional)
+                <input
+                  type="text"
+                  maxLength={191}
+                  value={value.vipPersonName}
+                  onChange={(event) =>
+                    updateValue({ vipPersonName: event.target.value })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-600">
+                Duration
+                <select
+                  value={value.durationHours}
+                  onChange={(event) =>
+                    updateValue({
+                      durationHours: Number(event.target.value),
+                      slot: null,
+                      slotDateTime: null,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                >
+                  {venue.rate4Hours != null && <option value={4}>4 hours</option>}
+                  {venue.rate8Hours != null && <option value={8}>8 hours</option>}
+                </select>
+              </label>
+            </>
           ) : rateMode === "headcount" ? (
             <>
               {venue.ratePerPerson != null && (
@@ -1940,6 +2122,35 @@ function AnnexureOptionRow({ venue, value, onChange }) {
             {getBookedDayCount(value) === 1 ? "day" : "days"}): ₹
             {(Number(value.amount || 0) * getBookedDayCount(value)).toFixed(2)}
           </p>
+          {rateMode === "duration" && (
+            <div className="flex items-start gap-2 text-sm text-slate-700 sm:col-span-2">
+              <input
+                id={`terms-accepted-${venue.id}`}
+                type="checkbox"
+                required
+                aria-label="I have read and agree to the Terms and Conditions"
+                checked={value.termsAndConditionsAccepted === true}
+                onChange={(event) =>
+                  updateValue({
+                    termsAndConditionsAccepted: event.target.checked,
+                  })
+                }
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#994113]"
+              />
+              <span>
+                I have read and agree to the{" "}
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={onShowTerms}
+                  className="font-bold cursor-pointer text-[#994113] underline underline-offset-2 hover:text-[#7a3410]"
+                >
+                  Terms and Conditions
+                </button>
+                .
+              </span>
+            </div>
+          )}
         </div>
       )}
     </section>

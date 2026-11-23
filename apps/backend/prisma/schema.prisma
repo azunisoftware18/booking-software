@@ -202,17 +202,24 @@ model Booking {
 }
 
 model BookingAnnexureItem {
-  id              String   @id @default(uuid())
-  bookingId       String   @map("booking_id")
-  placeId         String   @map("place_id")
-  slotDateTime    DateTime @map("slot_date_time")
-  durationHours   Int?     @map("duration_hours")
-  persons         Int      @default(0)
-  students        Int      @default(0)
-  seatCount       Int      @map("seat_count")
-  amount          Float
-  securityDeposit Float?   @map("security_deposit")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id                         String   @id @default(uuid())
+  bookingId                  String   @map("booking_id")
+  placeId                    String   @map("place_id")
+  slotDateTime               DateTime @map("slot_date_time")
+  durationHours              Int?     @map("duration_hours")
+  persons                    Int      @default(0)
+  students                   Int      @default(0)
+  placeOrSchoolName          String?  @map("place_or_school_name")
+  programAddress             String?  @map("program_address") @db.Text
+  audienceSize               Int?     @map("audience_size")
+  staffCount                 Int?     @map("staff_count")
+  programType                String?  @map("program_type")
+  vipPersonName              String?  @map("vip_person_name")
+  termsAndConditionsAccepted Boolean  @default(false) @map("terms_and_conditions_accepted")
+  seatCount                  Int      @map("seat_count")
+  amount                     Float
+  securityDeposit            Float?   @map("security_deposit")
+  createdAt                  DateTime @default(now()) @map("created_at")
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   place   Place   @relation(fields: [placeId], references: [id])
