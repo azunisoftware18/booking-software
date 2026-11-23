@@ -443,6 +443,10 @@ class BookingService {
               audienceSize: item.audienceSize ?? null,
               staffCount: item.staffCount ?? null,
               programType: item.programType || null,
+              otherProgramType:
+                item.programType === "Others"
+                  ? item.otherProgramType?.trim() || null
+                  : null,
               vipPersonName: item.vipPersonName?.trim() || null,
               termsAndConditionsAccepted:
                 item.termsAndConditionsAccepted === true,

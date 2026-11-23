@@ -774,6 +774,10 @@ class TicketService {
           item.programType,
           item.vipPersonName,
         ].some((value) => value !== null && value !== undefined && value !== "");
+      const programType =
+        item.programType === "Others" && item.otherProgramType
+          ? `${item.programType}: ${item.otherProgramType}`
+          : item.programType;
       const detailRows = hasVenueDetails
         ? [
             [
@@ -795,7 +799,7 @@ class TicketService {
             [
               {
                 label: "Program type",
-                value: item.programType,
+                value: programType,
                 x: detailLeftX,
                 width: detailColumnWidth,
               },

@@ -214,6 +214,7 @@ model BookingAnnexureItem {
   audienceSize               Int?     @map("audience_size")
   staffCount                 Int?     @map("staff_count")
   programType                String?  @map("program_type")
+  otherProgramType           String?  @map("other_program_type")
   vipPersonName              String?  @map("vip_person_name")
   termsAndConditionsAccepted Boolean  @default(false) @map("terms_and_conditions_accepted")
   seatCount                  Int      @map("seat_count")

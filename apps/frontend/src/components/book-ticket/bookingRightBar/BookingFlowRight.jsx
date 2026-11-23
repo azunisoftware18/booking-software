@@ -70,6 +70,7 @@ const hasRequiredDurationDetails = (item) => {
       Number.isSafeInteger(Number(item.staffCount)) &&
       Number(item.staffCount) >= 0 &&
       item.programType &&
+      (item.programType !== "Others" || item.otherProgramType?.trim()) &&
       item.termsAndConditionsAccepted === true,
   );
 };
@@ -501,6 +502,7 @@ export default function BookingFlowRight() {
             audienceSize: Number(item.audienceSize),
             staffCount: Number(item.staffCount),
             programType: item.programType,
+            otherProgramType: item.otherProgramType.trim(),
             vipPersonName: item.vipPersonName.trim(),
             termsAndConditionsAccepted: true,
           }
@@ -1753,6 +1755,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
       audienceSize: "",
       staffCount: "",
       programType: "",
+      otherProgramType: "",
       vipPersonName: "",
       termsAndConditionsAccepted: false,
       amount: rateMode === "unavailable" ? null : initialAmount,
@@ -1821,7 +1824,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
           {rateMode === "duration" ? (
             <>
               <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
-                Name of place/school *
+                Name of School / Institution*
                 <input
                   type="text"
                   required
@@ -1847,7 +1850,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
                 />
               </label>
               <label className="text-xs font-semibold text-slate-600">
-                Size of students/audience *
+                No. of Students/Audience *
                 <input
                   type="number"
                   min="0"
@@ -1879,9 +1882,14 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
                 <select
                   required
                   value={value.programType}
-                  onChange={(event) =>
-                    updateValue({ programType: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const programType = event.target.value;
+                    updateValue({
+                      programType,
+                      otherProgramType:
+                        programType === "Others" ? value.otherProgramType : "",
+                    });
+                  }}
                   className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 >
                   <option value="">Select program type</option>
@@ -1890,6 +1898,21 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
                   <option value="Others">Others</option>
                 </select>
               </label>
+              {value.programType === "Others" && (
+                <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+                  Please specify program type *
+                  <input
+                    type="text"
+                    required
+                    maxLength={191}
+                    value={value.otherProgramType}
+                    onChange={(event) =>
+                      updateValue({ otherProgramType: event.target.value })
+                    }
+                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+              )}
               <label className="text-xs font-semibold text-slate-600">
                 VIP Person Name (optional)
                 <input

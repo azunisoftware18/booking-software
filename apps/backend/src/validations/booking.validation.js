@@ -38,6 +38,7 @@ static get createBooking() {
         audienceSize: z.number().int().min(0).optional(),
         staffCount: z.number().int().min(0).optional(),
         programType: z.enum(["Academic", "Cultural", "Others"]).optional(),
+        otherProgramType: z.string().trim().max(191).optional(),
         vipPersonName: z.string().trim().max(191).optional(),
         termsAndConditionsAccepted: z.boolean().optional(),
       })
@@ -79,6 +80,14 @@ static get createBooking() {
             });
           }
         });
+
+        if (item.programType === "Others" && !item.otherProgramType) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["annexureItems", index, "otherProgramType"],
+            message: "Specify the program type when Others is selected",
+          });
+        }
 
         ["audienceSize", "staffCount"].forEach((field) => {
           if (item[field] === undefined) {
