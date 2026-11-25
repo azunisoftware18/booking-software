@@ -119,9 +119,9 @@ export default function DashboardLayout({ children }) {
               <Menu size={22} />
             </button>
 
-            <h1 className="text-lg font-black text-slate-800">
+            {/* <h1 className="text-lg font-black text-slate-800">
               Dashboard
-            </h1>
+            </h1> */}
           </div>
 
           {/* DESKTOP NAVBAR */}
