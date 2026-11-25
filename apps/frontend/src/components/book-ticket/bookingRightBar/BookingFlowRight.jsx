@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/style.css";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
 import { useBookingLocations } from "@/hooks/useBookingLocations";
@@ -142,6 +144,131 @@ const getBookedDayCount = (item) => {
 
   return Math.floor((end - start) / 86400000) + 1;
 };
+
+const parseVenueDate = (value) => {
+  if (!value) return undefined;
+
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatVenueDate = (date) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+
+const isMondayDate = (value) => parseVenueDate(value)?.getDay() === 1;
+
+const getNextVenueDate = (date) => {
+  const nextDate = new Date(date);
+  if (nextDate.getDay() === 1) nextDate.setDate(nextDate.getDate() + 1);
+  return formatVenueDate(nextDate);
+};
+
+function VenueDatePicker({ value, minDate, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(
+    () => parseVenueDate(value) || parseVenueDate(minDate) || new Date(),
+  );
+  const pickerRef = useRef(null);
+  const selectedDate = parseVenueDate(value);
+  const earliestDate = parseVenueDate(minDate);
+  const todayValue = formatVenueDate(new Date());
+  const todayDate = parseVenueDate(todayValue);
+  const canSelectToday =
+    todayDate.getDay() !== 1 && (!earliestDate || todayDate >= earliestDate);
+
+  useEffect(() => {
+    if (selectedDate) setVisibleMonth(selectedDate);
+  }, [value]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (!pickerRef.current?.contains(event.target)) setIsOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  const selectDate = (date) => {
+    onChange(formatVenueDate(date));
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={pickerRef} className="relative mt-1">
+      <div className="relative">
+        <input
+          type="text"
+          readOnly
+          value={selectedDate?.toLocaleDateString("en-US") || ""}
+          onClick={() => setIsOpen((open) => !open)}
+          className="block w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm"
+        />
+        <button
+          type="button"
+          aria-label="Open calendar"
+          onClick={() => setIsOpen((open) => !open)}
+          className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-700"
+        >
+          <CalendarDays size={14} />
+        </button>
+      </div>
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1 rounded-md border border-slate-300 bg-white p-2 shadow-lg">
+          <DayPicker
+            mode="single"
+            selected={selectedDate}
+            month={visibleMonth}
+            onMonthChange={setVisibleMonth}
+            onSelect={(date) => {
+              if (date) selectDate(date);
+            }}
+            disabled={(date) =>
+              date.getDay() === 1 ||
+              Boolean(earliestDate && date < earliestDate)
+            }
+            weekStartsOn={0}
+            showOutsideDays
+            style={{
+              "--rdp-accent-color": "#994113",
+              "--rdp-disabled-opacity": "0.4",
+              "--rdp-day_button-height": "2rem",
+              "--rdp-day_button-width": "2rem",
+              "--rdp-day-height": "2.25rem",
+              "--rdp-day-width": "2.25rem",
+            }}
+          />
+          <div className="flex justify-between border-t border-slate-200 pt-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+              }}
+              className="text-blue-700 hover:underline"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              disabled={!canSelectToday}
+              onClick={() => selectDate(todayDate)}
+              className="text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const getElectricityCharge = (item) =>
   Number(
@@ -1658,7 +1785,8 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
     String(now.getMonth() + 1).padStart(2, "0"),
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
-  const date = value?.date || today;
+  const defaultVisitDate = getNextVenueDate(now);
+  const date = value?.date || defaultVisitDate;
   const durationAnnexures = new Set(["A", "B"]);
   const canUseDurationRates = durationAnnexures.has(
     String(venue.annexure || "")
@@ -1745,7 +1873,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
 
     onChange({
       place: venue,
-      date: today,
+      date: defaultVisitDate,
       endDate: "",
       slot: null,
       slotDateTime: null,
@@ -2021,12 +2149,11 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
               <CalendarDays size={14} />
               Visit date
             </span>
-            <input
-              type="date"
-              min={today}
+            <VenueDatePicker
+              minDate={today}
               value={availabilityDate}
-              onChange={(event) => {
-                const nextDate = event.target.value;
+              onChange={(nextDate) => {
+                if (isMondayDate(nextDate)) return;
                 onChange({
                   ...value,
                   place: venue,
@@ -2039,21 +2166,19 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
                   slotDateTime: null,
                 });
               }}
-              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
             />
           </label>
 
           {venue.annexure !== "C" && (
             <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
               End date (optional)
-              <input
-                type="date"
-                min={value.date || availabilityDate}
+              <VenueDatePicker
+                minDate={value.date || availabilityDate}
                 value={value.endDate || ""}
-                onChange={(event) =>
-                  updateValue({ endDate: event.target.value })
-                }
-                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                onChange={(endDate) => {
+                  if (endDate && isMondayDate(endDate)) return;
+                  updateValue({ endDate });
+                }}
               />
               <span className="mt-1 block font-normal text-slate-500">
                 Leave blank for a one-day booking.
