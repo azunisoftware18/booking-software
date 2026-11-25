@@ -40,6 +40,7 @@ static get createBooking() {
         programType: z.enum(["Academic", "Cultural", "Others"]).optional(),
         otherProgramType: z.string().trim().max(191).optional(),
         vipPersonName: z.string().trim().max(191).optional(),
+        vipPersonPosition: z.string().trim().max(191).optional(),
         termsAndConditionsAccepted: z.boolean().optional(),
       })
     ).optional(),

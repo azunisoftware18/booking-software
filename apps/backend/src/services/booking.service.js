@@ -448,6 +448,7 @@ class BookingService {
                   ? item.otherProgramType?.trim() || null
                   : null,
               vipPersonName: item.vipPersonName?.trim() || null,
+              vipPersonPosition: item.vipPersonPosition?.trim() || null,
               termsAndConditionsAccepted:
                 item.termsAndConditionsAccepted === true,
               seatCount,

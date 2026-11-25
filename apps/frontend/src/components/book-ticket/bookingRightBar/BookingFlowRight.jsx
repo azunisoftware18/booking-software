@@ -62,16 +62,16 @@ const hasRequiredDurationDetails = (item) => {
 
   return Boolean(
     item.placeOrSchoolName?.trim() &&
-      item.programAddress?.trim() &&
-      item.audienceSize !== "" &&
-      Number.isSafeInteger(Number(item.audienceSize)) &&
-      Number(item.audienceSize) >= 0 &&
-      item.staffCount !== "" &&
-      Number.isSafeInteger(Number(item.staffCount)) &&
-      Number(item.staffCount) >= 0 &&
-      item.programType &&
-      (item.programType !== "Others" || item.otherProgramType?.trim()) &&
-      item.termsAndConditionsAccepted === true,
+    item.programAddress?.trim() &&
+    item.audienceSize !== "" &&
+    Number.isSafeInteger(Number(item.audienceSize)) &&
+    Number(item.audienceSize) >= 0 &&
+    item.staffCount !== "" &&
+    Number.isSafeInteger(Number(item.staffCount)) &&
+    Number(item.staffCount) >= 0 &&
+    item.programType &&
+    (item.programType !== "Others" || item.otherProgramType?.trim()) &&
+    item.termsAndConditionsAccepted === true,
   );
 };
 
@@ -504,6 +504,7 @@ export default function BookingFlowRight() {
             programType: item.programType,
             otherProgramType: item.otherProgramType.trim(),
             vipPersonName: item.vipPersonName.trim(),
+            vipPersonPosition: item.vipPersonPosition.trim(),
             termsAndConditionsAccepted: true,
           }
         : {}),
@@ -1371,37 +1372,39 @@ export default function BookingFlowRight() {
         </div>
       )}
 
-      {showVenueTerms && selectedAnnexure && selectedAnnexure.annexure !== "C" && (
-        <div
-          className="fixed inset-0 z-[2200] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="venue-terms-title"
-        >
-          <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <h2
-                id="venue-terms-title"
-                className="text-xl font-bold text-slate-900"
-              >
-                Terms and Condition
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowVenueTerms(false)}
-                className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Close
-              </button>
+      {showVenueTerms &&
+        selectedAnnexure &&
+        selectedAnnexure.annexure !== "C" && (
+          <div
+            className="fixed inset-0 z-[2200] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="venue-terms-title"
+          >
+            <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-8">
+              <div className="flex items-start justify-between gap-4">
+                <h2
+                  id="venue-terms-title"
+                  className="text-xl font-bold text-slate-900"
+                >
+                  Terms and Condition
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowVenueTerms(false)}
+                  className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+              <ol className="mt-5 list-decimal space-y-3 pl-5 text-sm leading-7 text-slate-700">
+                {VENUE_TERMS.map((term) => (
+                  <li key={term}>{term}</li>
+                ))}
+              </ol>
             </div>
-            <ol className="mt-5 list-decimal space-y-3 pl-5 text-sm leading-7 text-slate-700">
-              {VENUE_TERMS.map((term) => (
-                <li key={term}>{term}</li>
-              ))}
-            </ol>
           </div>
-        </div>
-      )}
+        )}
 
       {activeEntryFeeGroup && (
         <div
@@ -1449,9 +1452,7 @@ export default function BookingFlowRight() {
                           setBookingError("");
                           setSelectedEntryFeeQuantities((current) => ({
                             ...current,
-                            [entryFee.id]: event.target.checked
-                              ? 1
-                              : 0,
+                            [entryFee.id]: event.target.checked ? 1 : 0,
                           }));
                         }}
                         className="h-5 w-5 shrink-0 accent-[#994113]"
@@ -1490,7 +1491,9 @@ export default function BookingFlowRight() {
                           value={quantity}
                           onChange={(event) => {
                             setBookingError("");
-                            const requestedQuantity = Number(event.target.value);
+                            const requestedQuantity = Number(
+                              event.target.value,
+                            );
 
                             const requestedValue = Number.isFinite(
                               requestedQuantity,
@@ -1757,6 +1760,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
       programType: "",
       otherProgramType: "",
       vipPersonName: "",
+      vipPersonPosition: "",
       termsAndConditionsAccepted: false,
       amount: rateMode === "unavailable" ? null : initialAmount,
     });
@@ -1925,6 +1929,22 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
                   className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 />
               </label>
+
+              {value.vipPersonName.trim() && (
+                <label className="text-xs font-semibold text-slate-600">
+                  VIP Person Position
+                  <input
+                    type="text"
+                    maxLength={191}
+                    value={value.vipPersonPosition}
+                    onChange={(event) =>
+                      updateValue({ vipPersonPosition: event.target.value })
+                    }
+                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+              )}
+
               <label className="text-xs font-semibold text-slate-600">
                 Duration
                 <select
@@ -1938,8 +1958,12 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
                   }
                   className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 >
-                  {venue.rate4Hours != null && <option value={4}>4 hours</option>}
-                  {venue.rate8Hours != null && <option value={8}>8 hours</option>}
+                  {venue.rate4Hours != null && (
+                    <option value={4}>4 hours</option>
+                  )}
+                  {venue.rate8Hours != null && (
+                    <option value={8}>8 hours</option>
+                  )}
                 </select>
               </label>
             </>

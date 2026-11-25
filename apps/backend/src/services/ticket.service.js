@@ -773,6 +773,7 @@ class TicketService {
           item.staffCount,
           item.programType,
           item.vipPersonName,
+          item.vipPersonPosition,
         ].some((value) => value !== null && value !== undefined && value !== "");
       const programType =
         item.programType === "Others" && item.otherProgramType
@@ -782,7 +783,7 @@ class TicketService {
         ? [
             [
               {
-                label: "Place / school",
+                label: "School / Institution",
                 value: item.placeOrSchoolName,
                 x: detailLeftX,
                 width: fullDetailWidth,
@@ -823,8 +824,15 @@ class TicketService {
                 x: detailRightX,
                 width: detailColumnWidth,
               },
+             
             ],
             [
+               {
+                label: "VIP person position",
+                value: item.vipPersonPosition,
+                x: detailRightX,
+                width: detailColumnWidth,
+              },
               {
                 label: "Terms and conditions",
                 value: item.termsAndConditionsAccepted

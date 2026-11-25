@@ -216,6 +216,7 @@ model BookingAnnexureItem {
   programType                String?  @map("program_type")
   otherProgramType           String?  @map("other_program_type")
   vipPersonName              String?  @map("vip_person_name")
+  vipPersonPosition          String?  @map("vip_person_position")
   termsAndConditionsAccepted Boolean  @default(false) @map("terms_and_conditions_accepted")
   seatCount                  Int      @map("seat_count")
   amount                     Float
