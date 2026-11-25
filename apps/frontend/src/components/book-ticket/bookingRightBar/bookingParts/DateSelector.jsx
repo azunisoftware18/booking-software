@@ -8,6 +8,9 @@ import SlotCard from "./SlotCard";
 import FullPageLoader from "@/components/ui/FullPageLoader";
 import { useSlots } from "@/hooks/useSlot";
 import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
+import WeekdayDatePicker, {
+  isMondayDate,
+} from "@/components/ui/WeekdayDatePicker";
 
 export default function DateSelector({ onNext }) {
   const dispatch = useDispatch();
@@ -21,9 +24,9 @@ export default function DateSelector({ onNext }) {
     date: selectedDate,
   });
 
-  const handleDateChange = (e) => {
-    const newDate = e.target.value;
-    dispatch(setDate(newDate));
+  const handleDateChange = (date) => {
+    if (isMondayDate(date)) return;
+    dispatch(setDate(date));
     dispatch(setSlot(null));
   };
 
@@ -101,12 +104,11 @@ export default function DateSelector({ onNext }) {
             <div className="h-[1px] w-12 bg-gold/40" />
           </div>
 
-          <input
-            type="date"
-            min={today}
+          <WeekdayDatePicker
+            minDate={today}
             value={selectedDate || ""}
             onChange={handleDateChange}
-            className="w-full p-3.5 border border-gold/20 rounded-xl outline-none font-serif text-royal-blue bg-sandstone/10 focus:border-gold/50 focus:bg-white transition-all text-xs font-medium cursor-pointer shadow-inner mt-1"
+            inputClassName="w-full cursor-pointer rounded-xl border border-gold/20 bg-sandstone/10 p-3.5 pr-10 font-serif text-xs font-medium text-royal-blue shadow-inner outline-none transition-all focus:border-gold/50 focus:bg-white"
           />
         </div>
         <div className="w-full flex-1 flex flex-col">

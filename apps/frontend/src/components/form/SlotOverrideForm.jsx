@@ -1,14 +1,18 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import { useSelector } from "react-redux";
 import { useSlotTemplates } from "@/lib/queries/useSlot";
+import WeekdayDatePicker, {
+  isMondayDate,
+} from "@/components/ui/WeekdayDatePicker";
 
 export default function SlotOverrideForm({ onSubmit }) {
   const {
     register,
+    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -34,12 +38,26 @@ const { data: slots = [] } = useSlotTemplates(placeId);
     <form onSubmit={handleSubmit(submitHandler)} className="space-y-4">
 
       {/* Date */}
-      <InputField
-        label="Date"
-        type="date"
-        error={errors.date?.message}
-        {...register("date", { required: "Date required" })}
-      />
+      <div>
+        <label className="mb-2 block text-sm font-medium">Date</label>
+        <Controller
+          control={control}
+          name="date"
+          rules={{ required: "Date required" }}
+          render={({ field }) => (
+            <WeekdayDatePicker
+              value={field.value || ""}
+              onChange={(date) => {
+                if (!isMondayDate(date)) field.onChange(date);
+              }}
+              inputClassName="w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm"
+            />
+          )}
+        />
+        {errors.date?.message && (
+          <p className="mt-1 text-sm text-red-500">{errors.date.message}</p>
+        )}
+      </div>
 
       {/* 🔥 Start Time (24-hour only) */}
       <div>

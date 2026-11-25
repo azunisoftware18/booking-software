@@ -76,6 +76,15 @@ class PlaceService {
       slotTemplates = [],
     } = payload;
 
+    if (
+      slotTemplates.some(
+        ({ date }) =>
+          date && new Date(`${date}T00:00:00.000Z`).getUTCDay() === 1,
+      )
+    ) {
+      throw ApiError.badRequest("Slots cannot be scheduled on Mondays");
+    }
+
     const assignedLocationId =
       currentUser.locationId ||
       (

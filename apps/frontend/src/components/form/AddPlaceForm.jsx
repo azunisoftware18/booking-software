@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import Button from "../ui/Button";
 import InputField from "../ui/InputField";
 import TextareaField from "../ui/TextareaField";
+import WeekdayDatePicker, {
+  isMondayDate,
+} from "@/components/ui/WeekdayDatePicker";
 import dynamic from "next/dynamic";
 import { ANNEXURE_OPTIONS } from "@/lib/placeAnnexures";
 
@@ -235,6 +238,11 @@ export default function AddPlaceForm({
           setSlotError(
             "Enter a date, start time, end time and capacity for every slot.",
           );
+          return;
+        }
+
+        if (configuredSlots.some((slot) => isMondayDate(slot.date))) {
+          setSlotError("Slots cannot be scheduled on Monday.");
           return;
         }
 
@@ -657,11 +665,10 @@ export default function AddPlaceForm({
                   >
                     <label className="space-y-1 text-xs font-medium text-slate-600">
                       Date
-                      <input
-                        type="date"
+                      <WeekdayDatePicker
                         value={slot.date}
-                        onChange={(event) => {
-                          const date = event.target.value;
+                        onChange={(date) => {
+                          if (isMondayDate(date)) return;
                           setSlotTemplates((current) =>
                             current.map((item, itemIndex) =>
                               itemIndex === index ? { ...item, date } : item,
@@ -669,7 +676,7 @@ export default function AddPlaceForm({
                           );
                           setSlotError("");
                         }}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                        inputClassName="w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm text-slate-800"
                       />
                     </label>
                     <label className="space-y-1 text-xs font-medium text-slate-600">

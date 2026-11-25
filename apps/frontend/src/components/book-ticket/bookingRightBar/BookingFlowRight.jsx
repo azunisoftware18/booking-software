@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/style.css";
 import { usePlace } from "@/hooks/useCurrentPlace";
 import { useBookingMutation } from "@/hooks/useBookingMutation";
 import { useBookingLocations } from "@/hooks/useBookingLocations";
@@ -32,11 +30,20 @@ import {
   Ticket,
 } from "lucide-react";
 import FullPageLoader from "@/components/ui/FullPageLoader";
+import WeekdayDatePicker, {
+  getNextOpenDate,
+  isMondayDate,
+} from "@/components/ui/WeekdayDatePicker";
 
 let atomCheckoutScriptPromise;
 
 const GROUP_STUDENT_TICKET_NAME = "Group of Student**";
 const MIN_GROUP_STUDENT_QUANTITY = 10;
+const isMondayInIndia = (date = new Date()) =>
+  new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    timeZone: "Asia/Kolkata",
+  }).format(date) === "Monday";
 const VENUE_TERMS = [
   "कार्यक्रम हेतु हॉल / मंच नियत तिथि एवं समय को खाली होने पर ही बुक किया जा सकेगा। कार्यक्रम का समय प्रातः 09:00 बजे से रात्रि 08:00 के मध्य ही रखा जाना होगा एवं कार्यक्रम समय के पश्चात् 1 घण्टे में स्थान पूरी तरह खाली किया जाना होगा अन्यथा आगामी दिवस का शुल्क धरोहर राशि में से वसूल किया जाएगा।",
   "बुकिंग हेतु निर्धारित नकद राशि कार्यक्रम शुरू होने से पूर्व बुकिंग विण्डो / कैशियर / online के पास जमा करानी होगी।",
@@ -145,131 +152,6 @@ const getBookedDayCount = (item) => {
   return Math.floor((end - start) / 86400000) + 1;
 };
 
-const parseVenueDate = (value) => {
-  if (!value) return undefined;
-
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const formatVenueDate = (date) =>
-  [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-
-const isMondayDate = (value) => parseVenueDate(value)?.getDay() === 1;
-
-const getNextVenueDate = (date) => {
-  const nextDate = new Date(date);
-  if (nextDate.getDay() === 1) nextDate.setDate(nextDate.getDate() + 1);
-  return formatVenueDate(nextDate);
-};
-
-function VenueDatePicker({ value, minDate, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [visibleMonth, setVisibleMonth] = useState(
-    () => parseVenueDate(value) || parseVenueDate(minDate) || new Date(),
-  );
-  const pickerRef = useRef(null);
-  const selectedDate = parseVenueDate(value);
-  const earliestDate = parseVenueDate(minDate);
-  const todayValue = formatVenueDate(new Date());
-  const todayDate = parseVenueDate(todayValue);
-  const canSelectToday =
-    todayDate.getDay() !== 1 && (!earliestDate || todayDate >= earliestDate);
-
-  useEffect(() => {
-    if (selectedDate) setVisibleMonth(selectedDate);
-  }, [value]);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    const handleOutsideClick = (event) => {
-      if (!pickerRef.current?.contains(event.target)) setIsOpen(false);
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [isOpen]);
-
-  const selectDate = (date) => {
-    onChange(formatVenueDate(date));
-    setIsOpen(false);
-  };
-
-  return (
-    <div ref={pickerRef} className="relative mt-1">
-      <div className="relative">
-        <input
-          type="text"
-          readOnly
-          value={selectedDate?.toLocaleDateString("en-US") || ""}
-          onClick={() => setIsOpen((open) => !open)}
-          className="block w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm"
-        />
-        <button
-          type="button"
-          aria-label="Open calendar"
-          onClick={() => setIsOpen((open) => !open)}
-          className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-700"
-        >
-          <CalendarDays size={14} />
-        </button>
-      </div>
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 rounded-md border border-slate-300 bg-white p-2 shadow-lg">
-          <DayPicker
-            mode="single"
-            selected={selectedDate}
-            month={visibleMonth}
-            onMonthChange={setVisibleMonth}
-            onSelect={(date) => {
-              if (date) selectDate(date);
-            }}
-            disabled={(date) =>
-              date.getDay() === 1 ||
-              Boolean(earliestDate && date < earliestDate)
-            }
-            weekStartsOn={0}
-            showOutsideDays
-            style={{
-              "--rdp-accent-color": "#994113",
-              "--rdp-disabled-opacity": "0.4",
-              "--rdp-day_button-height": "2rem",
-              "--rdp-day_button-width": "2rem",
-              "--rdp-day-height": "2.25rem",
-              "--rdp-day-width": "2.25rem",
-            }}
-          />
-          <div className="flex justify-between border-t border-slate-200 pt-2 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                onChange("");
-                setIsOpen(false);
-              }}
-              className="text-blue-700 hover:underline"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              disabled={!canSelectToday}
-              onClick={() => selectDate(todayDate)}
-              className="text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Today
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 const getElectricityCharge = (item) =>
   Number(
     ELECTRICITY_CHARGE_BY_OPTION[item.place.annexureOption]?.[
@@ -350,6 +232,9 @@ export default function BookingFlowRight() {
   );
   const [bookingError, setBookingError] = useState("");
   const [showGatewayUnavailable, setShowGatewayUnavailable] = useState(false);
+  const [isMondayClosureDismissed, setIsMondayClosureDismissed] =
+    useState(false);
+  const isMondayClosureDay = isMondayInIndia();
 
   const dispatch = useDispatch();
   const reduxData = useSelector((state) => state.booking);
@@ -550,6 +435,8 @@ export default function BookingFlowRight() {
     annexureElectricityTotal;
 
   const startBookingForEntryFee = (selectedEntryFees) => {
+    if (isMondayClosureDay) return;
+
     const firstEntryFee = selectedEntryFees[0];
     const venueId = firstEntryFee.venueId || firstEntryFee.placeId;
     const venue =
@@ -589,6 +476,8 @@ export default function BookingFlowRight() {
   };
 
   const startBookingForAnnexureOptions = () => {
+    if (isMondayClosureDay) return;
+
     const selectedItems = Object.values(annexureDraftItems);
     if (
       !selectedItems.length ||
@@ -714,6 +603,11 @@ export default function BookingFlowRight() {
   // FINAL BOOKING
   // ============================================================
   const handleFinalBooking = async (visitorInfo) => {
+    if (isMondayClosureDay) {
+      setIsMondayClosureDismissed(false);
+      return;
+    }
+
     try {
       setBookingError("");
       const paymentMethod = isLoggedIn ? visitorInfo?.paymentMethod : "ONLINE";
@@ -1145,9 +1039,9 @@ export default function BookingFlowRight() {
                               <button
                                 key={venue.id}
                                 type="button"
-                                disabled={!venue.isConfigured}
+                                disabled={!venue.isConfigured || isMondayClosureDay}
                                 onClick={() => {
-                                  if (!venue.isConfigured) return;
+                                  if (!venue.isConfigured || isMondayClosureDay) return;
                                   setAnnexureDraftItems({});
                                   setShowDepositForm(false);
                                   setShowVenueTerms(false);
@@ -1207,7 +1101,9 @@ export default function BookingFlowRight() {
                           <button
                             key={group.venueId}
                             type="button"
+                            disabled={isMondayClosureDay}
                             onClick={() => {
+                              if (isMondayClosureDay) return;
                               setSelectedEntryFeeGroup(group);
                               setSelectedEntryFeeQuantities(
                                 Object.fromEntries(
@@ -1215,7 +1111,7 @@ export default function BookingFlowRight() {
                                 ),
                               );
                             }}
-                            className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                            className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <span className="flex items-start justify-between gap-3">
                               <span className="flex min-w-0 items-start gap-3">
@@ -1272,7 +1168,9 @@ export default function BookingFlowRight() {
                             <button
                               key={venue.id}
                               type="button"
+                              disabled={isMondayClosureDay}
                               onClick={() => {
+                                if (isMondayClosureDay) return;
                                 setAnnexureDraftItems({});
                                 setShowDepositForm(false);
                                 setShowVenueTerms(false);
@@ -1281,7 +1179,7 @@ export default function BookingFlowRight() {
                                   venues: [venue],
                                 });
                               }}
-                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md"
+                              className="group w-full rounded-2xl border border-slate-200 bg-linear-to-br from-white to-amber-50/60 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#994113]/50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <span className="flex items-start justify-between gap-3">
                                 <span className="block min-w-0 font-bold text-slate-800">
@@ -1465,6 +1363,7 @@ export default function BookingFlowRight() {
               <button
                 type="button"
                 disabled={
+                  isMondayClosureDay ||
                   !selectedAnnexureItems.length ||
                   (!showDepositForm &&
                     selectedAnnexureItems.some(
@@ -1574,6 +1473,7 @@ export default function BookingFlowRight() {
                     <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                       <input
                         type="checkbox"
+                        disabled={isMondayClosureDay}
                         checked={quantity > 0}
                         onChange={(event) => {
                           setBookingError("");
@@ -1615,6 +1515,7 @@ export default function BookingFlowRight() {
                         <input
                           type="number"
                           min={0}
+                          disabled={isMondayClosureDay}
                           value={quantity}
                           onChange={(event) => {
                             setBookingError("");
@@ -1694,6 +1595,7 @@ export default function BookingFlowRight() {
               <button
                 type="button"
                 disabled={
+                  isMondayClosureDay ||
                   !Object.values(selectedEntryFeeQuantities).some(
                     (quantity) => Number(quantity) > 0,
                   )
@@ -1774,6 +1676,33 @@ export default function BookingFlowRight() {
           </motion.div>
         )}
       </AnimatePresence>
+      {isMondayClosureDay && !isMondayClosureDismissed && (
+        <div
+          className="fixed inset-0 z-[3000] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="monday-closure-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <h2
+              id="monday-closure-title"
+              className="text-xl font-bold text-slate-900"
+            >
+              Closed on Monday
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Closed due to the Monday holiday. Bookings are unavailable today.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsMondayClosureDismissed(true)}
+              className="mt-6 w-full rounded-xl bg-linear-to-r from-jaipur-dark to-[#994113] px-5 py-3 font-bold text-white"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1785,7 +1714,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
     String(now.getMonth() + 1).padStart(2, "0"),
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
-  const defaultVisitDate = getNextVenueDate(now);
+  const defaultVisitDate = getNextOpenDate(now);
   const date = value?.date || defaultVisitDate;
   const durationAnnexures = new Set(["A", "B"]);
   const canUseDurationRates = durationAnnexures.has(
@@ -2149,7 +2078,7 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
               <CalendarDays size={14} />
               Visit date
             </span>
-            <VenueDatePicker
+            <WeekdayDatePicker
               minDate={today}
               value={availabilityDate}
               onChange={(nextDate) => {
@@ -2172,8 +2101,9 @@ function AnnexureOptionRow({ venue, value, onChange, onShowTerms }) {
           {venue.annexure !== "C" && (
             <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
               End date (optional)
-              <VenueDatePicker
+              <WeekdayDatePicker
                 minDate={value.date || availabilityDate}
+                rangeStartDate={value.date || availabilityDate}
                 value={value.endDate || ""}
                 onChange={(endDate) => {
                   if (endDate && isMondayDate(endDate)) return;

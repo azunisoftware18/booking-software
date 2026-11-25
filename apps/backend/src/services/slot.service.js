@@ -10,10 +10,17 @@ async function assertPlaceAccess(placeId, currentUser) {
   }
 }
 
+function assertWeekdayDate(date) {
+  if (date.getUTCDay() === 1) {
+    throw ApiError.badRequest("Slots cannot be scheduled on Mondays");
+  }
+}
+
 class SlotTemplateService {
   static async create(payload, currentUser) {
     const { placeId, date, startTime, endTime, capacity } = payload;
     const parsedDate = new Date(`${date}T00:00:00.000Z`);
+    assertWeekdayDate(parsedDate);
     await assertPlaceAccess(placeId, currentUser);
 
     const place = await prisma.place.findUnique({
@@ -75,6 +82,10 @@ class SlotTemplateService {
     const date = payload.date ?? (existing.date ? existing.date.toISOString().slice(0, 10) : undefined);
     const parsedDate = date ? new Date(`${date}T00:00:00.000Z`) : null;
     const capacity = payload.capacity ?? existing.capacity;
+
+    if (payload.date !== undefined && parsedDate) {
+      assertWeekdayDate(parsedDate);
+    }
 
     if (startTime >= endTime) {
       throw ApiError.badRequest("End time must be later than start time");
@@ -144,6 +155,7 @@ class SlotOverrideService {
     await assertPlaceAccess(placeId, currentUser);
 
     const parsedDate = new Date(`${date}T00:00:00.000Z`);
+    assertWeekdayDate(parsedDate);
 
     return prisma.slotOverride.upsert({
       where: {
@@ -254,6 +266,8 @@ class SlotService {
     await assertPlaceAccess(placeId, currentUser);
 
     const start = new Date(`${date}T00:00:00.000Z`);
+    if (start.getUTCDay() === 1) return [];
+
     const end = new Date(`${date}T23:59:59.999Z`);
 
     const templates = await SlotService.getTemplatesForDate(

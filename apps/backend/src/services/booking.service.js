@@ -80,6 +80,26 @@ class BookingService {
       throw ApiError.badRequest("Invalid booking type");
     }
 
+    const weekdayInIndia = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      timeZone: "Asia/Kolkata",
+    }).format(new Date());
+    if (weekdayInIndia === "Monday") {
+      throw ApiError.badRequest(
+        "Bookings are closed due to the Monday holiday"
+      );
+    }
+
+    if (slotDateTime) {
+      const requestedSlotDate = new Date(slotDateTime);
+      if (
+        !Number.isNaN(requestedSlotDate.getTime()) &&
+        requestedSlotDate.getUTCDay() === 1
+      ) {
+        throw ApiError.badRequest("Bookings are not available on Mondays");
+      }
+    }
+
     // if (bookingType === "ANNEXURE") {
     //   throw ApiError.badRequest(
     //     "Venue booking is no longer available from the customer portal"
@@ -219,6 +239,12 @@ class BookingService {
             const dailyItems = [];
             const dateCursor = new Date(`${startDate}T00:00:00.000Z`);
             while (dateCursor <= endDate) {
+              if (dateCursor.getUTCDay() === 1) {
+                throw ApiError.badRequest(
+                  "Bookings are not available on Mondays"
+                );
+              }
+
               const date = dateCursor.toISOString().slice(0, 10);
               dailyItems.push({
                 ...item,
