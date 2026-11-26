@@ -11,8 +11,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 
-
-
 import Button from "../ui/Button";
 import {
   useAvailablePermissions,
@@ -36,6 +34,8 @@ const RESOURCE_LABELS = {
   SETTING: "Website Settings",
   REPORT: "Reports",
 };
+
+
 
 export default function AssignPermissionModal({
   open,
