@@ -149,12 +149,6 @@ class UserService {
     const nextLevel = isSuperAdmin ? 2 : 3;
     const nextPlaceId = isSuperAdmin ? placeId || null : actor.placeId;
 
-    if (!isSuperAdmin && !nextPlaceId) {
-      throw ApiError.badRequest(
-        "Your account must be assigned to a place before creating employees",
-      );
-    }
-
     // Level 2 users cannot assign another place
     if (
       !isSuperAdmin &&
@@ -194,6 +188,7 @@ class UserService {
             : null,
         roleId,
         placeId: nextPlaceId,
+        isActive: isActive ?? true,
         parentId: actor.id,
         level: nextLevel,
       },

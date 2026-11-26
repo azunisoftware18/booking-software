@@ -31,6 +31,8 @@ class UserValidation {
         .string()
         .min(1, "Place is required")
         .optional(),
+
+      isActive: z.boolean().optional(),
     });
   }
 

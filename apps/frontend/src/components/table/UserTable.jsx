@@ -53,9 +53,9 @@ export default function UserTable({
   // ✅ Search filter
   const filteredUsers = useMemo(() => {
     const value = search.toLowerCase().trim();
-    const visibleUsers = (data || []).filter((user) => !isAdminUser(user));
-    if (!value) return visibleUsers;
-    return visibleUsers.filter((user) =>
+    const users = data || [];
+    if (!value) return users;
+    return users.filter((user) =>
       [user?.fullName, user?.email, user?.role?.roleName]
         .filter(Boolean)
         .some((val) => val.toLowerCase().includes(value)),
