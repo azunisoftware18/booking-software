@@ -348,14 +348,34 @@ static async getAllRoles(currentUserId) {
       throw ApiError.notFound("Role not found");
     }
 
+    const assignedUserCount = await prisma.user.count({
+      where: { roleId: id },
+    });
+
+    if (assignedUserCount > 0) {
+      throw ApiError.conflict(
+        `Cannot delete this role because it is assigned to ${assignedUserCount} user${assignedUserCount === 1 ? "" : "s"}. Reassign them to another role first.`
+      );
+    }
+
     // =======================================================
     // DELETE ROLE
     // =======================================================
-    await prisma.role.delete({
-      where: {
-        id,
-      },
-    });
+    try {
+      await prisma.role.delete({
+        where: {
+          id,
+        },
+      });
+    } catch (error) {
+      if (error?.code === "P2003") {
+        throw ApiError.conflict(
+          "Cannot delete this role because it is assigned to users. Reassign them to another role first."
+        );
+      }
+
+      throw error;
+    }
 
     return true;
   }
