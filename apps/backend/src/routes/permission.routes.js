@@ -19,6 +19,15 @@ const router = Router();
 // =========================================================
 
 router.get(
+  "/available",
+  AuthMiddleware.isAuthenticated,
+  PermissionMiddleware.hasPermission(
+    PermissionsRegistry.PERMISSION.READ
+  ),
+  asyncHandler(PermissionController.getAllAvailablePermissions)
+);
+
+router.get(
   "/",
   AuthMiddleware.isAuthenticated,
   PermissionMiddleware.hasPermission(

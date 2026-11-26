@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 
 import Button from "../ui/Button";
-import { usePermissions } from "@/lib/queries/usePermission";
+import {
+  useAvailablePermissions,
+  usePermissions,
+} from "@/lib/queries/usePermission";
 import { useUserPermissions } from "@/lib/queries/useUserPermission";
 import { useAssignPermission } from "@/lib/mutations/useAssignPermission";
 
@@ -42,9 +45,17 @@ export default function AssignPermissionModal({
   const [initialSelected, setInitialSelected] = useState([]);
   const [openResource, setOpenResource] = useState(null);
 
-  // ✅ All permissions
+  // ✅ All permission categories and permissions the current user can delegate
   const { data: permissionsData = [], isLoading: loadingPermissions } =
-    usePermissions();
+    useAvailablePermissions();
+  const {
+    data: assignablePermissionsData = [],
+    isLoading: loadingAssignablePermissions,
+  } = usePermissions();
+  const assignablePermissionIds = useMemo(
+    () => new Set(assignablePermissionsData.map((permission) => permission.id)),
+    [assignablePermissionsData]
+  );
 
   // ✅ User's current permissions (fresh fetch)
   const {
@@ -84,9 +95,12 @@ export default function AssignPermissionModal({
   }, [permissionsData]);
 
   const allPermissions = Object.values(grouped).flat();
+  const assignablePermissions = allPermissions.filter((permission) =>
+    assignablePermissionIds.has(permission.id)
+  );
   const allPermissionsAssigned =
-    allPermissions.length > 0 &&
-    allPermissions.every((permission) => selected.includes(permission.id));
+    assignablePermissions.length > 0 &&
+    assignablePermissions.every((permission) => selected.includes(permission.id));
 
   if (!open || !user) return null;
 
@@ -150,7 +164,10 @@ export default function AssignPermissionModal({
     }
   };
 
-  const isLoading = loadingPermissions || loadingUserPermissions;
+  const isLoading =
+    loadingPermissions ||
+    loadingAssignablePermissions ||
+    loadingUserPermissions;
   const isBusy = isLoading || fetchingUserPermissions;
 
   const fullName =
@@ -238,8 +255,8 @@ export default function AssignPermissionModal({
                 type="button"
                 size="sm"
                 variant={allPermissionsAssigned ? "destructive" : "default"}
-                disabled={isBusy || allPermissions.length === 0}
-                onClick={() => toggleAll(allPermissions)}
+                disabled={isBusy || assignablePermissions.length === 0}
+                onClick={() => toggleAll(assignablePermissions)}
               />
             </div>
           </div>
@@ -261,10 +278,15 @@ export default function AssignPermissionModal({
                 const allowedCount = resourcePerms.filter((perm) =>
                   isAllowed(perm.id)
                 ).length;
+                const assignableResourcePerms = resourcePerms.filter((perm) =>
+                  assignablePermissionIds.has(perm.id)
+                );
 
                 const allAssigned =
-                  resourcePerms.length > 0 &&
-                  allowedCount === resourcePerms.length;
+                  assignableResourcePerms.length > 0 &&
+                  assignableResourcePerms.every((perm) =>
+                    isAllowed(perm.id)
+                  );
 
                 const isOpen = openResource === resource;
 
@@ -306,9 +328,12 @@ export default function AssignPermissionModal({
                             size="sm"
                             variant={allAssigned ? "destructive" : "default"}
                             className="min-w-20"
+                            disabled={
+                              isBusy || assignableResourcePerms.length === 0
+                            }
                             onClick={(e) => {
                               e?.stopPropagation?.();
-                              toggleAll(resourcePerms);
+                              toggleAll(assignableResourcePerms);
                             }}
                           />
                         </div>
@@ -347,6 +372,9 @@ export default function AssignPermissionModal({
                                   size="sm"
                                   className="min-w-20 shrink-0"
                                   variant={allowed ? "destructive" : "default"}
+                                  disabled={
+                                    !assignablePermissionIds.has(perm.id)
+                                  }
                                   onClick={(e) => {
                                     e?.stopPropagation?.();
                                     toggleEffect(perm.id);
