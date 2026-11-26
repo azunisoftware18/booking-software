@@ -8,13 +8,15 @@ export default function Button({
   onClick, 
   type = "button",
   className = "",
-  iconPosition = "right"
+  iconPosition = "right",
+  disabled = false,
 }) {
   return (
     <button 
       type={type}
       onClick={onClick}
-      className={`group/work relative overflow-hidden rounded-xl   border border-black bg-[white] px-6 py-2.5 text-sm transition-all duration-300 hover:bg-black hover:shadow-lg active:scale-95 ${className}`}
+      disabled={disabled}
+      className={`group/work relative overflow-hidden rounded-xl border border-black bg-white px-6 py-2.5 text-sm transition-all duration-300 hover:bg-black hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:shadow-none disabled:active:scale-100 ${className}`}
     >
       {/* Hover Background */}
       <span className="absolute bottom-0 left-0 h-48 w-full origin-bottom translate-y-full transform rounded-full bg-black transition duration-300 ease-out group-hover/work:translate-y-14"></span>

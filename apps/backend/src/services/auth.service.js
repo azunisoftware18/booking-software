@@ -4,6 +4,37 @@ import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 import { ApiError } from "../utils/ApiError.js";
 import PermissionService from "./permission.service.js";
 
+const inheritParentScope = async (user) => {
+  if (!user.parentId || user.locationId || user.placeId) {
+    return user;
+  }
+
+  const parent = await prisma.user.findUnique({
+    where: { id: user.parentId },
+    select: {
+      placeId: true,
+      locationId: true,
+      location: {
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          state: true,
+        },
+      },
+    },
+  });
+
+  if (!parent) {
+    return user;
+  }
+
+  user.placeId = parent.placeId;
+  user.locationId = parent.locationId;
+  user.location = parent.location;
+  return user;
+};
+
 class AuthService {
   static async login({ identifier, password }) {
     const normalizedIdentifier = identifier.trim();
@@ -50,6 +81,8 @@ class AuthService {
     if (!isMatch) {
       throw ApiError.unauthorized("Invalid Username or Password");
     }
+
+    await inheritParentScope(user);
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -114,6 +147,8 @@ class AuthService {
         "Your account is inactive. Please contact the administrator."
       );
     }
+
+    await inheritParentScope(user);
 
     // Fetch user-wise + role-wise assigned permissions
     const { permissions } =

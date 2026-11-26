@@ -45,6 +45,7 @@ class AuthMiddleware {
         roleId: true,
         placeId: true,
         locationId: true,
+        parentId: true,
         level: true,
 
         role: {
@@ -59,6 +60,21 @@ class AuthMiddleware {
 
     if (!user) {
       throw ApiError.unauthorized("Invalid token user");
+    }
+
+    if (user.parentId && !user.locationId && !user.placeId) {
+      const parent = await prisma.user.findUnique({
+        where: { id: user.parentId },
+        select: {
+          placeId: true,
+          locationId: true,
+        },
+      });
+
+      if (parent) {
+        user.placeId = user.placeId || parent.placeId;
+        user.locationId = user.locationId || parent.locationId;
+      }
     }
 
     return user;

@@ -17,7 +17,7 @@ import AnnexureRefundModal from "@/components/modals/AnnexureRefundModal";
 export default function Page() {
   const currentPlace = useSelector((state) => state.place.currentPlace);
 
-  const placeId = currentPlace?.id;
+  const placeId = currentPlace?.id || currentPlace?._id;
 
   const { data: bookings, isLoading } = useBookings();
 
@@ -252,14 +252,23 @@ export default function Page() {
           ================================================= */}
 
           <div className="flex gap-2">
-            <div className="">
-              <Link href={`/book-tickets/${placeId}`}>
+            <div>
+              {placeId ? (
+                <Link href={`/book-tickets/${placeId}`}>
+                  <Button
+                    icon={PlusCircle}
+                    iconPosition="left"
+                    text="Ticket Book"
+                  />
+                </Link>
+              ) : (
                 <Button
                   icon={PlusCircle}
                   iconPosition="left"
                   text="Ticket Book"
+                  disabled
                 />
-              </Link>
+              )}
             </div>
 
             <Button

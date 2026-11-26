@@ -20,6 +20,7 @@ class UserService {
         id: true,
         roleId: true,
         placeId: true,
+        locationId: true,
         parentId: true,
         level: true,
         role: {
@@ -188,6 +189,7 @@ class UserService {
             : null,
         roleId,
         placeId: nextPlaceId,
+        locationId: isSuperAdmin ? null : actor.locationId,
         isActive: isActive ?? true,
         parentId: actor.id,
         level: nextLevel,

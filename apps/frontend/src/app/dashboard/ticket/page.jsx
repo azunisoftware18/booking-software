@@ -38,11 +38,9 @@ export default function TicketTypePage() {
   const { data: accessiblePlaces = [] } = usePlaces();
   const currentPlace = useSelector((state) => state.place.currentPlace);
   const isSuperAdmin = me?.role?.roleCode === "SUPER_ADMIN";
-  const isLocationAdmin = ["ADMIN", "LOCATION_ADMIN"].includes(
-    me?.role?.roleCode,
-  );
 
   const hasAssignedLocation = Boolean(me?.locationId || me?.location?.id);
+  const loadAssignedPlaces = hasAssignedLocation && !isSuperAdmin;
   const placeId =
     editData?.placeId ||
     me?.placeId ||
@@ -50,19 +48,20 @@ export default function TicketTypePage() {
       ? accessiblePlaces[0]?.id
       : currentPlace?.id || currentPlace?._id);
   const { data: ticketTypes, isLoading } = useTicketTypes(
-    isLocationAdmin || isSuperAdmin ? undefined : placeId,
+    isSuperAdmin || loadAssignedPlaces ? undefined : placeId,
     isSuperAdmin,
-    isLocationAdmin,
+    loadAssignedPlaces,
   );
   const assignedLocation = me?.location;
   const assignedCenter = assignedLocation?.city || assignedLocation?.name;
-  const visibleTicketTypes = !isSuperAdmin && !isLocationAdmin && assignedCenter
-    ? (ticketTypes || []).filter(
-        (ticket) =>
-          ticket.center?.trim().toLowerCase() ===
-          assignedCenter.trim().toLowerCase(),
-      )
-    : ticketTypes || [];
+  const visibleTicketTypes =
+    !isSuperAdmin && !hasAssignedLocation && assignedCenter
+      ? (ticketTypes || []).filter(
+          (ticket) =>
+            ticket.center?.trim().toLowerCase() ===
+            assignedCenter.trim().toLowerCase(),
+        )
+      : ticketTypes || [];
   const bookableTicketTypes = visibleTicketTypes.filter(
     (ticket) =>
       ticket.isAvailable !== false && (ticket.place?.id || ticket.placeId),

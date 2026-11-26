@@ -17,20 +17,19 @@ class TicketTypeController {
     if (payload.action === "getAll") {
       const roleCode = req.user?.role?.roleCode;
       const isSuperAdmin = roleCode === "SUPER_ADMIN";
-      const isLocationAdmin =
-        ["ADMIN", "LOCATION_ADMIN"].includes(roleCode) &&
-        req.user?.locationId;
-      const accessiblePlaces = isLocationAdmin
+      const isLocationAdmin = ["ADMIN", "LOCATION_ADMIN"].includes(roleCode);
+      const hasAssignedLocation = Boolean(req.user?.locationId);
+      const accessiblePlaces = hasAssignedLocation
         ? await PlaceService.getAllPlaces(req.user)
         : [];
 
       payload.data = {
         ...payload.data,
         allPlaces: isSuperAdmin,
-        ...(isLocationAdmin
+        ...(hasAssignedLocation
           ? {
               placeIds: accessiblePlaces.map((place) => place.id),
-              createdById: req.user.id,
+              ...(isLocationAdmin ? { createdById: req.user.id } : {}),
             }
           : {}),
         includeCreator: isSuperAdmin,

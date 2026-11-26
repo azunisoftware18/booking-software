@@ -16,6 +16,22 @@ import { usePermissions } from "@/lib/queries/usePermission";
 import { useUserPermissions } from "@/lib/queries/useUserPermission";
 import { useAssignPermission } from "@/lib/mutations/useAssignPermission";
 
+const RESOURCE_LABELS = {
+  DASHBOARD: "Dashboard",
+  PERMISSION: "Permission Management",
+  BOOKING: "Bookings & Venue Reports",
+  TICKET: "Tickets & Scanner",
+  USER: "Employee Management",
+  SCAN_LOG: "Ticket Scan Logs",
+  TICKET_TYPE: "Entry Fees",
+  ROLE: "Employee Roles",
+  LOCATION: "Location Management",
+  SLOT: "Slots",
+  PLACE: "Tourist Venues",
+  SETTING: "Website Settings",
+  REPORT: "Reports",
+};
+
 export default function AssignPermissionModal({
   open,
   user,
@@ -240,6 +256,8 @@ export default function AssignPermissionModal({
           ) : (
             <div className="relative grid grid-cols-1 gap-4 md:grid-cols-2">
               {Object.entries(grouped).map(([resource, resourcePerms]) => {
+                const resourceLabel =
+                  RESOURCE_LABELS[resource] || resource.replaceAll("_", " ");
                 const allowedCount = resourcePerms.filter((perm) =>
                   isAllowed(perm.id)
                 ).length;
@@ -267,8 +285,11 @@ export default function AssignPermissionModal({
                       }
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <p className="truncate text-sm font-semibold tracking-wide text-slate-800">
-                          {resource.replaceAll("_", " ")}
+                        <p
+                          title={resourceLabel}
+                          className="truncate text-sm font-semibold tracking-wide text-slate-800"
+                        >
+                          {resourceLabel}
                         </p>
 
                         <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">

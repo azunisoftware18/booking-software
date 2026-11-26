@@ -246,25 +246,27 @@ class PlaceService {
       user.role?.roleCode,
     );
 
-    if (user.locationId) {
+    const locationId = user.locationId || currentUser.locationId;
+    const placeId = user.placeId || currentUser.placeId;
+
+    if (locationId) {
       const location = await prisma.location.findUnique({
-        where: { id: user.locationId },
+        where: { id: locationId },
         select: { name: true, city: true },
       });
-
-      if (!location?.name && !location?.city && !isAdmin) {
-        return [];
-      }
 
       const locationTerms = [...new Set([location?.name, location?.city])].filter(
         Boolean,
       );
-      const locationFilters = locationTerms.flatMap((term) => [
-        { name: term },
-        { location: term },
-        { location: { startsWith: `${term} (` } },
-        { location: { startsWith: `${term},` } },
-      ]);
+      const locationFilters = [
+        { locationId },
+        ...locationTerms.flatMap((term) => [
+          { name: term },
+          { location: term },
+          { location: { startsWith: `${term} (` } },
+          { location: { startsWith: `${term},` } },
+        ]),
+      ];
 
       let where = { createdById: user.id };
 
@@ -303,13 +305,13 @@ class PlaceService {
     }
 
     // Level 2 and 3: Only assigned place
-    if (!user.placeId) {
+    if (!placeId) {
       return [];
     }
 
     return prisma.place.findMany({
       where: {
-        id: user.placeId,
+        id: placeId,
       },
       include: placeListInclude,
       orderBy: {

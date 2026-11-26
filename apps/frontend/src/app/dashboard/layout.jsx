@@ -49,9 +49,8 @@ export default function DashboardLayout({ children }) {
 
   // 🔥 Set current place
   useEffect(() => {
-    if (places?.length > 0) {
-      dispatch(setCurrentPlace(places[0]));
-    }
+    if (!places) return;
+    dispatch(setCurrentPlace(places[0] || null));
   }, [places, dispatch]);
 
   // 🔥 Loading screen
