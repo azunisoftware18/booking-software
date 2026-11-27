@@ -110,13 +110,13 @@ export const ANNEXURE_OPTIONS = {
     },
 
     {
-      label: "3D Science Film Show (Approx 20-30 Minute)",
+      label: "3D Science Film Show",
       value: "C2",
       ratePerPerson: "20",
       ratePerStudent: "10",
     },
     {
-      label: "Taramandal (Planetarium) (Approx 20-30 Minute)",
+      label: "Taramandal (Planetarium)",
       value: "C3",
       ratePerPerson: "10",
       ratePerStudent: "5",
@@ -137,13 +137,13 @@ export const ANNEXURE_OPTIONS = {
 
   D: [
     {
-      label: "3D Science Film Show (Approx 20-30 Minute)",
+      label: "3D Science Film Show",
       value: "D1",
       ratePerPerson: "20",
       ratePerStudent: "10",
     },
     {
-      label: "Taramandal (Planetarium) (Approx 20-30 Minute)",
+      label: "Taramandal (Planetarium)",
       value: "D2",
       ratePerPerson: "10",
       ratePerStudent: "5",
