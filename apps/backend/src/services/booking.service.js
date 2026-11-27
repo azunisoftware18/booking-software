@@ -347,14 +347,13 @@ class BookingService {
               );
             }
 
-            const isHeadcountActivity =
-              place.rate4Hours === null &&
-              place.rate8Hours === null &&
-              (place.ratePerPerson !== null || place.ratePerStudent !== null);
+            const isOtherActivity = ["C", "D"].includes(
+              String(place.annexure || "").toUpperCase()
+            );
             if (
-              (isHeadcountActivity &&
+              (isOtherActivity &&
                 isSlotPast(slotDate, template.endTime, now)) ||
-              (!isHeadcountActivity && itemSlotDate <= now)
+              (!isOtherActivity && itemSlotDate <= now)
             ) {
               throw ApiError.badRequest(
                 `Select a valid future slot for ${place.name}`
