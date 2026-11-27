@@ -1,6 +1,7 @@
 import prisma from "../db/db.js";
 import { ApiError } from "../utils/ApiError.js";
 import PlaceService from "./place.service.js";
+import { isSlotPast } from "../utils/slotTime.js";
 
 async function assertPlaceAccess(placeId, currentUser) {
   const places = await PlaceService.getAllPlaces(currentUser);
@@ -285,33 +286,6 @@ class SlotService {
     const now = new Date();
 
     // Get current date and time in India timezone.
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).formatToParts(now);
-
-    const getPart = (type) =>
-      parts.find((part) => part.type === type)?.value;
-
-    const today =
-      `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
-
-    const currentTime =
-      `${getPart("hour")}:${getPart("minute")}`;
-
-    const isPastSlot = (slotDate, slotEndTime) => {
-      if (slotDate < today) return true;
-      if (slotDate > today) return false;
-
-      // Keep a same-day slot bookable until its end time.
-      return slotEndTime <= currentTime;
-    };
-
     const activeBookingFilter = {
       OR: [
         { status: "PAID" },
@@ -395,7 +369,7 @@ class SlotService {
 
       let status = "available";
 
-      if (isPastSlot(date, t.endTime)) {
+      if (isSlotPast(date, t.endTime, now)) {
         status = "expired";
       } else if (override?.isClosed) {
         status = "unavailable";

@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { envConfig } from "../config/env.config.js";
 import TicketService from "./ticket.service.js";
 import { SlotService } from "./slot.service.js";
+import { isSlotPast } from "../utils/slotTime.js";
 
 import fs from "fs";
 import os from "os";
@@ -305,16 +306,17 @@ class BookingService {
             }
 
             const itemSlotDate = new Date(item.slotDateTime);
-            if (Number.isNaN(itemSlotDate.getTime()) || itemSlotDate <= now) {
+            if (Number.isNaN(itemSlotDate.getTime())) {
               throw ApiError.badRequest(
                 `Select a valid future slot for ${place.name}`
               );
             }
 
+            const slotDate = itemSlotDate.toISOString().slice(0, 10);
             const startTime = itemSlotDate.toISOString().slice(11, 16);
             const templates = await SlotService.getTemplatesForDate(
               place.id,
-              itemSlotDate.toISOString().slice(0, 10),
+              slotDate,
               tx
             );
             const matchesDuration = (candidate) => {
@@ -342,6 +344,20 @@ class BookingService {
               }
               throw ApiError.badRequest(
                 `The selected slot is not available for ${place.name}`
+              );
+            }
+
+            const isHeadcountActivity =
+              place.rate4Hours === null &&
+              place.rate8Hours === null &&
+              (place.ratePerPerson !== null || place.ratePerStudent !== null);
+            if (
+              (isHeadcountActivity &&
+                isSlotPast(slotDate, template.endTime, now)) ||
+              (!isHeadcountActivity && itemSlotDate <= now)
+            ) {
+              throw ApiError.badRequest(
+                `Select a valid future slot for ${place.name}`
               );
             }
 
