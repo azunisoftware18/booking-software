@@ -304,12 +304,12 @@ class SlotService {
     const currentTime =
       `${getPart("hour")}:${getPart("minute")}`;
 
-    const isPastSlot = (slotDate, slotTime) => {
+    const isPastSlot = (slotDate, slotEndTime) => {
       if (slotDate < today) return true;
       if (slotDate > today) return false;
 
-      // Expire the slot when its start time is reached.
-      return slotTime <= currentTime;
+      // Keep a same-day slot bookable until its end time.
+      return slotEndTime <= currentTime;
     };
 
     const activeBookingFilter = {
@@ -395,7 +395,7 @@ class SlotService {
 
       let status = "available";
 
-      if (isPastSlot(date, t.startTime)) {
+      if (isPastSlot(date, t.endTime)) {
         status = "expired";
       } else if (override?.isClosed) {
         status = "unavailable";

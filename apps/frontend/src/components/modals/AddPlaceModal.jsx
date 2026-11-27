@@ -12,6 +12,8 @@ export default function AddPlaceModal({
   annexures = [],
   existingPlaces = [],
   canCreateSlots = false,
+  canUpdateSlots = false,
+  canDeleteSlots = false,
   assignedLocation = "",
 }) {
   if (!open) return null;
@@ -83,6 +85,8 @@ flex flex-col
             onCancel={onClose}
             existingPlaces={existingPlaces}
             canCreateSlots={canCreateSlots}
+            canUpdateSlots={canUpdateSlots}
+            canDeleteSlots={canDeleteSlots}
             assignedLocation={assignedLocation}
           />
         </div>

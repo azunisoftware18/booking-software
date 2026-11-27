@@ -252,12 +252,14 @@ export default function PlacePage() {
           (permission.resource === "PLACE" && permission.action === "UPDATE")) &&
         permission.isActive,
     );
-  const canDeleteSlots = permissions.some(
-    (permission) =>
-      permission.resource === "SLOT" &&
-      permission.action === "DELETE" &&
-      permission.isActive,
-  );
+  const canDeleteSlots =
+    isSuperAdmin ||
+    permissions.some(
+      (permission) =>
+        permission.resource === "SLOT" &&
+        permission.action === "DELETE" &&
+        permission.isActive,
+    );
 
 
   return (
