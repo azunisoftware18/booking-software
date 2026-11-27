@@ -347,9 +347,9 @@ class BookingService {
               );
             }
 
-            const isOtherActivity = ["C", "D"].includes(
-              String(place.annexure || "").toUpperCase()
-            );
+            const annexureCode = String(place.annexure || "").toUpperCase();
+            const isDurationBooking = ["A", "B"].includes(annexureCode);
+            const isOtherActivity = ["C", "D"].includes(annexureCode);
             if (
               (isOtherActivity &&
                 isSlotPast(slotDate, template.endTime, now)) ||
@@ -365,7 +365,7 @@ class BookingService {
             const persons = Number(item.persons || 0);
             const students = Number(item.students || 0);
 
-            if (place.rate4Hours !== null || place.rate8Hours !== null) {
+            if (isDurationBooking) {
               if (persons !== 0 || students !== 0) {
                 throw ApiError.badRequest(
                   `Headcount is not valid for ${place.name}`
